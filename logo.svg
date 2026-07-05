@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <clipPath id="roundedSquare">
+      <rect width="400" height="400" rx="72"/>
+    </clipPath>
+  </defs>
+
+  <!-- Pure white background -->
+  <rect width="400" height="400" rx="80" fill="#FFFFFF"/>
+
+  <!-- Extremely subtle border -->
+  <rect x="8" y="8" width="384" height="384" rx="72" fill="none" stroke="#E5E5E5" stroke-width="1"/>
+
+  <g clip-path="url(#roundedSquare)">
+    <!-- Minimalist "M" monogram — two bold geometric forms creating a negative-space "eye" -->
+    <!-- Left stroke — bold black trapezoid -->
+    <path d="
+      M 100 60
+      L 180 60
+      L 160 220
+      L 80 220
+      Z"
+      fill="#000000"/>
+
+    <!-- Right stroke — bold black trapezoid -->
+    <path d="
+      M 220 60
+      L 300 60
+      L 320 220
+      L 240 220
+      Z"
+      fill="#000000"/>
+
+    <!-- Sharp angled cut creating the "V" apex of M -->
+    <polygon points="160,60 240,60 200,130" fill="#FFFFFF"/>
+
+    <!-- Crossbar of M — negative space horizontal -->
+    <rect x="95" y="155" width="210" height="6" fill="#FFFFFF"/>
+
+    <!-- Bottom right slant of M -->
+    <polygon points="240,220 320,220 350,340 270,340" fill="#000000"/>
+
+    <!-- Bottom left slant of M -->
+    <polygon points="80,220 160,220 130,340 50,340" fill="#000000"/>
+
+    <!-- Subtle optical alignment notch at top center -->
+    <polygon points="192,60 208,60 200,130" fill="#FFFFFF"/>
+  </g>
+</svg>
