@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Otto — Your AI digital colleague by Miraphant. Desktop app, CLI agent & Enterprise Edition.">
+<meta name="description" content="Otto — Your AI digital colleague by Miraphant. Desktop, CLI, Enterprise. Orchestrate, Trust, Transform, Output.">
 <title>Otto — Miraphant</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,10 +11,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --white: #FFFFFF; --black: #000000; --gray-50: #F9F9F9;
-    --gray-100: #F0F0F0; --gray-200: #E5E5E5; --gray-300: #CCCCCC;
-    --gray-400: #999999; --gray-500: #666666; --gray-600: #444444;
-    --gray-700: #333333; --gray-800: #222222; --gray-900: #111111;
+    --white: #FFFFFF; --black: #000000;
+    --gray-50: #F9F9F9; --gray-100: #F0F0F0; --gray-200: #E5E5E5;
+    --gray-300: #CCCCCC; --gray-400: #999999; --gray-500: #666666;
+    --gray-600: #444444; --gray-700: #333333; --gray-800: #222222;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -36,142 +36,109 @@
   }
   .nav-logo {
     display: flex; align-items: center; gap: 10px;
-    text-decoration: none; color: var(--black);
-    font-weight: 700; font-size: 16px;
+    text-decoration: none; color: var(--black); font-weight: 700; font-size: 16px;
   }
   .nav-logo-mark { width: 24px; height: 24px; }
-  .nav-back {
-    text-decoration: none; color: var(--gray-500);
-    font-size: 13px; font-weight: 500; transition: color 0.2s;
-  }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-back { text-decoration: none; color: var(--gray-500); font-size: 13px; font-weight: 500; transition: color 0.2s; }
   .nav-back:hover { color: var(--black); }
+  .lang-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--gray-400);
+    padding: 4px 8px; border-radius: 4px; font-family: inherit; transition: all 0.2s;
+  }
+  .lang-btn:hover { color: var(--gray-700); background: var(--gray-100); }
+  .lang-btn.active { color: var(--black); background: var(--gray-100); }
 
-  .product-hero {
-    padding: 120px 0 60px;
-    border-bottom: 1px solid var(--gray-100);
-  }
-  .product-hero-inner {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 60px;
-    align-items: center;
-  }
+  .product-hero { padding: 120px 0 60px; border-bottom: 1px solid var(--gray-100); }
+  .product-hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
   .product-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 12px; border-radius: 100px;
-    border: 1px solid var(--gray-200);
-    font-size: 11px; font-weight: 500;
-    color: var(--gray-500); margin-bottom: 24px;
+    padding: 4px 12px; border-radius: 100px; border: 1px solid var(--gray-200);
+    font-size: 11px; font-weight: 500; color: var(--gray-500); margin-bottom: 24px;
   }
   .product-hero h1 {
-    font-size: clamp(36px, 5vw, 56px);
-    font-weight: 900;
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-    margin-bottom: 20px;
+    font-size: clamp(36px, 5vw, 56px); font-weight: 900;
+    letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px;
   }
-  .product-hero .sub {
-    font-size: 16px; color: var(--gray-500);
-    line-height: 1.7; margin-bottom: 32px;
-  }
+  .product-hero .sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; margin-bottom: 32px; }
+
   .btn-primary {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 14px 28px; border-radius: 100px;
     background: var(--black); color: var(--white);
-    font-weight: 600; font-size: 14px;
-    text-decoration: none; transition: all 0.2s;
+    font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s;
   }
   .btn-primary:hover { background: var(--gray-800); transform: translateY(-1px); }
   .btn-secondary {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 14px 28px; border-radius: 100px;
     border: 1px solid var(--gray-200); color: var(--black);
-    font-weight: 500; font-size: 14px;
-    text-decoration: none; transition: all 0.2s;
+    font-weight: 500; font-size: 14px; text-decoration: none; transition: all 0.2s;
   }
   .btn-secondary:hover { border-color: var(--black); transform: translateY(-1px); }
   .btn-download {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 14px 32px; border-radius: 100px;
     background: var(--black); color: var(--white);
-    font-weight: 600; font-size: 14px;
-    text-decoration: none; transition: all 0.2s;
+    font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s;
   }
   .btn-download:hover { background: var(--gray-800); transform: translateY(-1px); }
 
-  .hero-visual {
-    background: var(--gray-50);
-    border-radius: 20px;
-    border: 1px solid var(--gray-200);
-    aspect-ratio: 4/3;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 64px;
-  }
-
   .section { padding: 80px 0; }
   .section.border-b { border-bottom: 1px solid var(--gray-100); }
-  .section-label {
-    font-size: 11px; font-weight: 600;
-    letter-spacing: 3px; text-transform: uppercase;
+  .section .label {
+    font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
     color: var(--gray-400); margin-bottom: 12px;
   }
   .section-title {
-    font-size: clamp(24px, 3vw, 36px);
-    font-weight: 800;
-    letter-spacing: -0.025em;
-    line-height: 1.1;
-    margin-bottom: 16px;
+    font-size: clamp(24px, 3vw, 36px); font-weight: 800;
+    letter-spacing: -0.025em; line-height: 1.1; margin-bottom: 16px;
+  }
+  .section-sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; }
+
+  /* Otto Four Pillars */
+  .otto-pillars {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--gray-200);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .otto-pillar {
+    background: var(--white); padding: 36px 28px;
+  }
+  .otto-pillar .keyword {
+    font-size: 22px; font-weight: 900; letter-spacing: -0.02em;
+    margin-bottom: 12px; text-transform: uppercase;
+  }
+  .otto-pillar p {
+    font-size: 13px; color: var(--gray-500); line-height: 1.7;
   }
 
-  /* Edition cards (horizontal) */
   .edition-card {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    align-items: center;
-    padding: 48px;
-    border-radius: 20px;
-    border: 1px solid var(--gray-200);
-    margin-bottom: 20px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: center;
+    padding: 48px; border-radius: 20px;
+    border: 1px solid var(--gray-200); margin-bottom: 20px;
   }
-  .edition-card.highlight {
-    border-color: var(--black);
-    border-width: 2px;
-    background: var(--gray-50);
-  }
-  .ed-card-icon { font-size: 40px; margin-bottom: 16px; }
+  .edition-card.highlight { border-color: var(--black); border-width: 2px; background: var(--gray-50); }
   .ed-card-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 100px;
-    border: 1px solid var(--gray-200);
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 1px; text-transform: uppercase;
-    color: var(--gray-500); margin-bottom: 12px;
+    display: inline-block; padding: 3px 10px; border-radius: 100px;
+    border: 1px solid var(--gray-200); font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px;
   }
-  .edition-card h3 {
-    font-size: 22px; font-weight: 700; margin-bottom: 8px;
-  }
-  .edition-card .desc {
-    font-size: 14px; color: var(--gray-500); line-height: 1.7; margin-bottom: 16px;
-  }
+  .edition-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .edition-card .desc { font-size: 14px; color: var(--gray-500); line-height: 1.7; margin-bottom: 16px; }
   .edition-card ul { list-style: none; padding: 0; margin-bottom: 20px; }
   .edition-card li {
     padding: 4px 0; font-size: 13px; color: var(--gray-600);
     display: flex; align-items: center; gap: 6px;
   }
-  .edition-card li::before { content: "✓"; color: var(--black); font-weight: 700; }
-  .ed-visual {
-    background: var(--white);
-    border: 1px solid var(--gray-100);
-    border-radius: 12px;
-    aspect-ratio: 16/10;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 48px; color: var(--gray-300);
-  }
-  .download-info {
-    font-size: 12px; color: var(--gray-400); margin-top: 8px;
-  }
+  .edition-card li::before { content: "-"; color: var(--gray-300); font-weight: 700; margin-right: 4px; }
+  .download-info { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
 
   .tech-list { display: flex; flex-wrap: wrap; gap: 8px; }
   .tech-tag {
@@ -180,11 +147,8 @@
     font-size: 12px; color: var(--gray-600);
   }
 
-  .cta-section {
-    background: var(--black); color: var(--white);
-    padding: 80px 0; text-align: center;
-  }
-  .cta-section .section-label { color: var(--gray-500); }
+  .cta-section { background: var(--black); color: var(--white); padding: 80px 0; text-align: center; }
+  .cta-section .label { color: var(--gray-500); }
   .cta-section .section-title { color: var(--white); }
   .cta-section .sub { color: var(--gray-400); font-size: 16px; line-height: 1.7; margin-bottom: 32px; }
   .cta-section .btn-primary { background: var(--white); color: var(--black); }
@@ -196,15 +160,16 @@
 
   .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
   .reveal.visible { opacity: 1; transform: translateY(0); }
-  .rd1 { transition-delay: 0.08s; }
-  .rd2 { transition-delay: 0.16s; }
-  .rd3 { transition-delay: 0.24s; }
-  .rd4 { transition-delay: 0.32s; }
+  .rd1 { transition-delay: 0.08s; } .rd2 { transition-delay: 0.16s; }
+  .rd3 { transition-delay: 0.24s; } .rd4 { transition-delay: 0.32s; }
 
   @media (max-width: 900px) {
-    .product-hero-inner { grid-template-columns: 1fr; }
-    .edition-card { grid-template-columns: 1fr; }
-    .ed-visual { display: none; }
+    .product-hero-inner, .edition-card { grid-template-columns: 1fr; }
+    .otto-pillars { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .otto-pillars { grid-template-columns: 1fr; }
+    .edition-card { padding: 24px; }
   }
 </style>
 </head>
@@ -224,113 +189,160 @@
       </svg>
       Miraphant
     </a>
-    <a href="index.html" class="nav-back">← Back to Home</a>
+    <div class="nav-right">
+      <a href="index.html" class="nav-back" data-i18n="nav.back">← Back</a>
+      <div style="display:flex;gap:4px;padding-left:12px;border-left:1px solid var(--gray-200)">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="zh">中</button>
+      </div>
+    </div>
   </div>
 </nav>
 
 <section class="product-hero">
   <div class="container product-hero-inner">
     <div>
-      <div class="reveal">
-        <div class="product-badge">Miraphant Product</div>
-      </div>
+      <div class="reveal"><div class="product-badge" data-i18n="hero.badge">Miraphant Product</div></div>
       <div class="reveal rd1">
         <h1>Otto</h1>
-        <p class="sub" style="font-size:18px;font-weight:600;color:var(--gray-700)">Your AI digital colleague</p>
-        <p class="sub">Otto lives in your terminal, your desktop, and your organization — bringing AI intelligence to every corner of your work.</p>
+        <p class="sub" style="font-size:18px;font-weight:600;color:var(--gray-700)" data-i18n="hero.tagline">Your AI digital colleague</p>
+        <p class="sub" data-i18n="hero.sub">Otto lives in your terminal, your desktop, and your organization — bringing AI intelligence to every corner of your work.</p>
       </div>
       <div class="reveal rd2" style="display:flex;gap:12px;flex-wrap:wrap">
-        <a href="#downloads" class="btn-download">⬇ Download Otto Desktop</a>
-        <a href="#editions" class="btn-secondary">Explore Editions</a>
+        <a href="#downloads" class="btn-download" data-i18n="hero.dl">⬇ Download Desktop</a>
+        <a href="#editions" class="btn-secondary" data-i18n="hero.editions">Editions →</a>
       </div>
     </div>
-    <div class="reveal rd3">
-      <div class="hero-visual">🤖</div>
+    <div class="reveal rd3" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--gray-300)">
+      <svg width="80" height="80" viewBox="0 0 28 28" fill="none">
+        <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#999"/>
+        <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#999"/>
+        <polygon points="8,12 11,12 10,16 7,16" fill="#999"/>
+        <polygon points="17,12 20,12 21,16 18,16" fill="#999"/>
+        <polygon points="11,4 17,4 14,8" fill="#F9F9F9"/>
+      </svg>
     </div>
   </div>
 </section>
 
-<!-- Editions -->
-<section id="editions" class="section border-b">
-  <div class="container">
-    <div class="reveal" style="max-width:600px">
-      <div class="section-label">Editions</div>
-      <h2 class="section-title">One AI, three forms</h2>
-    </div>
-
-    <!-- Otto Desktop -->
-    <div class="edition-card reveal rd1" style="margin-top:40px">
-      <div>
-        <div class="ed-card-icon">🖥️</div>
-        <div class="ed-card-badge">Desktop App · macOS</div>
-        <h3>Otto Desktop</h3>
-        <div class="desc">AI-native desktop experience. Otto lives in your menubar, learns your workflows, and automates your routines. Bring intelligence to every application you use.</div>
-        <ul>
-          <li>Native macOS app (Apple Silicon)</li>
-          <li>AI-powered desktop automation</li>
-          <li>Workflow learning &amp; suggestions</li>
-          <li>Voice interaction ready</li>
-        </ul>
-        <div id="downloads">
-          <a href="https://github.com/NSIETeam/miraphant/releases/latest/download/Otto-Desktop-1.2.0-mac-arm64.zip" class="btn-download">⬇ Download for macOS (ARM)</a>
-          <div class="download-info">Version 1.2.0 · Apple Silicon (M1+) · 139 MB</div>
-        </div>
-      </div>
-      <div class="ed-visual">🖥️</div>
-    </div>
-
-    <!-- Otto Code -->
-    <div class="edition-card reveal rd2">
-      <div>
-        <div class="ed-card-icon">⌨️</div>
-        <div class="ed-card-badge">CLI + Feishu Bot</div>
-        <h3>Otto Code</h3>
-        <div class="desc">A terminal-native AI agent and Feishu digital colleague. Code generation, debugging, MCP context management, and deep integration with 18+ Feishu business domains.</div>
-        <ul>
-          <li>CLI agent with full terminal control</li>
-          <li>Feishu bot (calendar, docs, sheets, tasks, OKRs, wiki...)</li>
-          <li>Multi-model support (CodeX, DeepSeek, Claude, GLM)</li>
-          <li>MCP context management &amp; tool ecosystem</li>
-          <li>Monorepo: cli / core / VS Code plugin / IDE companion</li>
-        </ul>
-        <div>
-          <a href="https://github.com/NSIETeam/otto" class="btn-secondary" style="margin-right:8px">View on GitHub →</a>
-          <span class="download-info">npm: npx otto-ai</span>
-        </div>
-      </div>
-      <div class="ed-visual">⌨️</div>
-    </div>
-
-    <!-- Otto Enterprise -->
-    <div class="edition-card highlight reveal rd3">
-      <div>
-        <div class="ed-card-icon">🏢</div>
-        <div class="ed-card-badge">Enterprise</div>
-        <h3>Otto Enterprise</h3>
-        <div class="desc">LAN-deployed enterprise AI agent for the entire organization. Server-client architecture with zero data leaving your network. Designed for non-technical employees.</div>
-        <ul>
-          <li>LAN server-client architecture</li>
-          <li>9 core tools: desktop automation, format conversion, document generation</li>
-          <li>Zero data leaves your network</li>
-          <li>Admin dashboard with SQLite backend</li>
-          <li>17 desktop automation actions, 50+ format conversions</li>
-          <li>AI-powered training &amp; onboarding materials</li>
-        </ul>
-        <div>
-          <a href="mailto:hello@miraphant.com?subject=Otto%20Enterprise" class="btn-primary">Contact for Enterprise →</a>
-        </div>
-      </div>
-      <div class="ed-visual">🏢</div>
-    </div>
-  </div>
-</section>
-
-<!-- Tech Stack -->
+<!-- Otto Four Pillars -->
 <section class="section border-b">
   <div class="container">
     <div class="reveal" style="max-width:600px">
-      <div class="section-label">Technology</div>
-      <h2 class="section-title">Built on modern AI infrastructure</h2>
+      <div class="label" data-i18n="pillars.label">Otto's DNA</div>
+      <h2 class="section-title" data-i18n="pillars.title">Four principles that define Otto</h2>
+    </div>
+    <div class="otto-pillars" style="margin-top:40px">
+      <div class="otto-pillar reveal rd1">
+        <div class="keyword" style="color:var(--black)">ORCHESTRATE</div>
+        <p data-i18n="pillars.p1">Otto orchestrates models, tools, and APIs into seamless workflows. From code generation to Feishu integration, every capability is composed, not bolted on.</p>
+      </div>
+      <div class="otto-pillar reveal rd2">
+        <div class="keyword" style="color:var(--gray-500)">TRUST</div>
+        <p data-i18n="pillars.p2">Your data stays yours. Otto Enterprise deploys on your LAN with zero data leaving your network. Open-source core, transparent operations, no vendor lock-in.</p>
+      </div>
+      <div class="otto-pillar reveal rd3">
+        <div class="keyword" style="color:var(--black)">TRANSFORM</div>
+        <p data-i18n="pillars.p3">Otto transforms how teams work — replacing fragmented toolchains with a single AI colleague. One assistant for developers, operators, and executives alike.</p>
+      </div>
+      <div class="otto-pillar reveal rd4">
+        <div class="keyword" style="color:var(--gray-500)">OUTPUT</div>
+        <p data-i18n="pillars.p4">Every feature is measured by what it ships. Code deployed, documents generated, tasks automated. Otto optimizes for results, not potential.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="editions" class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="editions.label">Editions</div>
+      <h2 class="section-title" data-i18n="editions.title">One AI, three forms</h2>
+    </div>
+    <div class="edition-card reveal rd1" style="margin-top:40px">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.desktop.badge">Desktop App</div>
+        <h3 data-i18n="editions.desktop.title">Otto Desktop</h3>
+        <div class="desc" data-i18n="editions.desktop.desc">AI-native desktop experience for macOS. Otto lives in your menubar, learns your workflows, and automates your routines. Bring intelligence to every application you use.</div>
+        <ul>
+          <li data-i18n="editions.desktop.l1">Native macOS app (Apple Silicon)</li>
+          <li data-i18n="editions.desktop.l2">AI-powered desktop automation</li>
+          <li data-i18n="editions.desktop.l3">Workflow learning and suggestions</li>
+          <li data-i18n="editions.desktop.l4">Voice interaction ready</li>
+        </ul>
+        <div id="downloads">
+          <a href="https://github.com/NSIETeam/miraphant/releases/latest/download/Otto-Desktop-1.2.0-mac-arm64.zip" class="btn-download" data-i18n="editions.desktop.dl">⬇ Download for macOS (ARM)</a>
+          <div class="download-info" data-i18n="editions.desktop.info">Version 1.2.0 · Apple Silicon (M1+) · 139 MB</div>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="4" width="28" height="20" rx="3" stroke="#999" stroke-width="1.5" fill="none"/>
+          <rect x="6" y="7" width="20" height="12" rx="1" fill="#EEE"/>
+          <rect x="8" y="9" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="8" y="13" width="10" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="8" y="17" width="8" height="2" rx="0.5" fill="#CCC"/>
+          <path d="M 10 26 L 22 26 M 16 24 L 16 26" stroke="#999" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="edition-card reveal rd2">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.code.badge">CLI + Feishu Bot</div>
+        <h3 data-i18n="editions.code.title">Otto Code</h3>
+        <div class="desc" data-i18n="editions.code.desc">A terminal-native AI agent and Feishu digital colleague. Code generation, debugging, MCP context management, and deep integration with 18+ Feishu business domains.</div>
+        <ul>
+          <li data-i18n="editions.code.l1">CLI agent with full terminal control</li>
+          <li data-i18n="editions.code.l2">Feishu bot — calendar, docs, sheets, tasks, OKRs, wiki</li>
+          <li data-i18n="editions.code.l3">Multi-model: CodeX, DeepSeek, Claude, GLM</li>
+          <li data-i18n="editions.code.l4">MCP protocol and tool ecosystem</li>
+        </ul>
+        <div>
+          <a href="https://github.com/NSIETeam/otto" class="btn-secondary" data-i18n="editions.code.gh" style="margin-right:8px">View on GitHub →</a>
+          <span class="download-info">npm i -g otto-ai</span>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <code style="font-size:11px;color:var(--gray-400);text-align:left;padding:20px;line-height:1.8">$ otto chat<br>$ otto code --refactor<br>$ otto deploy</code>
+      </div>
+    </div>
+    <div class="edition-card highlight reveal rd3">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.enterprise.badge">Enterprise</div>
+        <h3 data-i18n="editions.enterprise.title">Otto Enterprise</h3>
+        <div class="desc" data-i18n="editions.enterprise.desc">LAN-deployed enterprise AI agent for the entire organization. Server-client architecture with zero data leaving your network. Designed for non-technical employees.</div>
+        <ul>
+          <li data-i18n="editions.enterprise.l1">LAN server-client architecture</li>
+          <li data-i18n="editions.enterprise.l2">9 core tools: automation, conversion, document generation</li>
+          <li data-i18n="editions.enterprise.l3">Zero data leaves your network</li>
+          <li data-i18n="editions.enterprise.l4">Admin dashboard with local SQLite</li>
+          <li data-i18n="editions.enterprise.l5">Desktop automation (17 actions), 50+ format conversions</li>
+        </ul>
+        <div>
+          <a href="mailto:hello@miraphant.com?subject=Otto%20Enterprise" class="btn-primary" data-i18n="editions.enterprise.cta">Contact for Enterprise →</a>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="10" width="12" height="16" rx="2" stroke="#999" stroke-width="1.5" fill="none"/>
+          <rect x="5" y="13" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="5" y="17" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="18" y="10" width="12" height="16" rx="2" stroke="#999" stroke-width="1.5" fill="none"/>
+          <rect x="21" y="13" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="21" y="17" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <path d="M 14 18 L 18 18" stroke="#999" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M 14 12 L 18 12" stroke="#999" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="tech.label">Technology</div>
+      <h2 class="section-title" data-i18n="tech.title">Built on modern AI infrastructure</h2>
     </div>
     <div class="reveal rd1" style="margin-top:32px">
       <div class="tech-list">
@@ -340,9 +352,9 @@
         <span class="tech-tag">Electron</span>
         <span class="tech-tag">esbuild</span>
         <span class="tech-tag">npm Workspaces</span>
-        <span class="tech-tag">Claude API</span>
         <span class="tech-tag">CodeX</span>
-        <span class="tech-tag">OpenAI Compatible</span>
+        <span class="tech-tag">Claude API</span>
+        <span class="tech-tag">DeepSeek</span>
         <span class="tech-tag">MCP Protocol</span>
         <span class="tech-tag">Feishu API</span>
         <span class="tech-tag">WebSocket Gateway</span>
@@ -354,13 +366,12 @@
 <div class="cta-section">
   <div class="container">
     <div class="reveal">
-      <div class="section-label">Get Started</div>
-      <h2 class="section-title">Give everyone an AI colleague</h2>
-      <p class="sub">Download Otto Desktop, try Otto Code, or bring Otto Enterprise to your organization.</p>
+      <div class="label" data-i18n="cta.label">Get Started</div>
+      <h2 class="section-title" data-i18n="cta.title">Give everyone an AI colleague</h2>
+      <p class="sub" data-i18n="cta.sub">Download Otto Desktop, try Otto Code, or bring Otto Enterprise to your organization.</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <a href="#downloads" class="btn-primary">⬇ Download Now</a>
-        <a href="mailto:hello@miraphant.com" class="btn-secondary">Enterprise Inquiries</a>
-        <a href="index.html" class="btn-secondary" style="border-color:var(--gray-700);color:var(--white)">← Back to Miraphant</a>
+        <a href="#downloads" class="btn-primary" data-i18n="cta.dl">⬇ Download Now</a>
+        <a href="mailto:hello@miraphant.com" class="btn-secondary" data-i18n="cta.enterprise" style="border-color:var(--gray-700);color:var(--white)">Enterprise Inquiries</a>
       </div>
     </div>
   </div>
@@ -369,11 +380,133 @@
 <footer>
   <div class="container footer-inner">
     <span>© 2026 Miraphant, Inc.</span>
-    <span>Otto — A Miraphant Product</span>
+    <span data-i18n="footer.product">Otto — A Miraphant Product</span>
   </div>
 </footer>
 
 <script>
+const i18n = {
+  en: {
+    'nav.back': '← Back',
+    'hero.badge': 'Miraphant Product',
+    'hero.tagline': 'Your AI digital colleague',
+    'hero.sub': 'Otto lives in your terminal, your desktop, and your organization — bringing AI intelligence to every corner of your work.',
+    'hero.dl': '⬇ Download Desktop',
+    'hero.editions': 'Editions →',
+    'pillars.label': "Otto's DNA",
+    'pillars.title': 'Four principles that define Otto',
+    'pillars.p1': 'Otto orchestrates models, tools, and APIs into seamless workflows. From code generation to Feishu integration, every capability is composed, not bolted on.',
+    'pillars.p2': 'Your data stays yours. Otto Enterprise deploys on your LAN with zero data leaving your network. Open-source core, transparent operations, no vendor lock-in.',
+    'pillars.p3': 'Otto transforms how teams work — replacing fragmented toolchains with a single AI colleague. One assistant for developers, operators, and executives alike.',
+    'pillars.p4': 'Every feature is measured by what it ships. Code deployed, documents generated, tasks automated. Otto optimizes for results, not potential.',
+    'editions.label': 'Editions',
+    'editions.title': 'One AI, three forms',
+    'editions.desktop.badge': 'Desktop App',
+    'editions.desktop.title': 'Otto Desktop',
+    'editions.desktop.desc': 'AI-native desktop experience for macOS. Otto lives in your menubar, learns your workflows, and automates your routines.',
+    'editions.desktop.l1': 'Native macOS app (Apple Silicon)',
+    'editions.desktop.l2': 'AI-powered desktop automation',
+    'editions.desktop.l3': 'Workflow learning and suggestions',
+    'editions.desktop.l4': 'Voice interaction ready',
+    'editions.desktop.dl': '⬇ Download for macOS (ARM)',
+    'editions.desktop.info': 'Version 1.2.0 · Apple Silicon (M1+) · 139 MB',
+    'editions.code.badge': 'CLI + Feishu Bot',
+    'editions.code.title': 'Otto Code',
+    'editions.code.desc': 'A terminal-native AI agent and Feishu digital colleague. Code generation, debugging, MCP context management, and deep Feishu integration.',
+    'editions.code.l1': 'CLI agent with full terminal control',
+    'editions.code.l2': 'Feishu bot — calendar, docs, sheets, tasks, OKRs, wiki',
+    'editions.code.l3': 'Multi-model: CodeX, DeepSeek, Claude, GLM',
+    'editions.code.l4': 'MCP protocol and tool ecosystem',
+    'editions.code.gh': 'View on GitHub →',
+    'editions.enterprise.badge': 'Enterprise',
+    'editions.enterprise.title': 'Otto Enterprise',
+    'editions.enterprise.desc': 'LAN-deployed enterprise AI agent. Server-client architecture with zero data leaving your network.',
+    'editions.enterprise.l1': 'LAN server-client architecture',
+    'editions.enterprise.l2': '9 core tools: automation, conversion, document generation',
+    'editions.enterprise.l3': 'Zero data leaves your network',
+    'editions.enterprise.l4': 'Admin dashboard with local SQLite',
+    'editions.enterprise.l5': 'Desktop automation (17 actions), 50+ format conversions',
+    'editions.enterprise.cta': 'Contact for Enterprise →',
+    'tech.label': 'Technology',
+    'tech.title': 'Built on modern AI infrastructure',
+    'cta.label': 'Get Started',
+    'cta.title': 'Give everyone an AI colleague',
+    'cta.sub': 'Download Otto Desktop, try Otto Code, or bring Otto Enterprise to your organization.',
+    'cta.dl': '⬇ Download Now',
+    'cta.enterprise': 'Enterprise Inquiries',
+    'footer.product': 'Otto — A Miraphant Product',
+  },
+  zh: {
+    'nav.back': '← 返回',
+    'hero.badge': 'Miraphant 产品',
+    'hero.tagline': '你的 AI 数字同事',
+    'hero.sub': 'Otto 住在你的终端、你的桌面和你的组织中——将 AI 智能带到你工作的每个角落。',
+    'hero.dl': '⬇ 下载桌面版',
+    'hero.editions': '版本 →',
+    'pillars.label': 'Otto 的 DNA',
+    'pillars.title': '定义 Otto 的四大原则',
+    'pillars.p1': 'Otto 将模型、工具和 API 编排成无缝工作流。从代码生成到飞书集成，每个能力都是组合的，而非拼接的。',
+    'pillars.p2': '你的数据永远属于你。Otto Enterprise 部署在你的局域网中，零数据离开你的网络。开源核心、透明操作、无供应商锁定。',
+    'pillars.p3': 'Otto 转变团队的工作方式——用单一的 AI 同事取代碎片化的工具链。一个助手，适用于开发者、运营人员和高管。',
+    'pillars.p4': '每个功能都用它交付了什么来衡量。代码部署、文档生成、任务自动化。Otto 为结果优化，而非潜力。',
+    'editions.label': '版本',
+    'editions.title': '一个 AI，三种形态',
+    'editions.desktop.badge': '桌面应用',
+    'editions.desktop.title': 'Otto Desktop',
+    'editions.desktop.desc': 'macOS 的 AI 原生桌面体验。Otto 驻留在你的菜单栏中，学习你的工作流，自动化你的日常操作。',
+    'editions.desktop.l1': '原生 macOS 应用 (Apple Silicon)',
+    'editions.desktop.l2': 'AI 驱动的桌面自动化',
+    'editions.desktop.l3': '工作流学习与建议',
+    'editions.desktop.l4': '语音交互就绪',
+    'editions.desktop.dl': '⬇ 下载 macOS (ARM) 版',
+    'editions.desktop.info': '版本 1.2.0 · Apple Silicon (M1+) · 139 MB',
+    'editions.code.badge': 'CLI + 飞书机器人',
+    'editions.code.title': 'Otto Code',
+    'editions.code.desc': '终端原生的 AI 代理和飞书数字同事。代码生成、调试、MCP 上下文管理，深度飞书集成。',
+    'editions.code.l1': '完全终端控制的 CLI 代理',
+    'editions.code.l2': '飞书机器人 — 日历、文档、表格、任务、OKR、知识库',
+    'editions.code.l3': '多模型：CodeX、DeepSeek、Claude、GLM',
+    'editions.code.l4': 'MCP 协议与工具生态',
+    'editions.code.gh': '在 GitHub 上查看 →',
+    'editions.enterprise.badge': '企业版',
+    'editions.enterprise.title': 'Otto Enterprise',
+    'editions.enterprise.desc': '局域网部署的企业级 AI 代理。服务器-客户端架构，零数据离开你的网络。',
+    'editions.enterprise.l1': '局域网服务端-客户端架构',
+    'editions.enterprise.l2': '9 个核心工具：自动化、转换、文档生成',
+    'editions.enterprise.l3': '零数据离开你的网络',
+    'editions.enterprise.l4': '本地 SQLite 管理后台',
+    'editions.enterprise.l5': '桌面自动化（17 种操作），50+ 格式转换',
+    'editions.enterprise.cta': '联系企业版 →',
+    'tech.label': '技术栈',
+    'tech.title': '构建在现代 AI 基础设施之上',
+    'cta.label': '开始使用',
+    'cta.title': '让每个人都拥有 AI 同事',
+    'cta.sub': '下载 Otto Desktop，试用 Otto Code，或将 Otto Enterprise 带到你的组织。',
+    'cta.dl': '⬇ 立即下载',
+    'cta.enterprise': '企业咨询',
+    'footer.product': 'Otto — Miraphant 产品',
+  }
+};
+
+let currentLang = 'en';
+function setLang(lang) {
+  currentLang = lang;
+  const s = i18n[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (s[el.getAttribute('data-i18n')]) el.textContent = s[el.getAttribute('data-i18n')];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+  });
+  document.documentElement.lang = lang;
+  localStorage.setItem('otto-lang', lang);
+}
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
+});
+const saved = localStorage.getItem('otto-lang');
+if (saved && i18n[saved]) setLang(saved);
+
 const observer = new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
 },{threshold:0.1});

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Miraphant — Application Layer Superintelligence. We turn ideas into reality fast. AI-powered products & enterprise AI-native transformation.">
+<meta name="description" content="Miraphant — Application Layer Superintelligence. AI-powered products & enterprise AI-native transformation.">
 <title>Miraphant — Application Layer Superintelligence</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,7 +25,6 @@
   }
   .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
-  /* Nav */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
@@ -49,7 +48,6 @@
   }
   .nav-links a:hover { color: var(--black); }
   .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; color: var(--black); }
-
   .lang-btn {
     background: none; border: none; cursor: pointer;
     font-size: 12px; font-weight: 600; color: var(--gray-400);
@@ -59,7 +57,6 @@
   .lang-btn:hover { color: var(--gray-700); background: var(--gray-100); }
   .lang-btn.active { color: var(--black); background: var(--gray-100); }
 
-  /* Hero */
   #hero {
     min-height: 100vh; display: flex; align-items: center;
     padding: 80px 0 60px;
@@ -101,11 +98,9 @@
     text-decoration: none; transition: all 0.2s;
   }
   .btn-secondary:hover { border-color: var(--black); transform: translateY(-1px); }
-
   .hero-logo-wrap { margin-top: 48px; }
   .hero-logo-display { width: 96px; height: 96px; }
 
-  /* Sections */
   .section { padding: 96px 0; }
   .section.border-b { border-bottom: 1px solid var(--gray-100); }
   .section .label {
@@ -122,25 +117,15 @@
     font-size: 16px; color: var(--gray-500); line-height: 1.7;
   }
 
-  /* Superpower */
-  .superpower-grid {
+  .about-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 40px;
+    gap: 48px;
   }
-  .superpower-card {
-    padding: 40px;
-    border-radius: 16px;
-    border: 1px solid var(--gray-200);
-  }
-  .superpower-card h3 {
-    font-size: 20px; font-weight: 700; margin-bottom: 12px;
-  }
-  .superpower-card p {
-    font-size: 14px; color: var(--gray-500); line-height: 1.7;
+  .about-text {
+    font-size: 17px; line-height: 1.8; color: var(--gray-700);
   }
 
-  /* Product cards */
   .products-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -165,11 +150,7 @@
     font-size: 20px; color: var(--gray-300);
     transition: color 0.25s, transform 0.25s;
   }
-  .product-card:hover::after {
-    color: var(--black);
-    transform: translateX(4px);
-  }
-  .product-icon { font-size: 36px; margin-bottom: 16px; }
+  .product-card:hover::after { color: var(--black); transform: translateX(4px); }
   .product-card h3 {
     font-size: 20px; font-weight: 700; margin-bottom: 8px;
   }
@@ -185,19 +166,16 @@
     font-size: 11px; color: var(--gray-500);
   }
 
-  /* AI Club */
   .club-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1px;
     background: var(--gray-200);
     border: 1px solid var(--gray-200);
-    border-radius: 16px;
-    overflow: hidden;
+    border-radius: 16px; overflow: hidden;
   }
   .club-card {
-    background: var(--white);
-    padding: 32px 28px;
+    background: var(--white); padding: 32px 28px;
   }
   .club-card h3 {
     font-size: 16px; font-weight: 700; margin-bottom: 8px;
@@ -206,23 +184,29 @@
     font-size: 13px; color: var(--gray-500); line-height: 1.7;
   }
 
-  /* Philosophy */
-  .philosophy-grid {
+  .pillars-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1px;
     background: var(--gray-200);
     border: 1px solid var(--gray-200);
     border-radius: 16px; overflow: hidden;
   }
-  .philosophy-card {
-    background: var(--white); padding: 32px 28px;
+  .pillar-card {
+    background: var(--white); padding: 36px 28px;
   }
-  .philosophy-num { font-size: 13px; font-weight: 700; color: var(--gray-300); margin-bottom: 16px; }
-  .philosophy-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-  .philosophy-card p { font-size: 13px; color: var(--gray-500); line-height: 1.7; }
+  .pillar-num {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gray-300); margin-bottom: 16px;
+  }
+  .pillar-card h3 {
+    font-size: 18px; font-weight: 700; margin-bottom: 8px;
+  }
+  .pillar-card p {
+    font-size: 13px; color: var(--gray-500); line-height: 1.7;
+  }
 
-  /* CTA dark */
   .cta-dark {
     background: var(--black); color: var(--white); text-align: center;
   }
@@ -233,7 +217,6 @@
   .cta-dark .btn-primary:hover { background: var(--gray-200); }
   .cta-dark .btn-secondary { border-color: var(--gray-700); color: var(--white); }
 
-  /* Footer */
   footer { padding: 56px 0 32px; border-top: 1px solid var(--gray-100); }
   .footer-grid {
     display: grid;
@@ -257,11 +240,7 @@
     display: flex; justify-content: space-between;
     font-size: 12px; color: var(--gray-400);
   }
-  .footer-socials { display: flex; gap: 16px; }
-  .footer-socials a { color: var(--gray-400); text-decoration: none; transition: color 0.2s; }
-  .footer-socials a:hover { color: var(--black); }
 
-  /* Reveal */
   .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
   .reveal.visible { opacity: 1; transform: translateY(0); }
   .rd1 { transition-delay: 0.08s; }
@@ -270,9 +249,8 @@
   .rd4 { transition-delay: 0.32s; }
 
   @media (max-width: 900px) {
-    .superpower-grid { grid-template-columns: 1fr; }
-    .products-grid { grid-template-columns: 1fr; }
-    .philosophy-grid { grid-template-columns: 1fr; }
+    .about-grid, .products-grid { grid-template-columns: 1fr; }
+    .pillars-grid { grid-template-columns: repeat(2, 1fr); }
     .club-grid { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
   }
@@ -284,6 +262,7 @@
       padding: 16px 24px; border-bottom: 1px solid var(--gray-200);
     }
     .nav-toggle { display: block; }
+    .pillars-grid { grid-template-columns: 1fr 1fr; }
     .footer-grid { grid-template-columns: 1fr; }
     .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
   }
@@ -307,11 +286,14 @@
     </a>
     <div class="nav-right">
       <ul class="nav-links" id="navLinks">
-        <li><a href="#about">About</a></li>
-        <li><a href="#products">Products</a></li>
-        <li><a href="#club">AI Club</a></li>
-        <li><a href="#philosophy">Philosophy</a></li>
+        <li><a href="#about" data-i18n="nav.about">About</a></li>
+        <li><a href="#products" data-i18n="nav.products">Products</a></li>
+        <li><a href="#club" data-i18n="nav.club">AI Club</a></li>
       </ul>
+      <div style="display:flex;gap:4px;padding-left:16px;border-left:1px solid var(--gray-200)">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="zh">中</button>
+      </div>
       <button class="nav-toggle" id="navToggle" aria-label="Menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18M3 6h18M3 18h18"/>
@@ -321,32 +303,31 @@
   </div>
 </nav>
 
-<!-- Hero -->
 <section id="hero">
   <div class="container" style="width:100%">
     <div class="hero-content">
       <div class="reveal">
         <div class="hero-badge">
           <span class="hero-badge-dot"></span>
-          Application Layer Superintelligence
+          <span data-i18n="hero.badge">Application Layer Superintelligence</span>
         </div>
       </div>
       <div class="reveal rd1">
         <h1 class="hero-title">
-          Turn ideas into<br>
-          <span class="light">working products — fast.</span>
+          <span data-i18n="hero.l1">Turn ideas into</span><br>
+          <span class="light" data-i18n="hero.l2">working products — fast.</span>
         </h1>
       </div>
       <div class="reveal rd2">
-        <p class="hero-sub">
+        <p class="hero-sub" data-i18n="hero.sub">
           Miraphant builds AI-powered products and transforms organizations into AI-native ones.
           From idea to deployment, we make intelligence real.
         </p>
       </div>
       <div class="reveal rd3">
         <div class="hero-buttons">
-          <a href="#products" class="btn-primary">Explore Products →</a>
-          <a href="#about" class="btn-secondary">Our Superpower</a>
+          <a href="#products" class="btn-primary" data-i18n="hero.cta1">Explore Products →</a>
+          <a href="#about" class="btn-secondary" data-i18n="hero.cta2">Our Superpower</a>
         </div>
       </div>
       <div class="hero-logo-wrap reveal rd4">
@@ -356,174 +337,274 @@
   </div>
 </section>
 
-<!-- About / Superpower -->
 <section id="about" class="section border-b">
   <div class="container">
     <div class="reveal" style="max-width:600px">
-      <div class="label">Our Superpower</div>
-      <h2 class="section-title">We make your ideas real<br>and your organization AI-native</h2>
+      <div class="label" data-i18n="about.label">Who We Are</div>
+      <h2 class="section-title" data-i18n="about.title">
+        We make your ideas real<br>and your organization AI-native
+      </h2>
     </div>
-    <div class="superpower-grid" style="margin-top:40px">
-      <div class="superpower-card reveal rd1">
-        <h3>⚡ From idea to product — instantly</h3>
-        <p>You have a vision. We have the machinery. Miraphant's application layer platform takes your concept from whiteboard to working product in days, not months. No bureaucracy, no endless meetings — just shipping.</p>
+    <div class="about-grid" style="margin-top:40px">
+      <div class="reveal rd1">
+        <div class="about-text" data-i18n="about.p1">
+          Miraphant is an application-layer AI company. We don't train models — we ship products.
+          Our platform turns concepts into working software in days, compressing timelines
+          that other approaches measure in months.
+        </div>
       </div>
-      <div class="superpower-card reveal rd2">
-        <h3>🏢 AI-native organization transformation</h3>
-        <p>We don't just build AI products — we make your entire organization AI-native. From training programs to deployment infrastructure, we equip every employee with AI colleagues and the skills to use them.</p>
+      <div class="reveal rd2">
+        <div class="about-text" data-i18n="about.p2">
+          We also transform entire organizations into AI-native operations. From deploying
+          AI colleagues across every department to building foundational AI literacy through
+          Miraphant AI Club — we make intelligence a company-wide capability.
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Products -->
 <section id="products" class="section border-b">
   <div class="container">
     <div class="reveal" style="max-width:600px">
-      <div class="label">Our Products</div>
-      <h2 class="section-title">AI that ships</h2>
-      <p class="section-sub">From desktop to platform — products that bring intelligence to real workflows.</p>
+      <div class="label" data-i18n="products.label">Our Products</div>
+      <h2 class="section-title" data-i18n="products.title">AI that ships</h2>
+      <p class="section-sub" data-i18n="products.sub">From desktop to platform — products that bring intelligence to real workflows.</p>
     </div>
     <div class="products-grid" style="margin-top:40px">
-
       <a href="otto.html" class="product-card reveal rd1">
-        <div class="product-icon">🤖</div>
         <h3>Otto</h3>
-        <p>Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.</p>
+        <p data-i18n="products.otto.desc">Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.</p>
         <div class="product-tags">
-          <span>Desktop App</span>
-          <span>CLI Agent</span>
-          <span>Feishu Bot</span>
-          <span>Enterprise</span>
+          <span data-i18n="products.otto.t1">Desktop App</span>
+          <span data-i18n="products.otto.t2">CLI Agent</span>
+          <span data-i18n="products.otto.t3">Enterprise</span>
         </div>
       </a>
-
       <a href="circle.html" class="product-card reveal rd2">
-        <div class="product-icon">🏢</div>
-        <h3>园圈 Circle</h3>
-        <p>AI-driven industrial property investment matching platform. Connecting enterprises, parks, and brokers with intelligent site selection.</p>
+        <h3>Circle</h3>
+        <p data-i18n="products.circle.desc">A vibrant enterprise service ecosystem. AI-driven industrial property investment matching and B2B services platform.</p>
         <div class="product-tags">
-          <span>Real Estate</span>
-          <span>AI Matching</span>
-          <span>B2B Platform</span>
+          <span data-i18n="products.circle.t1">Enterprise Services</span>
+          <span data-i18n="products.circle.t2">AI Matching</span>
+          <span data-i18n="products.circle.t3">B2B Platform</span>
         </div>
       </a>
     </div>
   </div>
 </section>
 
-<!-- Miraphant AI Club -->
 <section id="club" class="section border-b">
   <div class="container">
     <div class="reveal" style="max-width:600px">
-      <div class="label">Miraphant AI Club</div>
-      <h2 class="section-title">Empower every employee<br>with AI fluency</h2>
-      <p class="section-sub">A structured program to build foundational AI capabilities across your organization — from beginners to power users.</p>
+      <div class="label" data-i18n="club.label">Miraphant AI Club</div>
+      <h2 class="section-title" data-i18n="club.title">Empower every employee<br>with AI fluency</h2>
+      <p class="section-sub" data-i18n="club.sub">A structured program to build foundational AI capabilities across your organization — from beginners to power users.</p>
     </div>
     <div class="club-grid" style="margin-top:40px">
       <div class="club-card reveal rd1">
-        <h3>🎓 AI Foundations</h3>
-        <p>Structured learning paths covering prompt engineering, AI tooling, and practical use cases for every role in your organization.</p>
+        <h3 data-i18n="club.c1.title">AI Foundations</h3>
+        <p data-i18n="club.c1.desc">Structured learning paths covering prompt engineering, AI tooling, and practical use cases for every role in your organization.</p>
       </div>
       <div class="club-card reveal rd2">
-        <h3>🛠️ Hands-On Labs</h3>
-        <p>Real-world exercises with Otto, Circle, and other tools. Employees build actual AI workflows, not just watch demos.</p>
+        <h3 data-i18n="club.c2.title">Hands-On Labs</h3>
+        <p data-i18n="club.c2.desc">Real-world exercises with Otto, Circle, and other tools. Employees build actual AI workflows, not just watch demos.</p>
       </div>
       <div class="club-card reveal rd3">
-        <h3>🏆 Certification & Growth</h3>
-        <p>Progressive certification from AI basics to advanced agent-building. Track organizational AI maturity over time.</p>
+        <h3 data-i18n="club.c3.title">Certification & Growth</h3>
+        <p data-i18n="club.c3.desc">Progressive certification from AI basics to advanced agent-building. Track organizational AI maturity over time.</p>
       </div>
       <div class="club-card reveal rd1">
-        <h3>📋 Custom Curriculum</h3>
-        <p>Programs tailored to your industry and company size. From 10-person startups to 10,000-employee enterprises.</p>
+        <h3 data-i18n="club.c4.title">Custom Curriculum</h3>
+        <p data-i18n="club.c4.desc">Programs tailored to your industry and company size. From 10-person startups to 10,000-employee enterprises.</p>
       </div>
       <div class="club-card reveal rd2">
-        <h3>🤝 Community & Events</h3>
-        <p>Regular workshops, hackathons, and knowledge-sharing sessions. Build an internal AI community that learns together.</p>
+        <h3 data-i18n="club.c5.title">Community & Events</h3>
+        <p data-i18n="club.c5.desc">Regular workshops, hackathons, and knowledge-sharing sessions. Build an internal AI community that learns together.</p>
       </div>
       <div class="club-card reveal rd3">
-        <h3>📊 Maturity Tracking</h3>
-        <p>Measure your organization's AI transformation progress. Data-driven insights on adoption, capability, and ROI.</p>
+        <h3 data-i18n="club.c6.title">Maturity Tracking</h3>
+        <p data-i18n="club.c6.desc">Measure your organization's AI transformation progress. Data-driven insights on adoption, capability, and ROI.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Philosophy -->
 <section id="philosophy" class="section border-b">
   <div class="container">
     <div class="reveal" style="max-width:600px;margin-bottom:40px">
-      <div class="label">Our Philosophy</div>
-      <h2 class="section-title">Three principles</h2>
+      <div class="label" data-i18n="phil.label">Our Philosophy</div>
+      <h2 class="section-title" data-i18n="phil.title">Three principles</h2>
     </div>
-    <div class="philosophy-grid">
-      <div class="philosophy-card reveal rd1">
-        <div class="philosophy-num">01</div>
-        <h3>Intelligence Must Ship</h3>
-        <p>The best model is worthless if users can't interact with it. We ship products, not research papers.</p>
+    <div class="pillars-grid">
+      <div class="pillar-card reveal rd1">
+        <div class="pillar-num">01</div>
+        <h3 data-i18n="phil.p1.title">Intelligence Must Ship</h3>
+        <p data-i18n="phil.p1.desc">The best model is worthless if users can't interact with it. We ship products, not research papers.</p>
       </div>
-      <div class="philosophy-card reveal rd2">
-        <div class="philosophy-num">02</div>
-        <h3>Speed is a Feature</h3>
-        <p>From idea to working product in the shortest possible time. We compress timelines that others think are fixed.</p>
+      <div class="pillar-card reveal rd2">
+        <div class="pillar-num">02</div>
+        <h3 data-i18n="phil.p2.title">Speed is a Feature</h3>
+        <p data-i18n="phil.p2.desc">From idea to working product in the shortest possible time. We compress timelines others think are fixed.</p>
       </div>
-      <div class="philosophy-card reveal rd3">
-        <div class="philosophy-num">03</div>
-        <h3>AI-Native by Default</h3>
-        <p>Every product we build, every organization we transform — AI is not an add-on, it's the foundation.</p>
+      <div class="pillar-card reveal rd3">
+        <div class="pillar-num">03</div>
+        <h3 data-i18n="phil.p3.title">AI-Native by Default</h3>
+        <p data-i18n="phil.p3.desc">Every product we build, every organization we transform — AI is not an add-on, it's the foundation.</p>
+      </div>
+      <div class="pillar-card reveal rd4">
+        <div class="pillar-num">04</div>
+        <h3 data-i18n="phil.p4.title">Applications Over Models</h3>
+        <p data-i18n="phil.p4.desc">Frontier models compete on benchmarks. We compete on real-world outcomes and user experience.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- CTA -->
 <section class="cta-dark section">
   <div class="container">
     <div class="reveal" style="max-width:600px;margin:0 auto">
-      <div class="label">Get in Touch</div>
-      <h2 class="section-title">Ready to build<br>with Miraphant?</h2>
-      <p class="section-sub">Whether you want a product built, your organization transformed, or your team AI-trained — we're here.</p>
+      <div class="label" data-i18n="cta.label">Get in Touch</div>
+      <h2 class="section-title" data-i18n="cta.title">Ready to build<br>with Miraphant?</h2>
+      <p class="section-sub" data-i18n="cta.sub">Whether you want a product built, your organization transformed, or your team AI-trained — we're here.</p>
       <div style="margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <a href="mailto:hello@miraphant.com" class="btn-primary">hello@miraphant.com</a>
-        <a href="#" class="btn-secondary">Join AI Club →</a>
+        <a href="mailto:hello@miraphant.com" class="btn-primary" data-i18n="cta.email">hello@miraphant.com</a>
+        <a href="#" class="btn-secondary" data-i18n="cta.club">Join AI Club →</a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Footer -->
 <footer>
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand">
         <div class="footer-brand-text">Miraphant</div>
-        <div class="footer-brand-desc">Application Layer Superintelligence. AI-powered products and organizational transformation.</div>
+        <div class="footer-brand-desc" data-i18n="footer.desc">Application Layer Superintelligence. AI-powered products and organizational transformation.</div>
       </div>
       <div class="footer-col">
-        <h4>Products</h4>
+        <h4 data-i18n="footer.products">Products</h4>
         <a href="otto.html">Otto</a>
-        <a href="circle.html">园圈 Circle</a>
-        <a href="#club">AI Club</a>
+        <a href="circle.html">Circle</a>
+        <a href="#club" data-i18n="footer.club">AI Club</a>
       </div>
       <div class="footer-col">
-        <h4>Company</h4>
-        <a href="#about">About</a>
-        <a href="#philosophy">Philosophy</a>
-        <a href="#">Blog</a>
+        <h4 data-i18n="footer.company">Company</h4>
+        <a href="#about" data-i18n="footer.about">About</a>
+        <a href="#philosophy" data-i18n="footer.phil">Philosophy</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Miraphant, Inc.</span>
-      <div class="footer-socials">
-        <a href="#" aria-label="Twitter/X">𝕏</a>
-        <a href="#" aria-label="GitHub">GH</a>
-        <a href="#" aria-label="LinkedIn">IN</a>
-      </div>
+      <span data-i18n="footer.copy">© 2026 Miraphant, Inc.</span>
     </div>
   </div>
 </footer>
 
 <script>
+const i18n = {
+  en: {
+    'nav.about': 'About', 'nav.products': 'Products', 'nav.club': 'AI Club',
+    'hero.badge': 'Application Layer Superintelligence',
+    'hero.l1': 'Turn ideas into',
+    'hero.l2': 'working products — fast.',
+    'hero.sub': 'Miraphant builds AI-powered products and transforms organizations into AI-native ones. From idea to deployment, we make intelligence real.',
+    'hero.cta1': 'Explore Products →',
+    'hero.cta2': 'Our Superpower',
+    'about.label': 'Who We Are',
+    'about.title': 'We make your ideas real and your organization AI-native',
+    'about.p1': 'Miraphant is an application-layer AI company. We don\'t train models — we ship products. Our platform turns concepts into working software in days, compressing timelines that other approaches measure in months.',
+    'about.p2': 'We also transform entire organizations into AI-native operations. From deploying AI colleagues across every department to building foundational AI literacy through Miraphant AI Club — we make intelligence a company-wide capability.',
+    'products.label': 'Our Products',
+    'products.title': 'AI that ships',
+    'products.sub': 'From desktop to platform — products that bring intelligence to real workflows.',
+    'products.otto.desc': 'Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.',
+    'products.otto.t1': 'Desktop App', 'products.otto.t2': 'CLI Agent', 'products.otto.t3': 'Enterprise',
+    'products.circle.desc': 'A vibrant enterprise service ecosystem. AI-driven industrial property investment matching and B2B services platform.',
+    'products.circle.t1': 'Enterprise Services', 'products.circle.t2': 'AI Matching', 'products.circle.t3': 'B2B Platform',
+    'club.label': 'Miraphant AI Club',
+    'club.title': 'Empower every employee with AI fluency',
+    'club.sub': 'A structured program to build foundational AI capabilities across your organization — from beginners to power users.',
+    'club.c1.title': 'AI Foundations', 'club.c1.desc': 'Structured learning paths covering prompt engineering, AI tooling, and practical use cases for every role in your organization.',
+    'club.c2.title': 'Hands-On Labs', 'club.c2.desc': 'Real-world exercises with Otto, Circle, and other tools. Employees build actual AI workflows, not just watch demos.',
+    'club.c3.title': 'Certification & Growth', 'club.c3.desc': 'Progressive certification from AI basics to advanced agent-building. Track organizational AI maturity.',
+    'club.c4.title': 'Custom Curriculum', 'club.c4.desc': 'Programs tailored to your industry and company size. From 10-person startups to 10,000-employee enterprises.',
+    'club.c5.title': 'Community & Events', 'club.c5.desc': 'Regular workshops, hackathons, and knowledge-sharing sessions. Build an internal AI community.',
+    'club.c6.title': 'Maturity Tracking', 'club.c6.desc': 'Measure your organization\'s AI transformation progress. Data-driven insights on adoption, capability, and ROI.',
+    'phil.label': 'Our Philosophy', 'phil.title': 'Three principles',
+    'phil.p1.title': 'Intelligence Must Ship', 'phil.p1.desc': 'The best model is worthless if users can\'t interact with it. We ship products, not research papers.',
+    'phil.p2.title': 'Speed is a Feature', 'phil.p2.desc': 'From idea to working product in the shortest possible time. We compress timelines others think are fixed.',
+    'phil.p3.title': 'AI-Native by Default', 'phil.p3.desc': 'Every product we build, every organization we transform — AI is not an add-on, it\'s the foundation.',
+    'phil.p4.title': 'Applications Over Models', 'phil.p4.desc': 'Frontier models compete on benchmarks. We compete on real-world outcomes and user experience.',
+    'cta.label': 'Get in Touch', 'cta.title': 'Ready to build with Miraphant?',
+    'cta.sub': 'Whether you want a product built, your organization transformed, or your team AI-trained — we\'re here.',
+    'cta.email': 'hello@miraphant.com', 'cta.club': 'Join AI Club →',
+    'footer.desc': 'Application Layer Superintelligence. AI-powered products and organizational transformation.',
+    'footer.products': 'Products', 'footer.company': 'Company',
+    'footer.about': 'About', 'footer.phil': 'Philosophy', 'footer.club': 'AI Club',
+    'footer.copy': '© 2026 Miraphant, Inc.',
+  },
+  zh: {
+    'nav.about': '关于我们', 'nav.products': '产品', 'nav.club': 'AI Club',
+    'hero.badge': '应用层超级智能',
+    'hero.l1': '把你的想法变成',
+    'hero.l2': '能用的产品——快。',
+    'hero.sub': 'Miraphant 构建 AI 驱动的产品，并将组织转变为 AI Native。从想法到部署，我们让智能成为现实。',
+    'hero.cta1': '探索产品 →',
+    'hero.cta2': '我们的超能力',
+    'about.label': '我们是谁',
+    'about.title': '把你的想法变成现实，让你的组织 AI Native',
+    'about.p1': 'Miraphant 是一家应用层 AI 公司。我们不训练模型——我们交付产品。我们的平台在数天内将概念转化为可工作的软件，压缩了其他方法需要数月才能完成的周期。',
+    'about.p2': '我们还将整个组织转变为 AI Native 运营。从在每个部门部署 AI 同事，到通过 Miraphant AI Club 构建基础 AI 素养——我们让智能成为公司级的能力。',
+    'products.label': '我们的产品',
+    'products.title': '智能，说到做到',
+    'products.sub': '从桌面到平台——将智能带入真实工作流的产品。',
+    'products.otto.desc': '你的 AI 数字同事。桌面应用、CLI 代理、飞书机器人及企业部署。在你工作的地方工作。',
+    'products.otto.t1': '桌面应用', 'products.otto.t2': 'CLI 代理', 'products.otto.t3': '企业版',
+    'products.circle.desc': '一个充满活力的企业服务生态。AI 驱动的产业地产招商撮合与 B2B 服务平台。',
+    'products.circle.t1': '企业服务', 'products.circle.t2': 'AI 撮合', 'products.circle.t3': 'B2B 平台',
+    'club.label': 'Miraphant AI Club',
+    'club.title': '让每位员工都具备 AI 能力',
+    'club.sub': '一个结构化项目，为你的组织构建基础 AI 能力——从初学者到高级用户。',
+    'club.c1.title': 'AI 基础', 'club.c1.desc': '涵盖提示工程、AI 工具和每个角色的实际用例的结构化学习路径。',
+    'club.c2.title': '实操工坊', 'club.c2.desc': '使用 Otto、Circle 等工具进行真实练习。员工构建实际的 AI 工作流，而不仅仅是看演示。',
+    'club.c3.title': '认证与成长', 'club.c3.desc': '从 AI 基础到高级智能体构建的分级认证。追踪组织 AI 成熟度。',
+    'club.c4.title': '定制课程', 'club.c4.desc': '根据行业和公司规模定制的项目。从 10 人初创公司到 10,000 人企业。',
+    'club.c5.title': '社区与活动', 'club.c5.desc': '定期工作坊、黑客马拉松和知识分享会。建立内部 AI 社区。',
+    'club.c6.title': '成熟度追踪', 'club.c6.desc': '衡量组织 AI 转型进展。关于采用率、能力和 ROI 的数据驱动洞察。',
+    'phil.label': '我们的理念', 'phil.title': '三项原则',
+    'phil.p1.title': '智能必须交付', 'phil.p1.desc': '最好的模型如果用户无法与之交互就毫无价值。我们交付产品，而非研究论文。',
+    'phil.p2.title': '速度就是特性', 'phil.p2.desc': '在最短时间内从想法到可工作产品。我们压缩了别人认为固定的时间线。',
+    'phil.p3.title': 'AI Native 是默认', 'phil.p3.desc': '我们构建的每个产品，我们转型的每个组织——AI 不是附加功能，而是基础。',
+    'phil.p4.title': '应用重于模型', 'phil.p4.desc': '前沿模型在基准上竞争。我们在真实世界的结果和用户体验上竞争。',
+    'cta.label': '联系我们', 'cta.title': '准备好和 Miraphant 一起构建了吗？',
+    'cta.sub': '无论你想构建产品、转型组织、还是培训团队——我们都在。',
+    'cta.email': 'hello@miraphant.com', 'cta.club': '加入 AI Club →',
+    'footer.desc': '应用层超级智能。AI 驱动的产品和组织转型。',
+    'footer.products': '产品', 'footer.company': '公司',
+    'footer.about': '关于我们', 'footer.phil': '理念', 'footer.club': 'AI Club',
+    'footer.copy': '© 2026 Miraphant, Inc.',
+  }
+};
+
+let currentLang = 'en';
+function setLang(lang) {
+  currentLang = lang;
+  const s = i18n[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (s[el.getAttribute('data-i18n')]) el.textContent = s[el.getAttribute('data-i18n')];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+  });
+  document.documentElement.lang = lang;
+  localStorage.setItem('miraphant-lang', lang);
+}
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
+});
+const saved = localStorage.getItem('miraphant-lang');
+if (saved && i18n[saved]) setLang(saved);
+
 const toggle = document.getElementById('navToggle');
 const links = document.getElementById('navLinks');
 toggle.addEventListener('click', () => links.classList.toggle('open'));
