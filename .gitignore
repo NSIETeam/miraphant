@@ -1,3 +1,6 @@
 .DS_Store
 *.log
 node_modules/
+downloads/*.zip
+downloads/*.dmg
+downloads/*.exe

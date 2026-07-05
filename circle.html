@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="园圈 (Circle) — AI-driven industrial property investment matching platform by Miraphant.">
+<title>园圈 Circle — Miraphant</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #FFFFFF; --black: #000000; --gray-50: #F9F9F9;
+    --gray-100: #F0F0F0; --gray-200: #E5E5E5; --gray-300: #CCCCCC;
+    --gray-400: #999999; --gray-500: #666666; --gray-600: #444444;
+    --gray-700: #333333; --gray-800: #222222; --gray-900: #111111;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--white); color: var(--black);
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; color: var(--black);
+    font-weight: 700; font-size: 16px;
+  }
+  .nav-logo-mark { width: 24px; height: 24px; }
+  .nav-back {
+    display: flex; align-items: center; gap: 6px;
+    text-decoration: none; color: var(--gray-500);
+    font-size: 13px; font-weight: 500; transition: color 0.2s;
+  }
+  .nav-back:hover { color: var(--black); }
+
+  /* Hero */
+  .product-hero {
+    padding: 120px 0 60px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .product-hero-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .product-badge {
+    display: inline-flex;
+    align-items: center; gap: 6px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--gray-200);
+    font-size: 11px; font-weight: 500;
+    color: var(--gray-500); margin-bottom: 24px;
+  }
+  .product-hero h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin-bottom: 20px;
+  }
+  .product-hero .sub {
+    font-size: 16px;
+    color: var(--gray-500);
+    line-height: 1.7;
+    margin-bottom: 32px;
+  }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 100px;
+    background: var(--black); color: var(--white);
+    font-weight: 600; font-size: 14px;
+    text-decoration: none; transition: all 0.2s;
+  }
+  .btn-primary:hover { background: var(--gray-800); transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 100px;
+    border: 1px solid var(--gray-200); color: var(--black);
+    font-weight: 500; font-size: 14px;
+    text-decoration: none; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--black); transform: translateY(-1px); }
+
+  .hero-visual {
+    background: var(--gray-50);
+    border-radius: 20px;
+    border: 1px solid var(--gray-200);
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+    color: var(--gray-300);
+  }
+
+  /* Section */
+  .section { padding: 80px 0; }
+  .section.border-b { border-bottom: 1px solid var(--gray-100); }
+  .section-label {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-400); margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    margin-bottom: 32px;
+  }
+
+  /* Features grid */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--gray-200);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .feature-card {
+    background: var(--white);
+    padding: 32px 28px;
+  }
+  .feature-icon {
+    font-size: 28px; margin-bottom: 16px;
+  }
+  .feature-card h3 {
+    font-size: 16px; font-weight: 700; margin-bottom: 8px;
+  }
+  .feature-card p {
+    font-size: 13px; color: var(--gray-500); line-height: 1.7;
+  }
+
+  /* Roles */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .role-card {
+    padding: 32px;
+    border-radius: 16px;
+    border: 1px solid var(--gray-200);
+  }
+  .role-card .emoji { font-size: 32px; margin-bottom: 12px; }
+  .role-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .role-card ul {
+    list-style: none; padding: 0;
+  }
+  .role-card li {
+    padding: 4px 0;
+    font-size: 13px; color: var(--gray-500);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .role-card li::before { content: "—"; color: var(--gray-300); }
+
+  /* Tech stack */
+  .tech-list {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .tech-tag {
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    font-size: 12px; color: var(--gray-600);
+  }
+
+  /* CTA */
+  .cta-section {
+    background: var(--black);
+    color: var(--white);
+    padding: 80px 0;
+    text-align: center;
+  }
+  .cta-section .section-label { color: var(--gray-500); }
+  .cta-section .section-title { color: var(--white); }
+  .cta-section .sub { color: var(--gray-400); font-size: 16px; line-height: 1.7; margin-bottom: 32px; }
+  .cta-section .btn-primary { background: var(--white); color: var(--black); }
+  .cta-section .btn-primary:hover { background: var(--gray-200); }
+
+  /* Footer */
+  footer { padding: 40px 0 24px; border-top: 1px solid var(--gray-100); }
+  .footer-inner {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--gray-400);
+  }
+
+  /* Reveal */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .rd1 { transition-delay: 0.08s; }
+  .rd2 { transition-delay: 0.16s; }
+  .rd3 { transition-delay: 0.24s; }
+
+  @media (max-width: 900px) {
+    .product-hero-inner { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+    .roles-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg class="nav-logo-mark" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="6" fill="none"/>
+        <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#000000"/>
+        <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#000000"/>
+        <polygon points="8,12 11,12 10,16 7,16" fill="#000000"/>
+        <polygon points="17,12 20,12 21,16 18,16" fill="#000000"/>
+        <polygon points="11,4 17,4 14,8" fill="#FFFFFF"/>
+        <rect x="7.5" y="10" width="13" height="0.8" fill="#FFFFFF"/>
+      </svg>
+      Miraphant
+    </a>
+    <a href="index.html" class="nav-back">← Back to Home</a>
+  </div>
+</nav>
+
+<section class="product-hero">
+  <div class="container product-hero-inner">
+    <div>
+      <div class="reveal">
+        <div class="product-badge">Miraphant Product</div>
+      </div>
+      <div class="reveal rd1">
+        <h1>园圈 <span style="font-weight:300">Circle</span></h1>
+        <p class="sub" style="font-size:18px;font-weight:600;color:var(--gray-700)">AI-driven industrial property investment matching platform</p>
+        <p class="sub">Connecting enterprises, industrial parks, and brokers through intelligent site selection, property matching, and one-stop business services.</p>
+      </div>
+      <div class="reveal rd2" style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="#" class="btn-primary">Visit Platform →</a>
+        <a href="#features" class="btn-secondary">Learn More</a>
+      </div>
+    </div>
+    <div class="reveal rd3">
+      <div class="hero-visual">🏢</div>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="section-label">Core Features</div>
+      <h2 class="section-title">Intelligence for<br>industrial real estate</h2>
+    </div>
+    <div class="features-grid" style="margin-top:40px">
+      <div class="feature-card reveal rd1">
+        <div class="feature-icon">📍</div>
+        <h3>AI Smart Site Selection</h3>
+        <p>Intelligent location matching based on enterprise needs, industry clusters, and infrastructure analysis.</p>
+      </div>
+      <div class="feature-card reveal rd2">
+        <div class="feature-icon">🤖</div>
+        <h3>AI Office Assistant</h3>
+        <p>Generate presentations, reports, and proposals through natural conversation. AI-powered productivity.</p>
+      </div>
+      <div class="feature-card reveal rd3">
+        <div class="feature-icon">🔍</div>
+        <h3>Property Discovery</h3>
+        <p>Advanced search with real-time availability, pricing, and detailed specifications for industrial properties.</p>
+      </div>
+      <div class="feature-card reveal rd1">
+        <div class="feature-icon">💬</div>
+        <h3>AI Floating Assistant</h3>
+        <p>Context-aware AI assistant that follows users across the platform, providing instant help and insights.</p>
+      </div>
+      <div class="feature-card reveal rd2">
+        <div class="feature-icon">⚡</div>
+        <h3>Time-Limited Offers</h3>
+        <p>Exclusive deals and promotions on premium properties. Real-time notifications for matching opportunities.</p>
+      </div>
+      <div class="feature-card reveal rd3">
+        <div class="feature-icon">🤝</div>
+        <h3>Broker Collaboration</h3>
+        <p>Seamless coordination between enterprises, parks, and brokers with shared dashboards and deal tracking.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="section-label">Who It's For</div>
+      <h2 class="section-title">Three sides, one platform</h2>
+    </div>
+    <div class="roles-grid" style="margin-top:40px">
+      <div class="role-card reveal rd1">
+        <div class="emoji">🏭</div>
+        <h3>Enterprises</h3>
+        <ul>
+          <li>Find ideal locations</li>
+          <li>Compare properties</li>
+          <li>AI-powered recommendations</li>
+          <li>One-stop business services</li>
+        </ul>
+      </div>
+      <div class="role-card reveal rd2">
+        <div class="emoji">🏗️</div>
+        <h3>Industrial Parks</h3>
+        <ul>
+          <li>List and manage properties</li>
+          <li>Targeted tenant acquisition</li>
+          <li>Data-driven pricing</li>
+          <li>Portfolio analytics</li>
+        </ul>
+      </div>
+      <div class="role-card reveal rd3">
+        <div class="emoji">📋</div>
+        <h3>Brokers</h3>
+        <ul>
+          <li>Access to listings</li>
+          <li>Client matching</li>
+          <li>Commission tracking</li>
+          <li>Collaboration tools</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="section-label">Technology</div>
+      <h2 class="section-title">Built for scale</h2>
+    </div>
+    <div class="reveal rd1" style="margin-top:32px">
+      <div class="tech-list">
+        <span class="tech-tag">Next.js 14</span>
+        <span class="tech-tag">React 18</span>
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">Leaflet Maps</span>
+        <span class="tech-tag">Express</span>
+        <span class="tech-tag">PostgreSQL</span>
+        <span class="tech-tag">Redis</span>
+        <span class="tech-tag">Python AI Agents</span>
+        <span class="tech-tag">Docker</span>
+        <span class="tech-tag">Graphite Design</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="cta-section">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Get Started</div>
+      <h2 class="section-title">Ready to transform<br>industrial real estate?</h2>
+      <p class="sub">Contact us to schedule a demo or get early access.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="mailto:hello@miraphant.com" class="btn-primary">Contact Us</a>
+        <a href="index.html" class="btn-secondary" style="border-color:var(--gray-700);color:var(--white)">← Back to Miraphant</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container footer-inner">
+    <span>© 2026 Miraphant, Inc.</span>
+    <span>园圈 Circle — A Miraphant Product</span>
+  </div>
+</footer>
+
+<script>
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>
