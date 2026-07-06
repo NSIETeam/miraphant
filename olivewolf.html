@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="OliveWolf — Open-source 3D digital human engine by Miraphant. Real-time audio-driven conversation, dual render backends, enterprise deployment.">
+<title>OliveWolf — Miraphant</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #FFFFFF; --black: #000000;
+    --gray-50: #F9F9F9; --gray-100: #F0F0F0; --gray-200: #E5E5E5;
+    --gray-300: #CCCCCC; --gray-400: #999999; --gray-500: #666666;
+    --gray-600: #444444; --gray-700: #333333; --gray-800: #222222;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--white); color: var(--black);
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--black); font-weight: 700; font-size: 16px; }
+  .nav-logo-mark { width: 24px; height: 24px; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-back { text-decoration: none; color: var(--gray-500); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+  .nav-back:hover { color: var(--black); }
+  .lang-btn { background: none; border: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--gray-400); padding: 4px 8px; border-radius: 4px; font-family: inherit; transition: all 0.2s; }
+  .lang-btn:hover { color: var(--gray-700); background: var(--gray-100); }
+  .lang-btn.active { color: var(--black); background: var(--gray-100); }
+
+  .product-hero { padding: 120px 0 60px; border-bottom: 1px solid var(--gray-100); }
+  .product-hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+  .product-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px; border: 1px solid var(--gray-200); font-size: 11px; font-weight: 500; color: var(--gray-500); margin-bottom: 24px; }
+  .product-hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px; }
+  .product-hero .sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; margin-bottom: 32px; }
+
+  .btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 100px; background: var(--black); color: var(--white); font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s; }
+  .btn-primary:hover { background: var(--gray-800); transform: translateY(-1px); }
+  .btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 100px; border: 1px solid var(--gray-200); color: var(--black); font-weight: 500; font-size: 14px; text-decoration: none; transition: all 0.2s; }
+  .btn-secondary:hover { border-color: var(--black); transform: translateY(-1px); }
+
+  .section { padding: 80px 0; }
+  .section.border-b { border-bottom: 1px solid var(--gray-100); }
+  .section .label { font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--gray-400); margin-bottom: 12px; }
+  .section-title { font-size: clamp(24px, 3vw, 36px); font-weight: 800; letter-spacing: -0.025em; line-height: 1.1; margin-bottom: 16px; }
+  .section-sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; }
+
+  .ow-pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--gray-200); border: 1px solid var(--gray-200); border-radius: 16px; overflow: hidden; }
+  .ow-pillar { background: var(--white); padding: 36px 28px; }
+  .ow-pillar .keyword { font-size: 20px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 12px; text-transform: uppercase; }
+  .ow-pillar p { font-size: 13px; color: var(--gray-500); line-height: 1.7; }
+
+  .pipeline { margin-top: 40px; padding: 32px; border: 1px solid var(--gray-200); border-radius: 16px; background: var(--gray-50); }
+  .pipeline-flow { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .pipeline-step { flex: 1; min-width: 120px; text-align: center; background: var(--white); border: 1px solid var(--gray-200); border-radius: 12px; padding: 16px 12px; }
+  .pipeline-step .num { font-size: 11px; font-weight: 700; color: var(--gray-300); letter-spacing: 1px; }
+  .pipeline-step .name { font-size: 13px; font-weight: 700; margin-top: 6px; }
+  .pipeline-step .tech { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+  .pipeline-arrow { color: var(--gray-300); font-size: 18px; font-weight: 300; }
+
+  .cap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 36px; }
+  .cap-card { border: 1px solid var(--gray-200); border-radius: 14px; padding: 24px; background: var(--white); }
+  .cap-card h3 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+  .cap-card p { font-size: 13px; color: var(--gray-500); line-height: 1.7; }
+
+  .edition-card { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; padding: 48px; border-radius: 20px; border: 1px solid var(--gray-200); margin-bottom: 20px; }
+  .edition-card.highlight { border-color: var(--black); border-width: 2px; background: var(--gray-50); }
+  .ed-card-badge { display: inline-block; padding: 3px 10px; border-radius: 100px; border: 1px solid var(--gray-200); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px; }
+  .edition-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .edition-card .desc { font-size: 14px; color: var(--gray-500); line-height: 1.7; margin-bottom: 16px; }
+  .edition-card ul { list-style: none; padding: 0; margin-bottom: 20px; }
+  .edition-card li { padding: 4px 0; font-size: 13px; color: var(--gray-600); display: flex; align-items: center; gap: 6px; }
+  .edition-card li::before { content: "-"; color: var(--gray-300); font-weight: 700; margin-right: 4px; }
+  .download-info { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+
+  .tech-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tech-tag { padding: 6px 14px; border-radius: 6px; background: var(--gray-50); border: 1px solid var(--gray-200); font-size: 12px; color: var(--gray-600); }
+
+  .cta-section { background: var(--black); color: var(--white); padding: 80px 0; text-align: center; }
+  .cta-section .label { color: var(--gray-500); }
+  .cta-section .section-title { color: var(--white); }
+  .cta-section .sub { color: var(--gray-400); font-size: 16px; line-height: 1.7; margin-bottom: 32px; }
+  .cta-section .btn-primary { background: var(--white); color: var(--black); }
+  .cta-section .btn-primary:hover { background: var(--gray-200); }
+  .cta-section .btn-secondary { border-color: var(--gray-700); color: var(--white); }
+
+  footer { padding: 40px 0 24px; border-top: 1px solid var(--gray-100); }
+  .footer-inner { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray-400); }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .rd1 { transition-delay: 0.08s; } .rd2 { transition-delay: 0.16s; } .rd3 { transition-delay: 0.24s; } .rd4 { transition-delay: 0.32s; }
+
+  @media (max-width: 900px) { .product-hero-inner, .edition-card { grid-template-columns: 1fr; } .cap-grid { grid-template-columns: 1fr; } .ow-pillars { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .ow-pillars { grid-template-columns: 1fr; } .edition-card { padding: 24px; } .pipeline-step { min-width: 100px; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg class="nav-logo-mark" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="6" fill="none"/>
+        <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#000000"/>
+        <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#000000"/>
+        <polygon points="8,12 11,12 10,16 7,16" fill="#000000"/>
+        <polygon points="17,12 20,12 21,16 18,16" fill="#000000"/>
+        <polygon points="11,4 17,4 14,8" fill="#FFFFFF"/>
+        <rect x="7.5" y="10" width="13" height="0.8" fill="#FFFFFF"/>
+      </svg>
+      Miraphant
+    </a>
+    <div class="nav-right">
+      <a href="index.html" class="nav-back" data-i18n="nav.back">← Back</a>
+      <div style="display:flex;gap:4px;padding-left:12px;border-left:1px solid var(--gray-200)">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="zh">中</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<section class="product-hero">
+  <div class="container product-hero-inner">
+    <div>
+      <div class="reveal"><div class="product-badge" data-i18n="hero.badge">Miraphant Product</div></div>
+      <div class="reveal rd1">
+        <h1>OliveWolf</h1>
+        <p class="sub" style="font-size:18px;font-weight:600;color:var(--gray-700)" data-i18n="hero.tagline">Open-source 3D digital human engine</p>
+        <p class="sub" data-i18n="hero.sub">A real-time, audio-driven digital human framework built on dual render backends. Open-source core with enterprise-grade deployment. From a single portrait to a speaking, listening, thinking avatar.</p>
+      </div>
+      <div class="reveal rd2" style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="https://github.com/NSIETeam/OliveWolf" class="btn-primary" data-i18n="hero.gh">View on GitHub →</a>
+        <a href="#editions" class="btn-secondary" data-i18n="hero.editions">Editions →</a>
+      </div>
+    </div>
+    <div class="reveal rd3" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center">
+      <svg width="120" height="160" viewBox="0 0 120 160" fill="none">
+        <circle cx="60" cy="52" r="28" stroke="#999" stroke-width="1.5" fill="none"/>
+        <path d="M 38 48 Q 60 40 82 48" stroke="#CCC" stroke-width="1" fill="none"/>
+        <circle cx="50" cy="52" r="2.5" fill="#666"/>
+        <circle cx="70" cy="52" r="2.5" fill="#666"/>
+        <path d="M 52 64 Q 60 68 68 64" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M 32 100 Q 60 88 88 100 L 92 150 L 28 150 Z" stroke="#999" stroke-width="1.5" fill="#F0F0F0"/>
+        <path d="M 100 70 Q 110 75 105 85" stroke="#CCC" stroke-width="1" fill="none" stroke-dasharray="2,2"/>
+        <path d="M 20 70 Q 10 75 15 85" stroke="#CCC" stroke-width="1" fill="none" stroke-dasharray="2,2"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="pillars.label">OliveWolf's DNA</div>
+      <h2 class="section-title" data-i18n="pillars.title">Four principles that define OliveWolf</h2>
+    </div>
+    <div class="ow-pillars" style="margin-top:40px">
+      <div class="ow-pillar reveal rd1">
+        <div class="keyword" style="color:var(--black)">REAL-TIME</div>
+        <p data-i18n="pillars.p1">Audio drives lip movement frame-by-frame. Low-latency streaming pipeline turns speech into a talking avatar in under two seconds — ask a question, get a face that answers.</p>
+      </div>
+      <div class="ow-pillar reveal rd2">
+        <div class="keyword" style="color:var(--gray-500)">DUAL-ENGINE</div>
+        <p data-i18n="pillars.p2">Two render backends under one interface: a 2D portrait engine for real-time conversation, and a full-body 3D engine for cinematic, offline-quality output. Switch without touching business logic.</p>
+      </div>
+      <div class="ow-pillar reveal rd3">
+        <div class="keyword" style="color:var(--black)">OPEN-CORE</div>
+        <p data-i18n="pillars.p3">The full engine is open-source. Build on LHM and LivePortrait with a clean abstraction layer. No black boxes — every render step is inspectable and replaceable.</p>
+      </div>
+      <div class="ow-pillar reveal rd4">
+        <div class="keyword" style="color:var(--gray-500)">ENTERPRISE</div>
+        <p data-i18n="pillars.p4">Self-hosted, LAN-deployable, brand-consistent. Custom avatars in your uniform, domain-specific knowledge bases, and full control over data. Yours to own, not rent.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:680px">
+      <div class="label" data-i18n="pipeline.label">Real-Time Pipeline</div>
+      <h2 class="section-title" data-i18n="pipeline.title">From voice to a speaking face — in one stream</h2>
+      <p class="section-sub" data-i18n="pipeline.sub">A streaming pipeline chains speech recognition, reasoning, synthesis, and rendering. Each stage runs as soon as its input arrives, so the avatar starts speaking before the full answer is generated.</p>
+    </div>
+    <div class="pipeline reveal rd1">
+      <div class="pipeline-flow">
+        <div class="pipeline-step"><div class="num">01</div><div class="name" data-i18n="pipeline.s1">Listen</div><div class="tech">ASR · Whisper</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><div class="num">02</div><div class="name" data-i18n="pipeline.s2">Think</div><div class="tech">LLM · GPT-4o</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><div class="num">03</div><div class="name" data-i18n="pipeline.s3">Speak</div><div class="tech">TTS · Streaming</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><div class="num">04</div><div class="name" data-i18n="pipeline.s4">Animate</div><div class="tech">Audio → Lip</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><div class="num">05</div><div class="name" data-i18n="pipeline.s5">Render</div><div class="tech">Portrait / 3D</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:680px">
+      <div class="label" data-i18n="cap.label">Capabilities</div>
+      <h2 class="section-title" data-i18n="cap.title">Engineered for both speed and quality</h2>
+    </div>
+    <div class="cap-grid">
+      <div class="cap-card reveal rd1"><h3 data-i18n="cap.c1.t">Audio-driven lipsync</h3><p data-i18n="cap.c1.d">TTS audio is split into frames and mapped to lip-open ratios, fed directly into the portrait renderer. No driving video needed — the voice animates the mouth.</p></div>
+      <div class="cap-card reveal rd2"><h3 data-i18n="cap.c2.t">Avatar caching</h3><p data-i18n="cap.c2.d">A portrait is preprocessed once — face detection, 3D feature extraction, keypoints — then reused across unlimited conversations. Instant replies, no repeated compute.</p></div>
+      <div class="cap-card reveal rd3"><h3 data-i18n="cap.c3.t">Full-body 3D</h3><p data-i18n="cap.c3.d">For cinematic output, the 3D engine reconstructs an animatable human from a single image and drives it with motion data. Build the avatar once, reuse every motion.</p></div>
+      <div class="cap-card reveal rd1"><h3 data-i18n="cap.c4.t">Scene presets</h3><p data-i18n="cap.c4.d">Four ready-made personas — explainer, consultant, streamer, guide — each with its own system prompt, render backend, and motion profile. Switch scenes in config.</p></div>
+      <div class="cap-card reveal rd2"><h3 data-i18n="cap.c5.t">Knowledge-ready</h3><p data-i18n="cap.c5.d">Plug in a domain knowledge base to ground the LLM. Real estate, finance, healthcare — the avatar answers with your facts, not hallucinations.</p></div>
+      <div class="cap-card reveal rd3"><h3 data-i18n="cap.c6.t">Unified backend API</h3><p data-i18n="cap.c6.d">One renderer interface, two engines. Business code never knows whether a 2D portrait or a 3D avatar is behind the screen. Add backends without rewriting logic.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="editions" class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="editions.label">Editions</div>
+      <h2 class="section-title" data-i18n="editions.title">One engine, two editions</h2>
+    </div>
+    <div class="edition-card reveal rd1" style="margin-top:40px">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.core.badge">Open Source</div>
+        <h3 data-i18n="editions.core.title">OliveWolf Core</h3>
+        <div class="desc" data-i18n="editions.core.desc">The full open-source engine. Dual render backends, real-time conversation pipeline, scene presets, and a clean abstraction layer. MIT-licensed — build, modify, and deploy on your own infrastructure.</div>
+        <ul>
+          <li data-i18n="editions.core.l1">Real-time audio-driven portrait animation</li>
+          <li data-i18n="editions.core.l2">Full-body 3D offline rendering</li>
+          <li data-i18n="editions.core.l3">ASR + LLM + TTS streaming pipeline</li>
+          <li data-i18n="editions.core.l4">Four scene presets out of the box</li>
+          <li data-i18n="editions.core.l5">Bring-your-own API keys</li>
+        </ul>
+        <div>
+          <a href="https://github.com/NSIETeam/OliveWolf" class="btn-primary" data-i18n="editions.core.gh">View on GitHub →</a>
+          <div class="download-info" data-i18n="editions.core.info">MIT License · Python · Self-hosted</div>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <code style="font-size:11px;color:var(--gray-400);text-align:left;padding:20px;line-height:1.8">$ git clone OliveWolf<br>$ python app_realtime.py<br>↗ http://localhost:7860</code>
+      </div>
+    </div>
+    <div class="edition-card highlight reveal rd2">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.ent.badge">Enterprise</div>
+        <h3 data-i18n="editions.ent.title">OliveWolf Enterprise</h3>
+        <div class="desc" data-i18n="editions.ent.desc">Managed deployment with custom avatars, domain knowledge bases, brand integration, and on-premise infrastructure. Designed for organizations that need a digital workforce at scale — with zero data leaving your network.</div>
+        <ul>
+          <li data-i18n="editions.ent.l1">Custom avatar creation in your brand uniform</li>
+          <li data-i18n="editions.ent.l2">Domain knowledge base integration & tuning</li>
+          <li data-i18n="editions.ent.l3">On-premise or LAN deployment</li>
+          <li data-i18n="editions.ent.l4">Live streaming & multi-avatar management</li>
+          <li data-i18n="editions.ent.l5">Monitoring, logging, and usage analytics</li>
+        </ul>
+        <div>
+          <a href="mailto:hello@miraphant.com?subject=OliveWolf%20Enterprise" class="btn-primary" data-i18n="editions.ent.cta">Contact for Enterprise →</a>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <svg width="72" height="72" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="11" r="5" stroke="#999" stroke-width="1.5" fill="none"/>
+          <path d="M 6 28 Q 16 20 26 28" stroke="#999" stroke-width="1.5" fill="none"/>
+          <circle cx="16" cy="11" r="1.5" fill="#666"/>
+          <path d="M 14 14 Q 16 15.5 18 14" stroke="#666" stroke-width="1" fill="none" stroke-linecap="round"/>
+          <rect x="3" y="3" width="26" height="26" rx="4" stroke="#CCC" stroke-width="0.8" fill="none" stroke-dasharray="2,2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="tech.label">Tech Stack</div>
+      <h2 class="section-title" data-i18n="tech.title">Built on proven open-source foundations</h2>
+    </div>
+    <div class="reveal rd1" style="margin-top:32px">
+      <div class="tech-list">
+        <span class="tech-tag">LHM</span>
+        <span class="tech-tag">LivePortrait</span>
+        <span class="tech-tag">PyTorch</span>
+        <span class="tech-tag">SMPL-X</span>
+        <span class="tech-tag">3D Gaussian Splatting</span>
+        <span class="tech-tag">GPT-4o</span>
+        <span class="tech-tag">Whisper</span>
+        <span class="tech-tag">ElevenLabs</span>
+        <span class="tech-tag">FFmpeg</span>
+        <span class="tech-tag">Gradio</span>
+        <span class="tech-tag">CUDA</span>
+        <span class="tech-tag">librosa</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="cta-section">
+  <div class="container">
+    <div class="reveal">
+      <div class="label" data-i18n="cta.label">Get Started</div>
+      <h2 class="section-title" data-i18n="cta.title">Give your product a face</h2>
+      <p class="sub" data-i18n="cta.sub">Clone the open-source engine, or bring OliveWolf Enterprise to your organization with custom avatars and on-premise deployment.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="https://github.com/NSIETeam/OliveWolf" class="btn-primary" data-i18n="cta.gh">View on GitHub →</a>
+        <a href="mailto:hello@miraphant.com?subject=OliveWolf" class="btn-secondary" data-i18n="cta.enterprise" style="border-color:var(--gray-700);color:var(--white)">Enterprise Inquiries</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container footer-inner">
+    <span>© 2026 Miraphant, Inc.</span>
+    <span data-i18n="footer.product">OliveWolf — A Miraphant Product</span>
+  </div>
+</footer>
+
+<script>
+const i18n = {
+  en: {
+    'nav.back': '← Back',
+    'hero.badge': 'Miraphant Product',
+    'hero.tagline': 'Open-source 3D digital human engine',
+    'hero.sub': 'A real-time, audio-driven digital human framework built on dual render backends. Open-source core with enterprise-grade deployment. From a single portrait to a speaking, listening, thinking avatar.',
+    'hero.gh': 'View on GitHub →',
+    'hero.editions': 'Editions →',
+    'pillars.label': "OliveWolf's DNA",
+    'pillars.title': 'Four principles that define OliveWolf',
+    'pillars.p1': 'Audio drives lip movement frame-by-frame. Low-latency streaming pipeline turns speech into a talking avatar in under two seconds — ask a question, get a face that answers.',
+    'pillars.p2': 'Two render backends under one interface: a 2D portrait engine for real-time conversation, and a full-body 3D engine for cinematic, offline-quality output. Switch without touching business logic.',
+    'pillars.p3': 'The full engine is open-source. Build on LHM and LivePortrait with a clean abstraction layer. No black boxes — every render step is inspectable and replaceable.',
+    'pillars.p4': 'Self-hosted, LAN-deployable, brand-consistent. Custom avatars in your uniform, domain-specific knowledge bases, and full control over data. Yours to own, not rent.',
+    'pipeline.label': 'Real-Time Pipeline',
+    'pipeline.title': 'From voice to a speaking face — in one stream',
+    'pipeline.sub': 'A streaming pipeline chains speech recognition, reasoning, synthesis, and rendering. Each stage runs as soon as its input arrives, so the avatar starts speaking before the full answer is generated.',
+    'pipeline.s1': 'Listen', 'pipeline.s2': 'Think', 'pipeline.s3': 'Speak', 'pipeline.s4': 'Animate', 'pipeline.s5': 'Render',
+    'cap.label': 'Capabilities',
+    'cap.title': 'Engineered for both speed and quality',
+    'cap.c1.t': 'Audio-driven lipsync',
+    'cap.c1.d': 'TTS audio is split into frames and mapped to lip-open ratios, fed directly into the portrait renderer. No driving video needed — the voice animates the mouth.',
+    'cap.c2.t': 'Avatar caching',
+    'cap.c2.d': 'A portrait is preprocessed once — face detection, 3D feature extraction, keypoints — then reused across unlimited conversations. Instant replies, no repeated compute.',
+    'cap.c3.t': 'Full-body 3D',
+    'cap.c3.d': 'For cinematic output, the 3D engine reconstructs an animatable human from a single image and drives it with motion data. Build the avatar once, reuse every motion.',
+    'cap.c4.t': 'Scene presets',
+    'cap.c4.d': 'Four ready-made personas — explainer, consultant, streamer, guide — each with its own system prompt, render backend, and motion profile. Switch scenes in config.',
+    'cap.c5.t': 'Knowledge-ready',
+    'cap.c5.d': 'Plug in a domain knowledge base to ground the LLM. Real estate, finance, healthcare — the avatar answers with your facts, not hallucinations.',
+    'cap.c6.t': 'Unified backend API',
+    'cap.c6.d': 'One renderer interface, two engines. Business code never knows whether a 2D portrait or a 3D avatar is behind the screen. Add backends without rewriting logic.',
+    'editions.label': 'Editions',
+    'editions.title': 'One engine, two editions',
+    'editions.core.badge': 'Open Source',
+    'editions.core.title': 'OliveWolf Core',
+    'editions.core.desc': 'The full open-source engine. Dual render backends, real-time conversation pipeline, scene presets, and a clean abstraction layer. MIT-licensed — build, modify, and deploy on your own infrastructure.',
+    'editions.core.l1': 'Real-time audio-driven portrait animation',
+    'editions.core.l2': 'Full-body 3D offline rendering',
+    'editions.core.l3': 'ASR + LLM + TTS streaming pipeline',
+    'editions.core.l4': 'Four scene presets out of the box',
+    'editions.core.l5': 'Bring-your-own API keys',
+    'editions.core.gh': 'View on GitHub →',
+    'editions.core.info': 'MIT License · Python · Self-hosted',
+    'editions.ent.badge': 'Enterprise',
+    'editions.ent.title': 'OliveWolf Enterprise',
+    'editions.ent.desc': 'Managed deployment with custom avatars, domain knowledge bases, brand integration, and on-premise infrastructure. Designed for organizations that need a digital workforce at scale — with zero data leaving your network.',
+    'editions.ent.l1': 'Custom avatar creation in your brand uniform',
+    'editions.ent.l2': 'Domain knowledge base integration & tuning',
+    'editions.ent.l3': 'On-premise or LAN deployment',
+    'editions.ent.l4': 'Live streaming & multi-avatar management',
+    'editions.ent.l5': 'Monitoring, logging, and usage analytics',
+    'editions.ent.cta': 'Contact for Enterprise →',
+    'tech.label': 'Tech Stack',
+    'tech.title': 'Built on proven open-source foundations',
+    'cta.label': 'Get Started',
+    'cta.title': 'Give your product a face',
+    'cta.sub': 'Clone the open-source engine, or bring OliveWolf Enterprise to your organization with custom avatars and on-premise deployment.',
+    'cta.gh': 'View on GitHub →',
+    'cta.enterprise': 'Enterprise Inquiries',
+    'footer.product': 'OliveWolf — A Miraphant Product',
+  },
+  zh: {
+    'nav.back': '← 返回',
+    'hero.badge': 'Miraphant 产品',
+    'hero.tagline': '开源 3D 数字人引擎',
+    'hero.sub': '基于双渲染后端的实时音频驱动数字人框架。开源核心，企业级部署。从一张照片，到会听、会想、会说话的数字人。',
+    'hero.gh': '在 GitHub 查看 →',
+    'hero.editions': '版本 →',
+    'pillars.label': 'OliveWolf 的基因',
+    'pillars.title': '定义 OliveWolf 的四项原则',
+    'pillars.p1': '音频逐帧驱动口型。低延迟流式管线让语音在两秒内变成会说话的数字人——你提问，一张正在回答的脸就出现。',
+    'pillars.p2': '一套接口，两个渲染后端：用于实时对话的 2D 人像引擎，和用于电影级离线画质的全身 3D 引擎。无需改动业务逻辑即可切换。',
+    'pillars.p3': '引擎完全开源。基于 LHM 与 LivePortrait 构建，配以清晰的抽象层。没有黑箱——每一个渲染步骤都可检视、可替换。',
+    'pillars.p4': '可自托管、可局域部署、可品牌定制。穿你工装的自定义形象、领域专属知识库、对数据的完全掌控。是拥有，不是租用。',
+    'pipeline.label': '实时管线',
+    'pipeline.title': '从语音到说话的脸——一条流',
+    'pipeline.sub': '流式管线串联语音识别、推理、合成与渲染。每个阶段在输入到达时即刻启动，数字人在完整答案生成前就开始说话。',
+    'pipeline.s1': '聆听', 'pipeline.s2': '思考', 'pipeline.s3': '发声', 'pipeline.s4': '驱动', 'pipeline.s5': '渲染',
+    'cap.label': '能力',
+    'cap.title': '兼顾速度与画质',
+    'cap.c1.t': '音频驱动口型',
+    'cap.c1.d': 'TTS 音频被分帧并映射为唇部开合度，直接喂入人像渲染器。无需驱动视频——声音即可驱动嘴部。',
+    'cap.c2.t': '形象缓存',
+    'cap.c2.d': '人像只预处理一次——人脸检测、3D 特征提取、关键点——随后在无数次对话中复用。即时回复，零重复计算。',
+    'cap.c3.t': '全身 3D',
+    'cap.c3.d': '面向电影级输出，3D 引擎从单张照片重建可动数字人，并用动作数据驱动。建一次形象，复用所有动作。',
+    'cap.c4.t': '场景预设',
+    'cap.c4.d': '四种现成人设——讲解员、顾问、主播、向导——各有专属系统提示词、渲染后端与动作配置。在配置中切换场景。',
+    'cap.c5.t': '知识库就绪',
+    'cap.c5.d': '接入领域知识库为 LLM 提供事实依据。房产、金融、医疗——数字人用你的事实回答，而非凭空编造。',
+    'cap.c6.t': '统一后端接口',
+    'cap.c6.d': '一个渲染接口，两个引擎。业务代码无需知道屏幕背后是 2D 人像还是 3D 数字人。新增后端，无需重写逻辑。',
+    'editions.label': '版本',
+    'editions.title': '一个引擎，两个版本',
+    'editions.core.badge': '开源',
+    'editions.core.title': 'OliveWolf Core',
+    'editions.core.desc': '完整的开源引擎。双渲染后端、实时对话管线、场景预设与清晰抽象层。MIT 协议——在你自己的基础设施上构建、修改、部署。',
+    'editions.core.l1': '实时音频驱动人像动画',
+    'editions.core.l2': '全身 3D 离线渲染',
+    'editions.core.l3': 'ASR + LLM + TTS 流式管线',
+    'editions.core.l4': '四种场景预设开箱即用',
+    'editions.core.l5': '自带 API 密钥',
+    'editions.core.gh': '在 GitHub 查看 →',
+    'editions.core.info': 'MIT 协议 · Python · 自托管',
+    'editions.ent.badge': '企业版',
+    'editions.ent.title': 'OliveWolf Enterprise',
+    'editions.ent.desc': '托管式部署，含自定义数字人、领域知识库、品牌集成与本地基础设施。为需要规模化数字员工队伍的组织设计——数据零出网。',
+    'editions.ent.l1': '穿你工装的自定义形象创建',
+    'editions.ent.l2': '领域知识库集成与调优',
+    'editions.ent.l3': '本地或局域部署',
+    'editions.ent.l4': '直播推流与多形象管理',
+    'editions.ent.l5': '监控、日志与用量分析',
+    'editions.ent.cta': '企业咨询 →',
+    'tech.label': '技术栈',
+    'tech.title': '基于成熟的开源基座构建',
+    'cta.label': '开始使用',
+    'cta.title': '给你的产品一张脸',
+    'cta.sub': '克隆开源引擎，或把 OliveWolf 企业版带到你的组织——自定义形象，本地部署。',
+    'cta.gh': '在 GitHub 查看 →',
+    'cta.enterprise': '企业咨询',
+    'footer.product': 'OliveWolf — Miraphant 产品',
+  }
+};
+
+let currentLang = 'en';
+function setLang(lang) {
+  currentLang = lang;
+  const s = i18n[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (s[el.getAttribute('data-i18n')]) el.textContent = s[el.getAttribute('data-i18n')];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+  });
+  document.documentElement.lang = lang;
+  localStorage.setItem('olivewolf-lang', lang);
+}
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
+});
+const saved = localStorage.getItem('olivewolf-lang');
+if (saved && i18n[saved]) setLang(saved);
+
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>
