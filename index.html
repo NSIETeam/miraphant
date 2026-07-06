@@ -97,7 +97,7 @@
     text-decoration: none; color: var(--white);
     font-weight: 700; font-size: 18px; letter-spacing: -0.3px;
   }
-  .nav-logo-mark { width: 28px; height: 28px; transition: transform 0.3s var(--ease-out); }
+  .nav-logo-mark { width: 36px; height: 28px; transition: transform 0.3s var(--ease-out); }
   .nav-logo:hover .nav-logo-mark { transform: scale(1.08); }
   .nav-right { display: flex; align-items: center; gap: 24px; }
   .nav-links { display: flex; gap: 28px; list-style: none; }
@@ -125,8 +125,8 @@
 
   /* Hero */
   #hero {
-    min-height: 100vh; display: flex; align-items: center;
-    padding: 80px 0 60px; position: relative;
+    min-height: auto; padding-top: 120px; display: flex; align-items: center;
+    padding: 56px 0 60px; position: relative;
   }
   .hero-content { max-width: 900px; margin: 0 auto; text-align: center; }
   .hero-badge {
@@ -170,7 +170,7 @@
     text-decoration: none; transition: all 0.25s var(--ease-out);
   }
   .btn-secondary:hover { border-color: var(--black); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .hero-logo-wrap { margin-top: 48px; }
+  .hero-logo-wrap { margin-top: 24px; }
   .hero-logo-display {
     width: 80px; height: 80px; opacity: 0;
     animation: logoFadeIn 1s var(--ease-out) 0.5s forwards;
@@ -178,7 +178,7 @@
   @keyframes logoFadeIn { to { opacity: 1; } }
 
   /* Sections */
-  .section { padding: 100px 0; }
+  .section { padding: 64px 0; }
   .section.border-b { border-bottom: 1px solid var(--gray-100); }
   .section .label {
     font-size: 11px; font-weight: 700;
@@ -331,7 +331,7 @@
 <nav id="nav">
   <div class="container nav-inner">
     <a href="#" class="nav-logo">
-      <img src="logo.png" alt="Miraphant" class="nav-logo-mark" style="width:28px;height:28px">
+      <img src="logo.png" alt="Miraphant" class="nav-logo-mark" style="width:36px;height:36px">
       Miraphant
     </a>
     <div class="nav-right">
@@ -396,7 +396,7 @@
         We make your ideas real<br>and your organization AI-native
       </h2>
     </div>
-    <div class="about-grid" style="margin-top:40px">
+    <div class="about-grid" style="margin-top:24px">
       <div class="reveal rd1">
         <div class="about-text" data-i18n="about.p1">
           Miraphant is an application-layer AI company. We don't train models — we ship products.
@@ -435,7 +435,7 @@
       <h2 class="section-title" data-i18n="products.title">AI that ships</h2>
       <p class="section-sub" data-i18n="products.sub">From desktop to platform — products that bring intelligence to real workflows.</p>
     </div>
-    <div class="products-grid" style="margin-top:40px">
+    <div class="products-grid" style="margin-top:24px">
       <a href="otto.html" class="product-card reveal rd1">
         <h3>Otto</h3>
         <p data-i18n="products.otto.desc">Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.</p>
@@ -483,7 +483,7 @@
       <h2 class="section-title" data-i18n="club.title">让效率可以留存<br><span style="font-weight:300">AI原生组织实战营</span></h2>
       <p class="section-sub" data-i18n="club.sub">不是来听课的，是来完成一个真实任务的。从认知到动手的一天，让AI长成你的组织。</p>
     </div>
-    <div class="club-grid" style="margin-top:40px">
+    <div class="club-grid" style="margin-top:24px">
       <div class="club-card reveal rd1">
         <h3 data-i18n="club.c1.title">AI认知扫盲</h3>
         <p data-i18n="club.c1.desc">AI不是聊天，是自主完成任务。Agent=手脚、Skill=经验、你=指挥官。AI已在专业考试中超越人类，90%律师考、95%数学奥赛、87%博士级推理。</p>
