@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 — Miraphant</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #FFFFFF; color: #000000;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; text-align: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 500px; padding: 0 24px; }
+  .code {
+    font-size: 120px; font-weight: 900;
+    letter-spacing: -0.05em; line-height: 1;
+    margin-bottom: 16px; color: #000000;
+  }
+  .message {
+    font-size: 18px; color: #666; line-height: 1.6;
+    margin-bottom: 32px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; border-radius: 100px;
+    background: #000; color: #FFF;
+    font-weight: 600; font-size: 14px;
+    text-decoration: none; transition: all 0.2s;
+  }
+  .btn:hover { background: #222; transform: translateY(-2px); }
+  .logo-mark { width: 28px; height: 28px; margin-bottom: 32px; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <svg class="logo-mark" viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="none"/>
+      <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#000000"/>
+      <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#000000"/>
+      <polygon points="8,12 11,12 10,16 7,16" fill="#000000"/>
+      <polygon points="17,12 20,12 21,16 18,16" fill="#000000"/>
+      <polygon points="11,4 17,4 14,8" fill="#FFFFFF"/>
+      <rect x="7.5" y="10" width="13" height="0.8" fill="#FFFFFF"/>
+    </svg>
+    <div class="code">404</div>
+    <p class="message">This page doesn't exist. But the intelligence does.</p>
+    <a href="index.html" class="btn">← Back to Miraphant</a>
+  </div>
+</body>
+</html>

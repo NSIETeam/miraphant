@@ -4,49 +4,115 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Miraphant — Application Layer Superintelligence. AI-powered products & enterprise AI-native transformation.">
-<title>Miraphant — Application Layer Superintelligence</title>
+<meta name="keywords" content="Miraphant, AI, Application Layer, Otto, Circle, AI Native, enterprise AI, digital colleague">
+<meta name="author" content="Miraphant, Inc.">
+<meta name="theme-color" content="#000000">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Miraphant — Application Layer Superintelligence">
+<meta property="og:description" content="We turn ideas into working products — fast. AI-powered products & enterprise AI-native transformation.">
+<meta property="og:image" content="https://nsieteam.github.io/miraphant/logo.svg">
+<meta property="og:url" content="https://nsieteam.github.io/miraphant/">
+<meta property="og:site_name" content="Miraphant">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Miraphant — Application Layer Superintelligence">
+<meta name="twitter:description" content="We turn ideas into working products — fast.">
+<meta name="twitter:image" content="https://nsieteam.github.io/miraphant/logo.svg">
+
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="canonical" href="https://nsieteam.github.io/miraphant/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Structured Data for SEO -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Miraphant",
+  "description": "Application Layer Superintelligence. AI-powered products and enterprise AI-native transformation.",
+  "url": "https://nsieteam.github.io/miraphant/",
+  "logo": "https://nsieteam.github.io/miraphant/logo.svg",
+  "email": "NSIETeam@outlook.com",
+  "foundingDate": "2026"
+}
+</script>
+
+<title>Miraphant — Application Layer Superintelligence</title>
 <style>
   :root {
     --white: #FFFFFF; --black: #000000;
     --gray-50: #F9F9F9; --gray-100: #F0F0F0; --gray-200: #E5E5E5;
     --gray-300: #CCCCCC; --gray-400: #999999; --gray-500: #666666;
     --gray-600: #444444; --gray-700: #333333; --gray-800: #222222;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: var(--white); color: var(--black);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
   .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
+  /* Scroll progress bar */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: var(--black); width: 0; z-index: 200;
+    transition: width 0.1s linear;
+  }
+
+  /* Page fade-in */
+  body { animation: fadeIn 0.4s var(--ease-out); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Nav */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--gray-200);
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s, background 0.3s;
   }
+  nav.scrolled { border-bottom-color: var(--gray-200); background: rgba(255,255,255,0.92); }
   .nav-inner {
     display: flex; align-items: center; justify-content: space-between;
-    height: 60px;
+    height: 64px; transition: height 0.3s;
   }
+  nav.scrolled .nav-inner { height: 56px; }
   .nav-logo {
     display: flex; align-items: center; gap: 10px;
     text-decoration: none; color: var(--black);
-    font-weight: 700; font-size: 18px;
+    font-weight: 700; font-size: 18px; letter-spacing: -0.3px;
   }
-  .nav-logo-mark { width: 28px; height: 28px; }
+  .nav-logo-mark { width: 28px; height: 28px; transition: transform 0.3s var(--ease-out); }
+  .nav-logo:hover .nav-logo-mark { transform: scale(1.08); }
   .nav-right { display: flex; align-items: center; gap: 24px; }
-  .nav-links { display: flex; gap: 24px; list-style: none; }
+  .nav-links { display: flex; gap: 28px; list-style: none; }
   .nav-links a {
     text-decoration: none; color: var(--gray-500);
     font-size: 13px; font-weight: 500; transition: color 0.2s;
+    position: relative; letter-spacing: 0.2px;
   }
-  .nav-links a:hover { color: var(--black); }
+  .nav-links a:hover, .nav-links a.active { color: var(--black); }
+  .nav-links a::after {
+    content: ''; position: absolute; bottom: -4px; left: 0;
+    width: 0; height: 1.5px; background: var(--black);
+    transition: width 0.25s var(--ease-out);
+  }
+  .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
   .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; color: var(--black); }
   .lang-btn {
     background: none; border: none; cursor: pointer;
@@ -57,23 +123,28 @@
   .lang-btn:hover { color: var(--gray-700); background: var(--gray-100); }
   .lang-btn.active { color: var(--black); background: var(--gray-100); }
 
+  /* Hero */
   #hero {
     min-height: 100vh; display: flex; align-items: center;
-    padding: 80px 0 60px;
+    padding: 80px 0 60px; position: relative;
   }
   .hero-content { max-width: 900px; margin: 0 auto; text-align: center; }
   .hero-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 14px; border-radius: 100px;
-    border: 1px solid var(--gray-200);
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 100px;
+    border: 1px solid var(--gray-200); background: var(--white);
     font-size: 12px; font-weight: 500; color: var(--gray-500);
-    margin-bottom: 32px;
+    margin-bottom: 32px; box-shadow: var(--shadow-sm);
   }
-  .hero-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--black); }
+  .hero-badge-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--black);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   .hero-title {
     font-size: clamp(36px, 6.5vw, 72px);
     font-weight: 900; line-height: 1.05;
-    letter-spacing: -0.03em; margin-bottom: 16px;
+    letter-spacing: -0.035em; margin-bottom: 20px;
   }
   .hero-title .light { font-weight: 300; }
   .hero-sub {
@@ -84,131 +155,103 @@
   .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .btn-primary {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 14px 28px; border-radius: 100px;
+    padding: 13px 28px; border-radius: 100px;
     background: var(--black); color: var(--white);
-    font-weight: 600; font-size: 14px;
-    text-decoration: none; transition: all 0.2s;
+    font-weight: 600; font-size: 14px; letter-spacing: 0.2px;
+    text-decoration: none; transition: all 0.25s var(--ease-out);
+    box-shadow: var(--shadow-sm);
   }
-  .btn-primary:hover { background: var(--gray-800); transform: translateY(-1px); }
+  .btn-primary:hover { background: var(--gray-800); transform: translateY(-2px); box-shadow: var(--shadow-md); }
   .btn-secondary {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 14px 28px; border-radius: 100px;
+    padding: 13px 28px; border-radius: 100px;
     border: 1px solid var(--gray-200); color: var(--black);
-    font-weight: 500; font-size: 14px;
-    text-decoration: none; transition: all 0.2s;
+    font-weight: 500; font-size: 14px; letter-spacing: 0.2px;
+    text-decoration: none; transition: all 0.25s var(--ease-out);
   }
-  .btn-secondary:hover { border-color: var(--black); transform: translateY(-1px); }
+  .btn-secondary:hover { border-color: var(--black); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .hero-logo-wrap { margin-top: 48px; }
-  .hero-logo-display { width: 96px; height: 96px; }
+  .hero-logo-display {
+    width: 80px; height: 80px; opacity: 0;
+    animation: logoFadeIn 1s var(--ease-out) 0.5s forwards;
+  }
+  @keyframes logoFadeIn { to { opacity: 1; } }
 
-  .section { padding: 96px 0; }
+  /* Sections */
+  .section { padding: 100px 0; }
   .section.border-b { border-bottom: 1px solid var(--gray-100); }
   .section .label {
-    font-size: 11px; font-weight: 600;
+    font-size: 11px; font-weight: 700;
     letter-spacing: 3px; text-transform: uppercase;
-    color: var(--gray-400); margin-bottom: 12px;
+    color: var(--gray-400); margin-bottom: 14px;
   }
   .section-title {
     font-size: clamp(28px, 3.5vw, 42px);
-    font-weight: 800; letter-spacing: -0.025em;
+    font-weight: 800; letter-spacing: -0.03em;
     line-height: 1.1; margin-bottom: 16px;
   }
   .section-sub {
     font-size: 16px; color: var(--gray-500); line-height: 1.7;
   }
 
+  /* About */
   .about-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
   }
   .about-text {
     font-size: 17px; line-height: 1.8; color: var(--gray-700);
   }
 
+  /* Products */
   .products-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
   }
   .product-card {
-    padding: 40px 36px;
-    border-radius: 16px;
+    padding: 40px 36px; border-radius: 16px;
     border: 1px solid var(--gray-200);
     text-decoration: none; color: inherit;
-    transition: all 0.25s;
-    position: relative;
+    transition: all 0.3s var(--ease-out);
+    position: relative; overflow: hidden;
   }
-  .product-card:hover {
-    border-color: var(--black);
-    transform: translateY(-3px);
+  .product-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 0;
+    background: var(--gray-50); transition: height 0.3s var(--ease-out); z-index: 0;
   }
+  .product-card:hover::before { height: 100%; }
+  .product-card:hover { border-color: var(--black); transform: translateY(-4px); box-shadow: var(--shadow-md); }
+  .product-card > * { position: relative; z-index: 1; }
   .product-card::after {
-    content: "→";
-    position: absolute;
-    top: 40px; right: 36px;
+    content: "→"; position: absolute; top: 40px; right: 36px;
     font-size: 20px; color: var(--gray-300);
-    transition: color 0.25s, transform 0.25s;
+    transition: color 0.25s, transform 0.25s; z-index: 1;
   }
-  .product-card:hover::after { color: var(--black); transform: translateX(4px); }
-  .product-card h3 {
-    font-size: 20px; font-weight: 700; margin-bottom: 8px;
-  }
-  .product-card p {
-    font-size: 14px; color: var(--gray-500); line-height: 1.7;
-  }
-  .product-tags {
-    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px;
-  }
+  .product-card:hover::after { color: var(--black); transform: translateX(6px); }
+  .product-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .product-card p { font-size: 14px; color: var(--gray-500); line-height: 1.7; }
+  .product-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
   .product-tags span {
     padding: 3px 10px; border-radius: 4px;
-    background: var(--gray-50); border: 1px solid var(--gray-200);
+    background: var(--white); border: 1px solid var(--gray-200);
     font-size: 11px; color: var(--gray-500);
   }
 
+  /* Club */
   .club-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--gray-200);
-    border: 1px solid var(--gray-200);
-    border-radius: 16px; overflow: hidden;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--gray-200);
+    border: 1px solid var(--gray-200); border-radius: 16px; overflow: hidden;
   }
-  .club-card {
-    background: var(--white); padding: 32px 28px;
-  }
-  .club-card h3 {
-    font-size: 16px; font-weight: 700; margin-bottom: 8px;
-  }
-  .club-card p {
-    font-size: 13px; color: var(--gray-500); line-height: 1.7;
-  }
+  .club-card { background: var(--white); padding: 32px 28px; transition: background 0.25s; }
+  .club-card:hover { background: var(--gray-50); }
+  .club-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .club-card p { font-size: 13px; color: var(--gray-500); line-height: 1.7; }
 
-  .pillars-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--gray-200);
-    border: 1px solid var(--gray-200);
-    border-radius: 16px; overflow: hidden;
-  }
-  .pillar-card {
-    background: var(--white); padding: 36px 28px;
-  }
-  .pillar-num {
-    font-size: 11px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--gray-300); margin-bottom: 16px;
-  }
-  .pillar-card h3 {
-    font-size: 18px; font-weight: 700; margin-bottom: 8px;
-  }
-  .pillar-card p {
-    font-size: 13px; color: var(--gray-500); line-height: 1.7;
-  }
-
-  .cta-dark {
-    background: var(--black); color: var(--white); text-align: center;
+  /* CTA dark */
+  .cta-dark { background: var(--black); color: var(--white); text-align: center; position: relative; overflow: hidden; }
+  .cta-dark::before {
+    content: ''; position: absolute; top: -50%; left: -10%; width: 120%; height: 200%;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.02) 0%, transparent 60%);
+    pointer-events: none;
   }
   .cta-dark .label { color: var(--gray-500); }
   .cta-dark .section-title { color: var(--white); }
@@ -217,40 +260,53 @@
   .cta-dark .btn-primary:hover { background: var(--gray-200); }
   .cta-dark .btn-secondary { border-color: var(--gray-700); color: var(--white); }
 
+  /* Footer */
   footer { padding: 56px 0 32px; border-top: 1px solid var(--gray-100); }
-  .footer-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 60px; margin-bottom: 40px;
-  }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 60px; margin-bottom: 40px; }
   .footer-brand-text { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
   .footer-brand-desc { font-size: 13px; color: var(--gray-400); line-height: 1.7; max-width: 280px; }
   .footer-col h4 {
-    font-size: 11px; font-weight: 600;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--gray-400); margin-bottom: 16px;
+    font-size: 11px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--gray-400); margin-bottom: 16px;
   }
   .footer-col a {
     display: block; color: var(--gray-500); text-decoration: none;
-    font-size: 13px; padding: 5px 0; transition: color 0.2s;
+    font-size: 13px; padding: 5px 0; transition: color 0.2s, padding-left 0.2s;
   }
-  .footer-col a:hover { color: var(--black); }
+  .footer-col a:hover { color: var(--black); padding-left: 4px; }
   .footer-bottom {
     padding-top: 24px; border-top: 1px solid var(--gray-100);
     display: flex; justify-content: space-between;
     font-size: 12px; color: var(--gray-400);
   }
 
-  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  /* Back to top */
+  #back-to-top {
+    position: fixed; bottom: 32px; right: 32px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--black); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; font-size: 18px; z-index: 90;
+    opacity: 0; transform: translateY(10px); pointer-events: none;
+    transition: all 0.3s var(--ease-out); box-shadow: var(--shadow-md);
+  }
+  #back-to-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  #back-to-top:hover { background: var(--gray-800); transform: translateY(-3px); }
+
+  /* Reveal */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); }
   .reveal.visible { opacity: 1; transform: translateY(0); }
-  .rd1 { transition-delay: 0.08s; }
-  .rd2 { transition-delay: 0.16s; }
-  .rd3 { transition-delay: 0.24s; }
-  .rd4 { transition-delay: 0.32s; }
+  .rd1 { transition-delay: 0.08s; } .rd2 { transition-delay: 0.16s; }
+  .rd3 { transition-delay: 0.24s; } .rd4 { transition-delay: 0.32s; }
+
+  /* Page transition */
+  a[href]:not([href^="#"]):not([href^="mailto"]):not([href^="http"]) {
+    transition: opacity 0.15s;
+  }
+  a[href]:not([href^="#"]):not([href^="mailto"]):not([href^="http"]):click { opacity: 0.5; }
 
   @media (max-width: 900px) {
     .about-grid, .products-grid { grid-template-columns: 1fr; }
-    .pillars-grid { grid-template-columns: repeat(2, 1fr); }
     .club-grid { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr 1fr; }
   }
@@ -258,19 +314,21 @@
     .nav-links { display: none; }
     .nav-links.open {
       display: flex; flex-direction: column; position: absolute;
-      top: 60px; left: 0; right: 0; background: var(--white);
-      padding: 16px 24px; border-bottom: 1px solid var(--gray-200);
+      top: 64px; left: 0; right: 0; background: var(--white);
+      padding: 16px 24px; border-bottom: 1px solid var(--gray-200); gap: 16px;
     }
     .nav-toggle { display: block; }
-    .pillars-grid { grid-template-columns: 1fr 1fr; }
     .footer-grid { grid-template-columns: 1fr; }
     .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+    #back-to-top { bottom: 20px; right: 20px; }
   }
 </style>
 </head>
 <body>
 
-<nav>
+<div id="progress-bar"></div>
+
+<nav id="nav">
   <div class="container nav-inner">
     <a href="#" class="nav-logo">
       <svg class="nav-logo-mark" viewBox="0 0 28 28" fill="none">
@@ -365,7 +423,6 @@
   </div>
 </section>
 
-<!-- Call to creators & leaders -->
 <section class="section border-b" style="background:var(--gray-50)">
   <div class="container">
     <div class="reveal" style="max-width:700px;margin:0 auto;text-align:center">
@@ -443,24 +500,6 @@
         <h3 data-i18n="club.c2.title">Otto实战场</h3>
         <p data-i18n="club.c2.desc">从会说话到会做事。选场景→@Otto发任务→观察思考过程→拿结果验收。全程透明可见，不是黑箱操作。会说话，就会用。</p>
       </div>
-      <div class="club-card reveal rd3">
-        <h3 data-i18n="club.c3.title">Skill沉淀机制</h3>
-        <p data-i18n="club.c3.desc">入职5问继承团队经验，同类任务3次自动沉淀SOP，离职时经验自动合并。经验第一次真正留下来了——不再因人员流动而消失。</p>
-      </div>
-      <div class="club-card reveal rd1">
-        <h3 data-i18n="club.c4.title">ROI真实数据</h3>
-        <p data-i18n="club.c4.desc">基于6个真实验证任务：平均单任务节省4小时，投入产出比551倍，单次Token成本仅¥0.36。效率提升可量化、可复现。</p>
-      </div>
-      <div class="club-card reveal rd2">
-        <h3 data-i18n="club.c5.title">消除顾虑专场</h3>
-        <p data-i18n="club.c5.desc">不是AI取代人，是掌握AI的人取代不掌握AI的人。本地部署零云端，数据始终在企业边界内。省下的时间，是你的。</p>
-      </div>
-      <div class="club-card reveal rd3">
-        <h3 data-i18n="club.c6.title">组织落地计划</h3>
-        <p data-i18n="club.c6.desc">Day 1管理层上手→Week 1选3-5人试点→Month 1全员跑通3个场景。别家让你用AI，我们让AI长成你的组织。</p>
-      </div>
-    </div>
-  </div>
 </section>
 
 <section class="cta-dark section">
@@ -503,6 +542,8 @@
   </div>
 </footer>
 
+<button id="back-to-top" aria-label="Back to top">↑</button>
+
 <script>
 const i18n = {
   en: {
@@ -513,6 +554,7 @@ const i18n = {
     'hero.sub': 'Miraphant builds AI-powered products and transforms organizations into AI-native ones. From idea to deployment, we make intelligence real.',
     'hero.cta1': 'Explore Products →',
     'hero.cta2': 'Our Superpower',
+    'hero.c2': 'Our Superpower',
     'about.label': 'Who We Are',
     'about.title': 'We make your ideas real and your organization AI-native',
     'about.p1': 'Miraphant is an application-layer AI company. We don\'t train models — we ship products. Our platform turns concepts into working software in days, compressing timelines that other approaches measure in months.',
@@ -610,16 +652,67 @@ document.querySelectorAll('.lang-btn').forEach(b => {
 const saved = localStorage.getItem('miraphant-lang');
 if (saved && i18n[saved]) setLang(saved);
 
+// Nav scroll + active highlight
+const nav = document.getElementById('nav');
+const navLinks = document.querySelectorAll('.nav-links a');
+const sections = document.querySelectorAll('section[id]');
+
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+
+  // Progress bar
+  const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = (window.scrollY / scrollHeight) * 100;
+  document.getElementById('progress-bar').style.width = progress + '%';
+
+  // Active nav link
+  let current = '';
+  sections.forEach(section => {
+    const top = section.offsetTop - 100;
+    if (window.scrollY >= top) current = section.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    if (href === '#' + current) { a.classList.add('active'); }
+    else if (href !== '#' && !href.includes('.html')) { a.classList.remove('active'); }
+  });
+
+  // Back to top
+  const btn = document.getElementById('back-to-top');
+  if (btn) btn.classList.toggle('visible', window.scrollY > 600);
+}, { passive: true });
+
+// Nav toggle
 const toggle = document.getElementById('navToggle');
 const links = document.getElementById('navLinks');
 toggle.addEventListener('click', () => links.classList.toggle('open'));
 document.querySelectorAll('.nav-links a').forEach(a => {
   a.addEventListener('click', () => links.classList.remove('open'));
 });
+
+// Back to top
+document.getElementById('back-to-top').addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Reveal animation
 const observer = new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
 },{threshold:0.1});
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+// Page transition for internal links
+document.querySelectorAll('a[href$=".html"]').forEach(a => {
+  a.addEventListener('click', (e) => {
+    const href = a.getAttribute('href');
+    if (href && !href.startsWith('http') && !href.startsWith('mailto')) {
+      e.preventDefault();
+      document.body.style.opacity = '0';
+      document.body.style.transition = 'opacity 0.15s';
+      setTimeout(() => { window.location.href = href; }, 150);
+    }
+  });
+});
 </script>
 </body>
 </html>
