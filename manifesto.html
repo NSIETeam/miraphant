@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Miraphant Manifesto — Our positions on AI safety, scaling, and application-layer value.">
+<title>Our Manifesto — Miraphant</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #FFFFFF; --black: #000000;
+    --gray-50: #F9F9F9; --gray-100: #F0F0F0; --gray-200: #E5E5E5;
+    --gray-300: #CCCCCC; --gray-400: #999999; --gray-500: #666666;
+    --gray-600: #444444; --gray-700: #333333; --gray-800: #222222;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--white); color: var(--black);
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between; height: 60px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; color: var(--black); font-weight: 700; font-size: 16px;
+  }
+  .nav-logo-mark { width: 24px; height: 24px; }
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-back { text-decoration: none; color: var(--gray-500); font-size: 13px; font-weight: 500; transition: color 0.2s; }
+  .nav-back:hover { color: var(--black); }
+  .lang-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--gray-400);
+    padding: 4px 8px; border-radius: 4px; font-family: inherit; transition: all 0.2s;
+  }
+  .lang-btn:hover { color: var(--gray-700); background: var(--gray-100); }
+  .lang-btn.active { color: var(--black); background: var(--gray-100); }
+
+  /* Hero */
+  .manifesto-hero { padding: 140px 0 60px; border-bottom: 1px solid var(--gray-100); }
+  .manifesto-hero .label {
+    font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-400); margin-bottom: 16px;
+  }
+  .manifesto-hero h1 {
+    font-size: clamp(36px, 6vw, 56px); font-weight: 900;
+    letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px;
+  }
+  .manifesto-hero .sub {
+    font-size: 17px; color: var(--gray-500); line-height: 1.7; max-width: 600px;
+  }
+
+  /* Article body */
+  .article-body { padding: 64px 0; }
+  .article-body section { margin-bottom: 56px; }
+  .article-body h2 {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+    line-height: 1.3; margin-bottom: 16px;
+  }
+  .article-body h2 .num {
+    font-size: 13px; font-weight: 700; color: var(--gray-300);
+    display: block; margin-bottom: 4px; letter-spacing: 1px;
+  }
+  .article-body p {
+    font-size: 16px; color: var(--gray-700); line-height: 1.85; margin-bottom: 16px;
+  }
+  .article-body strong { color: var(--black); }
+  .article-body .quote {
+    border-left: 3px solid var(--black);
+    padding: 12px 0 12px 24px; margin: 24px 0;
+    font-size: 17px; color: var(--gray-600); line-height: 1.7;
+    font-weight: 500;
+  }
+  .article-body .quote .source {
+    display: block; font-size: 12px; color: var(--gray-400);
+    font-weight: 400; margin-top: 8px;
+  }
+
+  /* Comparison table */
+  .compare-block {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--gray-200);
+    border: 1px solid var(--gray-200); border-radius: 12px; overflow: hidden;
+    margin: 24px 0;
+  }
+  .compare-side { background: var(--white); padding: 28px 24px; }
+  .compare-side .side-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--gray-400); margin-bottom: 8px;
+  }
+  .compare-side h3 {
+    font-size: 16px; font-weight: 700; margin-bottom: 8px;
+  }
+  .compare-side p {
+    font-size: 13px; color: var(--gray-500); line-height: 1.7; margin: 0;
+  }
+  .compare-side.theirs { background: var(--gray-50); }
+  .compare-side.ours { border-left: 0; }
+
+  /* Closing CTA */
+  .closing { padding: 64px 0; background: var(--black); color: var(--white); text-align: center; }
+  .closing h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+  .closing p { font-size: 16px; color: var(--gray-400); line-height: 1.7; margin-bottom: 28px; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 100px;
+    background: var(--white); color: var(--black);
+    font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-primary:hover { background: var(--gray-200); transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 100px;
+    border: 1px solid var(--gray-700); color: var(--white);
+    font-weight: 500; font-size: 14px; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--gray-400); transform: translateY(-1px); }
+
+  footer { padding: 40px 0 24px; border-top: 1px solid var(--gray-100); }
+  .footer-inner { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray-400); }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 640px) {
+    .compare-block { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container nav-inner" style="max-width:1100px">
+    <a href="index.html" class="nav-logo">
+      <svg class="nav-logo-mark" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="6" fill="none"/>
+        <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#000000"/>
+        <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#000000"/>
+        <polygon points="8,12 11,12 10,16 7,16" fill="#000000"/>
+        <polygon points="17,12 20,12 21,16 18,16" fill="#000000"/>
+        <polygon points="11,4 17,4 14,8" fill="#FFFFFF"/>
+        <rect x="7.5" y="10" width="13" height="0.8" fill="#FFFFFF"/>
+      </svg>
+      Miraphant
+    </a>
+    <div class="nav-right">
+      <a href="index.html" class="nav-back" data-i18n="nav.back">← Back</a>
+      <div style="display:flex;gap:4px;padding-left:12px;border-left:1px solid var(--gray-200)">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="zh">中</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<section class="manifesto-hero">
+  <div class="container">
+    <div class="reveal">
+      <div class="label" data-i18n="hero.label">Our Manifesto</div>
+      <h1 data-i18n="hero.title">Our Positions</h1>
+      <p class="sub" data-i18n="hero.sub">
+        The AI industry is at a crossroads. Below are our positions on the defining questions —
+        where we agree with the frontier, where we diverge, and where we believe the real opportunity lies.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="article-body">
+  <div class="container">
+
+    <!-- 01 -->
+    <section class="reveal">
+      <h2><span class="num">01</span><span data-i18n="s1.title">Safety is not optional — but neither is paralysis</span></h2>
+      <p data-i18n="s1.p1">
+        We respect Anthropic's Responsible Scaling Policy and Constitutional AI. The principle that
+        safeguards must scale proportionally with capabilities is sound. A tiered framework — where
+        stronger models trigger stronger guardrails — is the right architecture.
+      </p>
+      <div class="quote" data-i18n="s1.quote">
+        "Safe AI is a superior product."
+        <span class="source">— Anthropic</span>
+      </div>
+      <p data-i18n="s1.p2">
+        We agree. But we'd add: <strong>safe AI that never ships is not a product at all.</strong>
+        The frontier labs obsess over what might go wrong. We obsess equally over what goes right
+        when intelligence reaches real people. Safety without deployment is theory. Deployment
+        without safety is recklessness. We choose both.
+      </p>
+    </section>
+
+    <!-- 02 -->
+    <section class="reveal">
+      <h2><span class="num">02</span><span data-i18n="s2.title">The model is the brain. The application is the body.</span></h2>
+      <p data-i18n="s2.p1">
+        Anthropic builds one of the world's best brains — Claude. We don't compete with that.
+        We compete on the body: the applications, interfaces, and infrastructure that turn
+        intelligence into action.
+      </p>
+      <p data-i18n="s2.p2">
+        A brain without a body can't lift anything. The most powerful model in the world,
+        trapped behind an API, helps only those who know how to call it. Our job is to build
+        the hands and feet — so that intelligence reaches every desk, every workflow, every
+        person who needs it.
+      </p>
+      <div class="compare-block">
+        <div class="compare-side theirs">
+          <div class="side-label" data-i18n="s2.theirs.label">Frontier Labs</div>
+          <h3 data-i18n="s2.theirs.title">Build a better brain</h3>
+          <p data-i18n="s2.theirs.desc">Compete on parameters, benchmarks, context windows. Value measured in capability scores.</p>
+        </div>
+        <div class="compare-side ours">
+          <div class="side-label" data-i18n="s2.ours.label">Miraphant</div>
+          <h3 data-i18n="s2.ours.title">Build a better body</h3>
+          <p data-i18n="s2.ours.desc">Compete on experience, outcomes, adoption. Value measured in tasks completed and hours saved.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="reveal">
+      <h2><span class="num">03</span><span data-i18n="s3.title">Helpful, harmless, honest — and shipped</span></h2>
+      <p data-i18n="s3.p1">
+        Anthropic's three H's — helpful, harmless, honest — are a solid ethical foundation.
+        Constitutional AI's approach of training models to self-critique against a set of
+        principles is elegant. We adopt this philosophy in our application layer.
+      </p>
+      <p data-i18n="s3.p2">
+        But we add a fourth H: <strong>Handed to users.</strong> A model that is perfectly
+        helpful, harmless, and honest — but locked in a lab — helps no one. Every principle
+        we adopt must ultimately serve the people who use our products. Ethics that don't
+        ship are just philosophy.
+      </p>
+    </section>
+
+    <!-- 04 -->
+    <section class="reveal">
+      <h2><span class="num">04</span><span data-i18n="s4.title">Interpretability matters — but so does accessibility</span></h2>
+      <p data-i18n="s4.p1">
+        Anthropic invests heavily in interpretability research — understanding what happens
+        inside neural networks. Their work on circuit analysis and feature visualization is
+        pushing the field forward. We believe this is important.
+      </p>
+      <p data-i18n="s4.p2">
+        But there's another kind of transparency that matters just as much: <strong>process
+        transparency for the end user.</strong> When Otto executes a task, the user sees every
+        step — what it's thinking, what tools it's calling, why it made each decision. No black
+        boxes in the application layer. The user doesn't need to understand transformers; they
+        need to trust the agent in front of them.
+      </p>
+    </section>
+
+    <!-- 05 -->
+    <section class="reveal">
+      <h2><span class="num">05</span><span data-i18n="s5.title">Data sovereignty is non-negotiable</span></h2>
+      <p data-i18n="s5.p1">
+        Anthropic's RSP includes strong commitments about data handling and deployment controls.
+        We go further: for enterprise deployments, <strong>data never leaves your network.</strong>
+      </p>
+      <p data-i18n="s5.p2">
+        Otto Enterprise runs on your LAN. Zero cloud. Zero third-party forwarding. When an
+        employee leaves, their data access and traces are zeroed out — by architecture, not
+        promise. We believe data sovereignty isn't a feature; it's a prerequisite for trust.
+      </p>
+    </section>
+
+    <!-- 06 -->
+    <section class="reveal">
+      <h2><span class="num">06</span><span data-i18n="s6.title">The real benchmark is the workplace</span></h2>
+      <p data-i18n="s6.p1">
+        Frontier labs compete on benchmarks: MMLU, HumanEval, GPQA. These are valuable for
+        measuring progress. But they are not the final measure.
+      </p>
+      <p data-i18n="s6.p2">
+        The real benchmark is: <strong>did an employee complete a task faster? Did a team
+        ship something they couldn't before? Did an organization become more capable?</strong>
+        We measure ourselves by ROI per task, hours saved, and skills accumulated — not
+        leaderboard positions. Anthropic builds the engine. We build the car that gets you
+        to work.
+      </p>
+      <div class="quote" data-i18n="s6.quote">
+        "Frontier models compete on benchmarks. We compete on whether your team got home earlier."
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="reveal">
+      <h2><span class="num">07</span><span data-i18n="s7.title">AI should augment, not replace — but the transition is real</span></h2>
+      <p data-i18n="s7.p1">
+        Anthropic acknowledges the economic impact of AI and has proposed frameworks for
+        managing job displacement. We agree this is a serious concern.
+      </p>
+      <p data-i18n="s7.p2">
+        Our position: <strong>AI doesn't replace people — people who master AI replace those
+        who don't.</strong> The transition is real, and it's happening now. Our responsibility
+        is not to slow it down, but to make sure everyone has the tools and training to be on
+        the right side of that equation. That's why Miraphant AI Club exists: not to teach
+        people about AI in theory, but to put AI in their hands on day one.
+      </p>
+    </section>
+
+  </div>
+</section>
+
+<section class="closing">
+  <div class="container">
+    <div class="reveal">
+      <h2 data-i18n="close.title">Others build AI. We ship it.</h2>
+      <p data-i18n="close.sub">The future of intelligence is not in a lab. It's in your hands.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="index.html" class="btn-primary" data-i18n="close.cta">← Back to Miraphant</a>
+        <a href="mailto:hello@miraphant.com" class="btn-secondary" data-i18n="close.contact">Contact Us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-inner" style="max-width:1100px">
+    <span>© 2026 Miraphant, Inc.</span>
+    <span data-i18n="footer.tag">Our Manifesto — Miraphant</span>
+  </div>
+</footer>
+
+<script>
+const i18n = {
+  en: {
+    'nav.back': '← Back',
+    'hero.label': 'Our Manifesto',
+    'hero.title': 'Our Positions',
+    'hero.sub': 'The AI industry is at a crossroads. Below are our positions on the defining questions — where we agree with the frontier, where we diverge, and where we believe the real opportunity lies.',
+    's1.title': 'Safety is not optional — but neither is paralysis',
+    's1.p1': "We respect Anthropic's Responsible Scaling Policy and Constitutional AI. The principle that safeguards must scale proportionally with capabilities is sound. A tiered framework — where stronger models trigger stronger guardrails — is the right architecture.",
+    's1.quote': '"Safe AI is a superior product." — Anthropic',
+    's1.p2': "We agree. But we'd add: safe AI that never ships is not a product at all. The frontier labs obsess over what might go wrong. We obsess equally over what goes right when intelligence reaches real people. Safety without deployment is theory. Deployment without safety is recklessness. We choose both.",
+    's2.title': 'The model is the brain. The application is the body.',
+    's2.p1': "Anthropic builds one of the world's best brains — Claude. We don't compete with that. We compete on the body: the applications, interfaces, and infrastructure that turn intelligence into action.",
+    's2.p2': "A brain without a body can't lift anything. The most powerful model in the world, trapped behind an API, helps only those who know how to call it. Our job is to build the hands and feet — so that intelligence reaches every desk, every workflow, every person who needs it.",
+    's2.theirs.label': 'Frontier Labs', 's2.theirs.title': 'Build a better brain',
+    's2.theirs.desc': 'Compete on parameters, benchmarks, context windows. Value measured in capability scores.',
+    's2.ours.label': 'Miraphant', 's2.ours.title': 'Build a better body',
+    's2.ours.desc': 'Compete on experience, outcomes, adoption. Value measured in tasks completed and hours saved.',
+    's3.title': 'Helpful, harmless, honest — and shipped',
+    's3.p1': "Anthropic's three H's — helpful, harmless, honest — are a solid ethical foundation. Constitutional AI's approach of training models to self-critique against a set of principles is elegant. We adopt this philosophy in our application layer.",
+    's3.p2': "But we add a fourth H: Handed to users. A model that is perfectly helpful, harmless, and honest — but locked in a lab — helps no one. Every principle we adopt must ultimately serve the people who use our products. Ethics that don't ship are just philosophy.",
+    's4.title': 'Interpretability matters — but so does accessibility',
+    's4.p1': "Anthropic invests heavily in interpretability research — understanding what happens inside neural networks. Their work on circuit analysis and feature visualization is pushing the field forward. We believe this is important.",
+    's4.p2': "But there's another kind of transparency that matters just as much: process transparency for the end user. When Otto executes a task, the user sees every step — what it's thinking, what tools it's calling, why it made each decision. No black boxes in the application layer. The user doesn't need to understand transformers; they need to trust the agent in front of them.",
+    's5.title': 'Data sovereignty is non-negotiable',
+    's5.p1': "Anthropic's RSP includes strong commitments about data handling and deployment controls. We go further: for enterprise deployments, data never leaves your network.",
+    's5.p2': "Otto Enterprise runs on your LAN. Zero cloud. Zero third-party forwarding. When an employee leaves, their data access and traces are zeroed out — by architecture, not promise. We believe data sovereignty isn't a feature; it's a prerequisite for trust.",
+    's6.title': 'The real benchmark is the workplace',
+    's6.p1': "Frontier labs compete on benchmarks: MMLU, HumanEval, GPQA. These are valuable for measuring progress. But they are not the final measure.",
+    's6.p2': "The real benchmark is: did an employee complete a task faster? Did a team ship something they couldn't before? Did an organization become more capable? We measure ourselves by ROI per task, hours saved, and skills accumulated — not leaderboard positions. Anthropic builds the engine. We build the car that gets you to work.",
+    's6.quote': '"Frontier models compete on benchmarks. We compete on whether your team got home earlier."',
+    's7.title': 'AI should augment, not replace — but the transition is real',
+    's7.p1': "Anthropic acknowledges the economic impact of AI and has proposed frameworks for managing job displacement. We agree this is a serious concern.",
+    's7.p2': "Our position: AI doesn't replace people — people who master AI replace those who don't. The transition is real, and it's happening now. Our responsibility is not to slow it down, but to make sure everyone has the tools and training to be on the right side of that equation. That's why Miraphant AI Club exists: not to teach people about AI in theory, but to put AI in their hands on day one.",
+    'close.title': 'Others build AI. We ship it.',
+    'close.sub': 'The future of intelligence is not in a lab. It\'s in your hands.',
+    'close.cta': '← Back to Miraphant',
+    'close.contact': 'Contact Us',
+    'footer.tag': 'Our Manifesto — Miraphant',
+  },
+  zh: {
+    'nav.back': '← 返回',
+    'hero.label': '我们的主张',
+    'hero.title': '我们的立场',
+    'hero.sub': 'AI 行业正站在十字路口。以下是我们对关键问题的立场——我们与前沿实验室的共识在哪里，分歧在哪里，以及我们认为真正的机会在哪里。',
+    's1.title': '安全不是可选项——但停滞也不是',
+    's1.p1': '我们尊重 Anthropic 的负责任扩展政策（RSP）和宪法 AI（Constitutional AI）。保障措施应与能力同比增长的原则是合理的。分层框架——更强的模型触发更强的护栏——是正确的架构。',
+    's1.quote': '"安全的 AI 是更好的产品。" —— Anthropic',
+    's1.p2': '我们同意。但要补充一句：永不交付的安全 AI 根本不是产品。前沿实验室痴迷于可能出错的地方。我们同样痴迷于智能到达真实用户后做对了什么。不部署的安全只是理论，不安全的部署只是鲁莽。我们选择两者兼顾。',
+    's2.title': '模型是大脑，应用是身体',
+    's2.p1': 'Anthropic 造了世界上最好的大脑之一——Claude。我们不与之竞争。我们在身体上竞争：将智能转化为行动的应用、界面和基础设施。',
+    's2.p2': '没有身体的大脑什么也搬不动。世界上最强大的模型，困在 API 后面，只能帮到知道怎么调用它的人。我们的工作是造手和脚——让智能到达每张办公桌、每个工作流、每个需要它的人。',
+    's2.theirs.label': '前沿实验室', 's2.theirs.title': '造更好的大脑',
+    's2.theirs.desc': '在参数、基准、上下文窗口上竞争。价值以能力评分衡量。',
+    's2.ours.label': 'Miraphant', 's2.ours.title': '造更好的身体',
+    's2.ours.desc': '在体验、结果、采用率上竞争。价值以完成的任务和节省的时间衡量。',
+    's3.title': '有用、无害、诚实——还要交付',
+    's3.p1': 'Anthropic 的三个 H——有用、无害、诚实——是坚实的伦理基础。宪法 AI 让模型对照一组原则自我批评的方法很优雅。我们在应用层采纳了这一理念。',
+    's3.p2': '但我们加了第四个 H：交付到用户手中（Handed to users）。一个完美有用、无害、诚实——但锁在实验室里——的模型帮不了任何人。我们采纳的每条原则最终都必须服务于使用产品的人。不交付的伦理只是哲学。',
+    's4.title': '可解释性很重要——可及性也一样',
+    's4.p1': 'Anthropic 在可解释性研究上投入巨大——理解神经网络内部发生了什么。他们在电路分析和特征可视化方面的工作正在推动领域前进。我们认为这很重要。',
+    's4.p2': '但还有另一种同样重要的透明度：面向终端用户的过程透明。当 Otto 执行任务时，用户能看到每一步——它在想什么、调用什么工具、为什么做每个决定。应用层没有黑箱。用户不需要理解 Transformer，他们需要信任面前的 Agent。',
+    's5.title': '数据主权不可妥协',
+    's5.p1': 'Anthropic 的 RSP 包含了关于数据处理和部署控制的强承诺。我们走得更远：企业部署中，数据永远不离开你的网络。',
+    's5.p2': 'Otto Enterprise 运行在你的局域网。零云端、零第三方转发。员工离职时，其数据访问权限和痕迹同步清零——靠架构，而非承诺。我们相信数据主权不是功能，而是信任的前提。',
+    's6.title': '真正的基准是工作场所',
+    's6.p1': '前沿实验室在基准上竞争：MMLU、HumanEval、GPQA。这些对衡量进步有价值，但不是最终衡量标准。',
+    's6.p2': '真正的基准是：员工是否更快完成了任务？团队是否交付了以前做不到的东西？组织是否变得更有能力？我们用每个任务的 ROI、节省的小时数、积累的 Skill 来衡量自己——而非排行榜名次。Anthropic 造引擎，我们造送你上班的车。',
+    's6.quote': '"前沿模型在基准上竞争，我们在你的团队是否更早下班上竞争。"',
+    's7.title': 'AI 应当增强而非取代——但转型是真实的',
+    's7.p1': 'Anthropic 承认 AI 的经济影响，并提出了管理就业替代的框架。我们同意这是一个严肃的问题。',
+    's7.p2': '我们的立场：AI 不取代人——掌握 AI 的人取代不掌握 AI 的人。转型是真实的，而且正在发生。我们的责任不是放慢它，而是确保每个人都有工具和训练站到等式的正确一边。这就是 Miraphant AI Club 存在的意义：不是在理论上教人们 AI，而是在第一天就把 AI 放到他们手中。',
+    'close.title': '别人造 AI，我们交付 AI。',
+    'close.sub': '智能的未来不在实验室里，在你手中。',
+    'close.cta': '← 返回 Miraphant',
+    'close.contact': '联系我们',
+    'footer.tag': '我们的主张 — Miraphant',
+  }
+};
+
+let currentLang = 'en';
+function setLang(lang) {
+  currentLang = lang;
+  const s = i18n[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (s[el.getAttribute('data-i18n')]) el.textContent = s[el.getAttribute('data-i18n')];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+  });
+  document.documentElement.lang = lang;
+  localStorage.setItem('manifesto-lang', lang);
+}
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
+});
+const saved = localStorage.getItem('manifesto-lang');
+if (saved && i18n[saved]) setLang(saved);
+
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>
