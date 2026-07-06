@@ -1,49 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
   <defs>
-    <clipPath id="roundedSquare">
-      <rect width="400" height="400" rx="72"/>
+    <clipPath id="bgClip">
+      <rect width="200" height="200" rx="40"/>
     </clipPath>
   </defs>
 
-  <!-- Pure white background -->
-  <rect width="400" height="400" rx="80" fill="#FFFFFF"/>
+  <!-- Black background -->
+  <g clip-path="url(#bgClip)">
+    <rect width="200" height="200" fill="#000000"/>
 
-  <!-- Extremely subtle border -->
-  <rect x="8" y="8" width="384" height="384" rx="72" fill="none" stroke="#E5E5E5" stroke-width="1"/>
+    <!-- Ring 1 (left) — gap at bottom intersection where Ring 2 goes over -->
+    <circle cx="78" cy="100" r="48" stroke="#FFFFFF" stroke-width="6" fill="none"
+            stroke-dasharray="39.96 25.13 236.50" stroke-dashoffset="0"/>
 
-  <g clip-path="url(#roundedSquare)">
-    <!-- Minimalist "M" monogram — two bold geometric forms creating a negative-space "eye" -->
-    <!-- Left stroke — bold black trapezoid -->
-    <path d="
-      M 100 60
-      L 180 60
-      L 160 220
-      L 80 220
-      Z"
-      fill="#000000"/>
+    <!-- Ring 2 (right) — gap at top intersection where Ring 1 goes over -->
+    <circle cx="122" cy="100" r="48" stroke="#FFFFFF" stroke-width="6" fill="none"
+            stroke-dasharray="190.83 25.13 85.63" stroke-dashoffset="0"/>
 
-    <!-- Right stroke — bold black trapezoid -->
-    <path d="
-      M 220 60
-      L 300 60
-      L 320 220
-      L 240 220
-      Z"
-      fill="#000000"/>
+    <!-- Inner concentric ring -->
+    <circle cx="100" cy="100" r="30" stroke="#FFFFFF" stroke-width="6" fill="none"/>
 
-    <!-- Sharp angled cut creating the "V" apex of M -->
-    <polygon points="160,60 240,60 200,130" fill="#FFFFFF"/>
+    <!-- Cross line 1 (top-left to bottom-right) -->
+    <line x1="78.8" y1="78.8" x2="121.2" y2="121.2" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
 
-    <!-- Crossbar of M — negative space horizontal -->
-    <rect x="95" y="155" width="210" height="6" fill="#FFFFFF"/>
+    <!-- Cross line 2 (top-right to bottom-left) -->
+    <line x1="121.2" y1="78.8" x2="78.8" y2="121.2" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
 
-    <!-- Bottom right slant of M -->
-    <polygon points="240,220 320,220 350,340 270,340" fill="#000000"/>
-
-    <!-- Bottom left slant of M -->
-    <polygon points="80,220 160,220 130,340 50,340" fill="#000000"/>
-
-    <!-- Subtle optical alignment notch at top center -->
-    <polygon points="192,60 208,60 200,130" fill="#FFFFFF"/>
+    <!-- Center dot -->
+    <circle cx="100" cy="100" r="5" fill="#FFFFFF"/>
   </g>
 </svg>

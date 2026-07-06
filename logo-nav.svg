@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Transparent background version for nav on white -->
+
+  <!-- Ring 1 (left) — gap at bottom intersection -->
+  <circle cx="78" cy="100" r="48" stroke="#000000" stroke-width="6" fill="none"
+          stroke-dasharray="39.96 25.13 236.50" stroke-dashoffset="0"/>
+
+  <!-- Ring 2 (right) — gap at top intersection -->
+  <circle cx="122" cy="100" r="48" stroke="#000000" stroke-width="6" fill="none"
+          stroke-dasharray="190.83 25.13 85.63" stroke-dashoffset="0"/>
+
+  <!-- Inner concentric ring -->
+  <circle cx="100" cy="100" r="30" stroke="#000000" stroke-width="6" fill="none"/>
+
+  <!-- Cross line 1 -->
+  <line x1="78.8" y1="78.8" x2="121.2" y2="121.2" stroke="#000000" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Cross line 2 -->
+  <line x1="121.2" y1="78.8" x2="78.8" y2="121.2" stroke="#000000" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Center dot -->
+  <circle cx="100" cy="100" r="5" fill="#000000"/>
+</svg>
