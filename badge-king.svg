@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" fill="none">
+  <defs>
+    <clipPath id="cardClip">
+      <rect width="400" height="600" rx="20"/>
+    </clipPath>
+    <clipPath id="photoClip">
+      <circle cx="200" cy="250" r="52"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#cardClip)">
+    <!-- Background -->
+    <rect width="400" height="600" fill="#FFFFFF"/>
+
+    <!-- Top black band - thinner -->
+    <rect width="400" height="100" fill="#000000"/>
+
+    <!-- Miraphant text top-left -->
+    <text x="32" y="48" text-anchor="start"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="18" font-weight="800" fill="#FFFFFF"
+          letter-spacing="2">Miraphant</text>
+
+    <!-- Tagline top-left, small -->
+    <text x="33" y="68" text-anchor="start"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="7" font-weight="500" fill="#666666"
+          letter-spacing="3">APPLICATION LAYER SUPERINTELLIGENCE</text>
+
+    <!-- Photo placeholder circle - smaller -->
+    <circle cx="200" cy="250" r="55" fill="none" stroke="#000000" stroke-width="2"/>
+    <circle cx="200" cy="250" r="53" fill="#F9F9F9"/>
+    <g clip-path="url(#photoClip)" transform="translate(0, 12)">
+      <circle cx="200" cy="228" r="20" fill="#CCCCCC"/>
+      <path d="M 170 272 Q 170 252, 200 252 Q 230 252, 230 272 Z" fill="#CCCCCC"/>
+    </g>
+
+    <!-- Name -->
+    <text x="200" y="355" text-anchor="middle"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="30" font-weight="900" fill="#000000"
+          letter-spacing="-0.5">KING</text>
+
+    <!-- Chinese name -->
+    <text x="200" y="380" text-anchor="middle"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="14" font-weight="500" fill="#999999"
+          letter-spacing="4">瞿 铭</text>
+
+    <!-- Divider -->
+    <line x1="150" y1="400" x2="250" y2="400" stroke="#E5E5E5" stroke-width="1"/>
+
+    <!-- Department -->
+    <text x="200" y="425" text-anchor="middle"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="10" font-weight="600" fill="#999999"
+          letter-spacing="3">DEPARTMENT</text>
+    <text x="200" y="448" text-anchor="middle"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="17" font-weight="700" fill="#000000"
+          letter-spacing="1">产品部 / Product</text>
+
+    <!-- Employee ID -->
+    <text x="200" y="485" text-anchor="middle"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="10" font-weight="500" fill="#999999"
+          letter-spacing="2">EMPLOYEE ID</text>
+    <text x="200" y="506" text-anchor="middle"
+          font-family="'JetBrains Mono', monospace"
+          font-size="13" font-weight="600" fill="#666666"
+          letter-spacing="3">MP-2026-001</text>
+
+    <!-- Bottom bar -->
+    <rect y="560" width="400" height="40" fill="#000000"/>
+    <text x="200" y="585" text-anchor="middle"
+          font-family="'Inter', -apple-system, sans-serif"
+          font-size="8" font-weight="500" fill="#666666"
+          letter-spacing="4">MAKE AI GROW INTO YOUR ORGANIZATION</text>
+  </g>
+
+  <!-- Card border -->
+  <rect x="1" y="1" width="398" height="598" rx="19" fill="none" stroke="#E5E5E5" stroke-width="1"/>
+</svg>
