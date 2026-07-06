@@ -140,6 +140,13 @@
   .edition-card li::before { content: "-"; color: var(--gray-300); font-weight: 700; margin-right: 4px; }
   .download-info { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
 
+
+  .memory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 36px; }
+  .memory-card { border: 1px solid var(--gray-200); border-radius: 14px; padding: 24px; background: var(--white); }
+  .memory-card h3 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+  .memory-card p { font-size: 13px; color: var(--gray-500); line-height: 1.7; }
+  .memory-flow { margin-top: 24px; padding: 24px; border-radius: 16px; background: var(--gray-50); border: 1px solid var(--gray-200); font-size: 13px; color: var(--gray-600); line-height: 1.8; }
+
   .tech-list { display: flex; flex-wrap: wrap; gap: 8px; }
   .tech-tag {
     padding: 6px 14px; border-radius: 6px;
@@ -165,6 +172,7 @@
 
   @media (max-width: 900px) {
     .product-hero-inner, .edition-card { grid-template-columns: 1fr; }
+    .memory-grid { grid-template-columns: 1fr; }
     .otto-pillars { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 640px) {
@@ -250,6 +258,26 @@
         <p data-i18n="pillars.p4">Every feature is measured by what it ships. Code deployed, documents generated, tasks automated. Otto optimizes for results, not potential.</p>
       </div>
     </div>
+  </div>
+</section>
+
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:680px">
+      <div class="label" data-i18n="memory.label">Organizational Memory</div>
+      <h2 class="section-title" data-i18n="memory.title">From personal assistant to company memory OS</h2>
+      <p class="section-sub" data-i18n="memory.sub">Otto turns every conversation, project, workflow, and repeated task into governed organizational memory and reusable skill.</p>
+    </div>
+    <div class="memory-grid">
+      <div class="memory-card reveal rd1"><h3 data-i18n="memory.c1.t">Six-layer memory</h3><p data-i18n="memory.c1.d">Self, session, project, department, company, and skill memory keep work context structured instead of scattered.</p></div>
+      <div class="memory-card reveal rd2"><h3 data-i18n="memory.c2.t">Project as the work unit</h3><p data-i18n="memory.c2.d">Any staged goal can become a project: code, sales, marketing, legal, finance, HR, documents, or operations.</p></div>
+      <div class="memory-card reveal rd3"><h3 data-i18n="memory.c3.t">Self-forming skills</h3><p data-i18n="memory.c3.d">Repeated high-value tasks become candidate skills, reviewed by managers and promoted to department or company libraries.</p></div>
+      <div class="memory-card reveal rd1"><h3 data-i18n="memory.c4.t">License-based access</h3><p data-i18n="memory.c4.d">Owners and managers distribute seats, token budgets, model access, skill access, and knowledge permissions to N-1 teams.</p></div>
+      <div class="memory-card reveal rd2"><h3 data-i18n="memory.c5.t">Codebase graph memory</h3><p data-i18n="memory.c5.d">Code projects can connect to codebase-memory-mcp for architecture maps, call paths, routes, ADRs, and impact analysis.</p></div>
+      <div class="memory-card reveal rd3"><h3 data-i18n="memory.c6.t">Manager and owner dashboards</h3><p data-i18n="memory.c6.d">Teams see project ROI, token usage, member patterns, candidate skills, and knowledge reuse across the organization.</p></div>
+    </div>
+    <div class="memory-flow reveal rd4" data-i18n="memory.flow">Session memory becomes project memory. Project memory becomes team knowledge. Repeated team knowledge becomes approved skill. Cross-team skill becomes company capability.</div>
   </div>
 </section>
 
@@ -399,6 +427,22 @@ const i18n = {
     'pillars.p2': 'Your data stays yours. Otto Enterprise deploys on your LAN with zero data leaving your network. Open-source core, transparent operations, no vendor lock-in.',
     'pillars.p3': 'Otto transforms how teams work — replacing fragmented toolchains with a single AI colleague. One assistant for developers, operators, and executives alike.',
     'pillars.p4': 'Every feature is measured by what it ships. Code deployed, documents generated, tasks automated. Otto optimizes for results, not potential.',
+    'memory.label': 'Organizational Memory',
+    'memory.title': 'From personal assistant to company memory OS',
+    'memory.sub': 'Otto turns every conversation, project, workflow, and repeated task into governed organizational memory and reusable skill.',
+    'memory.c1.t': 'Six-layer memory',
+    'memory.c1.d': 'Self, session, project, department, company, and skill memory keep work context structured instead of scattered.',
+    'memory.c2.t': 'Project as the work unit',
+    'memory.c2.d': 'Any staged goal can become a project: code, sales, marketing, legal, finance, HR, documents, or operations.',
+    'memory.c3.t': 'Self-forming skills',
+    'memory.c3.d': 'Repeated high-value tasks become candidate skills, reviewed by managers and promoted to department or company libraries.',
+    'memory.c4.t': 'License-based access',
+    'memory.c4.d': 'Owners and managers distribute seats, token budgets, model access, skill access, and knowledge permissions to N-1 teams.',
+    'memory.c5.t': 'Codebase graph memory',
+    'memory.c5.d': 'Code projects can connect to codebase-memory-mcp for architecture maps, call paths, routes, ADRs, and impact analysis.',
+    'memory.c6.t': 'Manager and owner dashboards',
+    'memory.c6.d': 'Teams see project ROI, token usage, member patterns, candidate skills, and knowledge reuse across the organization.',
+    'memory.flow': 'Session memory becomes project memory. Project memory becomes team knowledge. Repeated team knowledge becomes approved skill. Cross-team skill becomes company capability.',
     'editions.label': 'Editions',
     'editions.title': 'One AI, three forms',
     'editions.desktop.badge': 'Desktop App',
@@ -449,6 +493,22 @@ const i18n = {
     'pillars.p2': '你的数据永远属于你。Otto Enterprise 部署在你的局域网中，零数据离开你的网络。开源核心、透明操作、无供应商锁定。',
     'pillars.p3': 'Otto 转变团队的工作方式——用单一的 AI 同事取代碎片化的工具链。一个助手，适用于开发者、运营人员和高管。',
     'pillars.p4': '每个功能都用它交付了什么来衡量。代码部署、文档生成、任务自动化。Otto 为结果优化，而非潜力。',
+    'memory.label': '组织记忆',
+    'memory.title': '从个人助手到公司记忆操作系统',
+    'memory.sub': 'Otto 将每一次对话、项目、流程和重复任务沉淀为可治理的组织记忆与可复用 Skill。',
+    'memory.c1.t': '六层记忆',
+    'memory.c1.d': '自我、会话、项目、部门、公司和 Skill 记忆，让工作上下文结构化，而不是散落在聊天里。',
+    'memory.c2.t': '项目即工作单元',
+    'memory.c2.d': '任何阶段性目标都可以成为项目：代码、销售、市场、法务、财务、HR、文档或运营。',
+    'memory.c3.t': '自形成 Skill',
+    'memory.c3.d': '高价值重复任务会变成候选 Skill，经负责人审核后进入部门或公司 Skill 库。',
+    'memory.c4.t': '许可证权限',
+    'memory.c4.d': '老板和部门负责人可向 N-1 分发 seat、token额度、模型、Skill 和知识库访问权。',
+    'memory.c5.t': '代码图谱记忆',
+    'memory.c5.d': '代码项目可连接 codebase-memory-mcp，获得架构图、调用链、路由、ADR 和影响分析。',
+    'memory.c6.t': '负责人和老板看板',
+    'memory.c6.d': '团队可查看项目 ROI、token 使用、成员模式、候选 Skill 和知识复用情况。',
+    'memory.flow': '会话记忆沉淀为项目记忆。项目记忆沉淀为部门知识。重复的部门知识形成审批后的 Skill。跨部门复用的 Skill 变成公司能力。',
     'editions.label': '版本',
     'editions.title': '一个 AI，三种形态',
     'editions.desktop.badge': '桌面应用',
