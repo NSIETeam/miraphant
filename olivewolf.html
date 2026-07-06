@@ -46,10 +46,6 @@
   .product-hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px; }
   .product-hero .sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; margin-bottom: 32px; }
 
-  .demo-media { background: var(--gray-50); border-radius: 20px; border: 1px solid var(--gray-200); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.06); }
-  .demo-media img, .demo-media video { display: block; width: 100%; height: auto; }
-  .demo-caption { padding: 14px 18px; border-top: 1px solid var(--gray-200); display: flex; justify-content: space-between; gap: 16px; align-items: center; font-size: 12px; color: var(--gray-500); background: var(--white); }
-  .demo-caption strong { color: var(--black); font-weight: 700; }
 
   .btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 100px; background: var(--black); color: var(--white); font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s; }
   .btn-primary:hover { background: var(--gray-800); transform: translateY(-1px); }
@@ -152,12 +148,11 @@
         <a href="#editions" class="btn-secondary" data-i18n="hero.editions">Editions →</a>
       </div>
     </div>
-    <div class="reveal rd3 demo-media">
-      <img src="assets/olivewolf-demo.svg" alt="OliveWolf real-time digital human demo preview" loading="eager">
-      <div class="demo-caption">
-        <span><strong data-i18n="hero.demo.title">Demo preview</strong></span>
-        <span data-i18n="hero.demo.desc">Voice → LLM → TTS → avatar rendering</span>
-      </div>
+    <div class="reveal rd3" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);padding:36px">
+      <div class="label" data-i18n="hero.panel.label">Customer Deployment</div>
+      <h2 style="font-size:28px;line-height:1.15;margin-bottom:16px" data-i18n="hero.panel.title">Install once. Train in browser.</h2>
+      <p class="section-sub" data-i18n="hero.panel.desc">Send the free Studio package to a customer server. They run two scripts, open the web console, upload an avatar, and start a training job.</p>
+      <div style="margin-top:24px"><a href="downloads/olivewolf-studio-v0.1.1.tar.gz" class="btn-primary" data-i18n="hero.download">Download Free Version →</a></div>
     </div>
   </div>
 </section>
@@ -233,7 +228,7 @@
   <div class="container">
     <div class="reveal" style="max-width:600px">
       <div class="label" data-i18n="editions.label">Editions</div>
-      <h2 class="section-title" data-i18n="editions.title">One engine, two editions</h2>
+      <h2 class="section-title" data-i18n="editions.title">One engine, three editions</h2>
     </div>
     <div class="edition-card reveal rd1" style="margin-top:40px">
       <div>
@@ -248,7 +243,7 @@
           <li data-i18n="editions.core.l5">Bring-your-own API keys</li>
         </ul>
         <div>
-          <a href="https://github.com/NSIETeam/OliveWolf" class="btn-primary" data-i18n="editions.core.gh">View on GitHub →</a>
+          <a href="downloads/olivewolf-studio-v0.1.1.tar.gz" class="btn-primary" data-i18n="editions.core.gh">Download Free Version →</a>
           <div class="download-info" data-i18n="editions.core.info">MIT License · Python · Self-hosted</div>
         </div>
       </div>
@@ -293,13 +288,7 @@
         </div>
       </div>
       <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
-        <svg width="72" height="72" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="11" r="5" stroke="#999" stroke-width="1.5" fill="none"/>
-          <path d="M 6 28 Q 16 20 26 28" stroke="#999" stroke-width="1.5" fill="none"/>
-          <circle cx="16" cy="11" r="1.5" fill="#666"/>
-          <path d="M 14 14 Q 16 15.5 18 14" stroke="#666" stroke-width="1" fill="none" stroke-linecap="round"/>
-          <rect x="3" y="3" width="26" height="26" rx="4" stroke="#CCC" stroke-width="0.8" fill="none" stroke-dasharray="2,2"/>
-        </svg>
+        <code style="font-size:11px;color:var(--gray-400);text-align:left;padding:20px;line-height:1.8">Private Deployment<br>Custom Avatar<br>Knowledge Base<br>Monitoring<br>Support</code>
       </div>
     </div>
   </div>
@@ -337,7 +326,7 @@
       <h2 class="section-title" data-i18n="cta.title">Give your product a face</h2>
       <p class="sub" data-i18n="cta.sub">Clone the open-source engine, or bring OliveWolf Enterprise to your organization with custom avatars and on-premise deployment.</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <a href="https://github.com/NSIETeam/OliveWolf" class="btn-primary" data-i18n="cta.gh">View on GitHub →</a>
+        <a href="downloads/olivewolf-studio-v0.1.1.tar.gz" class="btn-primary" data-i18n="cta.gh">Download Free Version →</a>
         <a href="mailto:NSIETeam@outlook.com?subject=OliveWolf" class="btn-secondary" data-i18n="cta.enterprise" style="border-color:var(--gray-700);color:var(--white)">Enterprise Inquiries</a>
       </div>
     </div>
@@ -360,8 +349,10 @@ const i18n = {
     'hero.sub': 'A real-time, audio-driven digital human framework built on dual render backends. Open-source core with enterprise-grade deployment. From a single portrait to a speaking, listening, thinking avatar.',
     'hero.gh': 'View on GitHub →',
     'hero.editions': 'Editions →',
-    'hero.demo.title': 'Demo preview',
-    'hero.demo.desc': 'Voice → LLM → TTS → avatar rendering',
+    'hero.panel.label': 'Customer Deployment',
+    'hero.panel.title': 'Install once. Train in browser.',
+    'hero.panel.desc': 'Send the free Studio package to a customer server. They run two scripts, open the web console, upload an avatar, and start a training job.',
+    'hero.download': 'Download Free Version →',
     'pillars.label': "OliveWolf's DNA",
     'pillars.title': 'Four principles that define OliveWolf',
     'pillars.p1': 'Audio drives lip movement frame-by-frame. Low-latency streaming pipeline turns speech into a talking avatar in under two seconds — ask a question, get a face that answers.',
@@ -387,7 +378,7 @@ const i18n = {
     'cap.c6.t': 'Unified backend API',
     'cap.c6.d': 'One renderer interface, two engines. Business code never knows whether a 2D portrait or a 3D avatar is behind the screen. Add backends without rewriting logic.',
     'editions.label': 'Editions',
-    'editions.title': 'One engine, two editions',
+    'editions.title': 'One engine, three editions',
     'editions.core.badge': 'Open Source',
     'editions.core.title': 'OliveWolf Core',
     'editions.core.desc': 'The full open-source engine. Dual render backends, real-time conversation pipeline, scene presets, and a clean abstraction layer. MIT-licensed — build, modify, and deploy on your own infrastructure.',
@@ -396,7 +387,7 @@ const i18n = {
     'editions.core.l3': 'ASR + LLM + TTS streaming pipeline',
     'editions.core.l4': 'Four scene presets out of the box',
     'editions.core.l5': 'Bring-your-own API keys',
-    'editions.core.gh': 'View on GitHub →',
+    'editions.core.gh': 'Download Free Version →',
     'editions.core.info': 'MIT License · Python · Self-hosted',
     'editions.studio.badge': 'Studio',
     'editions.studio.title': 'OliveWolf Studio',
@@ -421,7 +412,7 @@ const i18n = {
     'cta.label': 'Get Started',
     'cta.title': 'Give your product a face',
     'cta.sub': 'Clone the open-source engine, or bring OliveWolf Enterprise to your organization with custom avatars and on-premise deployment.',
-    'cta.gh': 'View on GitHub →',
+    'cta.gh': 'Download Free Version →',
     'cta.enterprise': 'Enterprise Inquiries',
     'footer.product': 'OliveWolf — A Miraphant Product',
   },
@@ -432,8 +423,10 @@ const i18n = {
     'hero.sub': '基于双渲染后端的实时音频驱动数字人框架。开源核心，企业级部署。从一张照片，到会听、会想、会说话的数字人。',
     'hero.gh': '在 GitHub 查看 →',
     'hero.editions': '版本 →',
-    'hero.demo.title': '演示预览',
-    'hero.demo.desc': '语音 → 大模型 → 语音合成 → 数字人渲染',
+    'hero.panel.label': '客户部署',
+    'hero.panel.title': '安装一次，在浏览器里训练。',
+    'hero.panel.desc': '把免费 Studio 安装包发到客户服务器。客户运行两个脚本，打开网页控制台，上传形象并启动训练任务。',
+    'hero.download': '下载免费版本 →',
     'pillars.label': 'OliveWolf 的基因',
     'pillars.title': '定义 OliveWolf 的四项原则',
     'pillars.p1': '音频逐帧驱动口型。低延迟流式管线让语音在两秒内变成会说话的数字人——你提问，一张正在回答的脸就出现。',
@@ -459,7 +452,7 @@ const i18n = {
     'cap.c6.t': '统一后端接口',
     'cap.c6.d': '一个渲染接口，两个引擎。业务代码无需知道屏幕背后是 2D 人像还是 3D 数字人。新增后端，无需重写逻辑。',
     'editions.label': '版本',
-    'editions.title': '一个引擎，两个版本',
+    'editions.title': '一个引擎，三个版本',
     'editions.core.badge': '开源',
     'editions.core.title': 'OliveWolf Core',
     'editions.core.desc': '完整的开源引擎。双渲染后端、实时对话管线、场景预设与清晰抽象层。MIT 协议——在你自己的基础设施上构建、修改、部署。',
@@ -468,7 +461,7 @@ const i18n = {
     'editions.core.l3': 'ASR + LLM + TTS 流式管线',
     'editions.core.l4': '四种场景预设开箱即用',
     'editions.core.l5': '自带 API 密钥',
-    'editions.core.gh': '在 GitHub 查看 →',
+    'editions.core.gh': '下载免费版本 →',
     'editions.core.info': 'MIT 协议 · Python · 自托管',
     'editions.studio.badge': 'Studio',
     'editions.studio.title': 'OliveWolf Studio',
@@ -493,7 +486,7 @@ const i18n = {
     'cta.label': '开始使用',
     'cta.title': '给你的产品一张脸',
     'cta.sub': '克隆开源引擎，或把 OliveWolf 企业版带到你的组织——自定义形象，本地部署。',
-    'cta.gh': '在 GitHub 查看 →',
+    'cta.gh': '下载免费版本 →',
     'cta.enterprise': '企业咨询',
     'footer.product': 'OliveWolf — Miraphant 产品',
   }
