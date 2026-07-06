@@ -59,6 +59,16 @@
 
   .commit-msg{font-size:13px;color:var(--g600);line-height:1.5;word-break:break-word}
   .commit-author{font-size:11px;color:var(--g400);margin-top:2px}
+  .commit-note{margin-top:6px;padding:6px 10px;border-left:2px solid var(--g200);font-size:12px;color:var(--g500);background:var(--g50);border-radius:0 4px 4px 0;line-height:1.5;word-break:break-word;cursor:text;transition:border-color .2s}
+  .commit-note:hover{border-left-color:var(--g400)}
+  .commit-note:empty::before{content:'Add note...';color:var(--g300);font-style:italic}
+  .commit-note:focus{outline:none;border-left-color:var(--black);background:var(--white);box-shadow:0 0 0 1px var(--g200)}
+  .commit-note.has-note{border-left-color:var(--black);color:var(--g700)}
+  .note-toolbar{display:flex;align-items:center;gap:8px;margin-top:4px}
+  .note-save-indicator{font-size:10px;color:var(--g400);opacity:0;transition:opacity .3s}
+  .note-save-indicator.show{opacity:1}
+  .export-btn{padding:6px 14px;border:1px solid var(--g200);border-radius:100px;background:var(--white);font-size:12px;font-weight:500;cursor:pointer;color:var(--g500);transition:all .2s}
+  .export-btn:hover{border-color:var(--black);color:var(--black)}
 
   .date-header{grid-column:1/-1;padding:20px 0 8px;font-size:12px;font-weight:700;color:var(--g400);letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid var(--g100);margin-bottom:4px}
 
@@ -91,6 +101,8 @@
     <ul class="nav-links">
       <li><a href="#timeline">Timeline</a></li>
       <li><a href="#contributors">Contributors</a></li>
+      <li><button class="export-btn" id="exportBtn" style="margin-left:8px">Export Notes</button></li>
+      <li><button class="export-btn" id="importBtn">Import Notes</button></li>
     </ul>
   </div>
 </nav>
@@ -103,7 +115,9 @@
       <div class="stat-box"><div class="num" id="totalCommits">0</div><div class="lbl">Total Commits</div></div>
       <div class="stat-box"><div class="num" id="totalRepos">5</div><div class="lbl">Repositories</div></div>
       <div class="stat-box"><div class="num" id="totalContributors">4</div><div class="lbl">Contributors</div></div>
+      <div class="stat-box"><div class="num" id="totalNotes">0</div><div class="lbl">Notes Saved</div></div>
     </div>
+    <div class="contributor-stats" id="contributorStats"></div>
   </div>
 </section>
 
@@ -118,6 +132,8 @@
       <button class="filter-btn" data-repo="EasyHermes">EasyHermes</button>
     </div>
     <input type="text" class="search-box" id="searchBox" placeholder="Search commit messages...">
+    <button class="note-btn" onclick="exportNotes()" style="white-space:nowrap">导出备注</button>
+    <button class="note-btn" onclick="importNotes()" style="white-space:nowrap">导入备注</button>
   </div>
 </div>
 
@@ -390,12 +406,97 @@ const COMMITS = [
   {d:"2026-04-28T11:08:11Z",a:"NIETeam",m:"🎉 EasyHermes v1.0.0 — 初始版本",r:"EasyHermes"},
 ];
 
+// === END COMMIT DATA ===
+
 // Sort by date descending
 COMMITS.sort((a, b) => new Date(b.d) - new Date(a.d));
 
+// ===== State =====
 let activeFilter = 'all';
 let searchTerm = '';
 
+// ===== Notes (localStorage) =====
+const NOTES_KEY = 'miraphant-changelog-notes';
+function getNotes() {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); } catch { return {}; }
+}
+function getNote(id) {
+  return getNotes()[id] || '';
+}
+function saveNote(id, text) {
+  const notes = getNotes();
+  if (text.trim()) { notes[id] = text.trim(); } else { delete notes[id]; }
+  localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  updateNoteCount();
+}
+function updateNoteCount() {
+  document.getElementById('totalNotes').textContent = Object.keys(getNotes()).length;
+}
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== Note editing (inline) =====
+window.editNote = function(noteId) {
+  const entry = document.querySelector(`[data-note-id="${noteId}"]`);
+  if (!entry) return;
+  const container = entry.querySelector('.commit-note-row');
+  if (!container) return;
+  const current = getNote(noteId);
+  container.innerHTML = `
+    <textarea class="note-edit" id="noteEdit_${noteId}" placeholder="输入备注...">${escapeHtml(current)}</textarea>
+    <div class="note-save-bar">
+      <button class="note-btn primary" onclick="saveNoteBtn('${noteId}')">保存</button>
+      <button class="note-btn" onclick="cancelNote('${noteId}')">取消</button>
+      ${current ? `<button class="note-btn" onclick="deleteNote('${noteId}')" style="margin-left:auto;color:#c44">删除</button>` : ''}
+    </div>`;
+  const ta = document.getElementById(`noteEdit_${noteId}`);
+  if (ta) { ta.focus(); ta.style.height = Math.max(28, ta.scrollHeight) + 'px'; }
+};
+window.saveNoteBtn = function(noteId) {
+  const ta = document.getElementById(`noteEdit_${noteId}`);
+  if (!ta) return;
+  saveNote(noteId, ta.value);
+  render();
+};
+window.cancelNote = function() { render(); };
+window.deleteNote = function(noteId) { saveNote(noteId, ''); render(); };
+
+// ===== Export / Import notes =====
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+window.exportNotes = function() {
+  const notes = getNotes();
+  if (Object.keys(notes).length === 0) { alert('暂无备注可导出'); return; }
+  downloadJSON(notes, `miraphant-notes-${new Date().toISOString().slice(0,10)}.json`);
+};
+window.importNotes = function() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        const notes = getNotes();
+        const merged = { ...notes, ...imported };
+        localStorage.setItem(NOTES_KEY, JSON.stringify(merged));
+        render(); updateNoteCount();
+        alert(`已导入 ${Object.keys(imported).length} 条备注`);
+      } catch(err) { alert('文件格式错误'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+// ===== Format =====
 function formatDate(iso) {
   const d = new Date(iso);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -406,6 +507,7 @@ function formatDate(iso) {
   };
 }
 
+// ===== Render =====
 function render() {
   const list = document.getElementById('commitList');
   const filtered = COMMITS.filter(c => {
@@ -421,16 +523,28 @@ function render() {
 
   filtered.forEach(c => {
     const f = formatDate(c.d);
+    const noteId = `${c.r}|${c.d}|${c.m.slice(0,40)}`;
+    const note = getNote(noteId);
+
     if (f.dateKey !== lastDateKey) {
       lastDateKey = f.dateKey;
       const weekday = new Date(c.d).toLocaleDateString('en-US', { weekday: 'long' });
       html += `<div class="date-header">${f.dateKey} — ${weekday}</div>`;
     }
-    html += `<div class="commit-entry" data-repo="${c.r}">
+
+    const noteHtml = note
+      ? `<div class="commit-note-row"><div class="commit-note has-note" onclick="editNote('${noteId.replace(/'/g,"\\'")}')">${escapeHtml(note)}</div></div>`
+      : `<div class="commit-note-row"><span class="commit-note-empty" onclick="editNote('${noteId.replace(/'/g,"\\'")}')">+ 添加备注</span></div>`;
+
+    html += `<div class="commit-entry" data-repo="${c.r}" data-note-id="${noteId.replace(/"/g,'&quot;')}">
       <div class="commit-date"><div class="day">${f.day}</div><div class="time">${f.time}</div></div>
       <div class="commit-body">
         <span class="repo-badge repo-${c.r.toLowerCase()}">${c.r}</span>
-        <div><div class="commit-msg">${c.m}</div><div class="commit-author">${c.a}</div></div>
+        <div style="flex:1">
+          <div class="commit-msg">${c.m}</div>
+          <div class="commit-author">${c.a}</div>
+          ${noteHtml}
+        </div>
       </div>
     </div>`;
   });
@@ -442,7 +556,32 @@ function render() {
   list.innerHTML = html;
 }
 
-// Filter buttons
+// ===== Contributor stats =====
+function renderContributorStats() {
+  const counts = {};
+  COMMITS.forEach(c => { counts[c.a] = (counts[c.a] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const max = sorted[0][1];
+  const colors = ['#000','#555','#888','#aaa','#ccc'];
+  let html = '';
+  sorted.forEach((entry, i) => {
+    const [name, count] = entry;
+    const pct = Math.round(count / max * 100);
+    const initials = name.substring(0, 2).toUpperCase();
+    const color = colors[i % colors.length];
+    html += `<div class="contrib-chip">
+      <div class="contrib-avatar" style="background:${color}">${initials}</div>
+      <div>
+        <div class="contrib-name">${name}</div>
+        <div class="contrib-count">${count} commits</div>
+        <div class="contrib-bar"><div class="contrib-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('contributorStats').innerHTML = html;
+}
+
+// ===== Filter buttons =====
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -452,16 +591,17 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
   });
 });
 
-// Search
+// ===== Search =====
 document.getElementById('searchBox').addEventListener('input', e => {
   searchTerm = e.target.value;
   render();
 });
 
-// Initial render
+// ===== Init =====
 render();
+renderContributorStats();
+updateNoteCount();
 
-// Count unique contributors
 const contributors = new Set(COMMITS.map(c => c.a));
 document.getElementById('totalContributors').textContent = contributors.size;
 </script>
