@@ -96,6 +96,43 @@
     border: 1px solid var(--gray-200);
     border-radius: 16px; overflow: hidden;
   }
+
+  .contributors-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    justify-content: center;
+    padding: 20px 0;
+  }
+  .contributor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s;
+  }
+  .contributor:hover { transform: translateY(-3px); }
+  .contributor-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--gray-200);
+    object-fit: cover;
+    transition: border-color 0.2s;
+  }
+  .contributor:hover .contributor-avatar { border-color: var(--black); }
+  .contributor-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+  }
+  .contributor-commits {
+    font-size: 11px;
+    color: var(--gray-400);
+  }
+  }
   .feature-card { background: var(--white); padding: 32px 28px; }
   .feature-num {
     font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
@@ -305,6 +342,28 @@
   </div>
 </section>
 
+<!-- Contributors -->
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="contributors.label">Contributors</div>
+      <h2 class="section-title" data-i18n="contributors.title">Built by the community</h2>
+    </div>
+    <div class="reveal rd1 contributors-grid" style="margin-top:24px">
+      <a href="https://github.com/NSIETeam" class="contributor" target="_blank" rel="noopener">
+        <img src="https://avatars.githubusercontent.com/u/209107355?v=4" alt="NSIETeam" class="contributor-avatar" loading="lazy">
+        <span class="contributor-name">NSIETeam</span>
+        <span class="contributor-commits">119 commits</span>
+      </a>
+      <a href="https://github.com/krx521920" class="contributor" target="_blank" rel="noopener">
+        <img src="https://avatars.githubusercontent.com/u/293832182?v=4" alt="krx521920" class="contributor-avatar" loading="lazy">
+        <span class="contributor-name">krx521920</span>
+        <span class="contributor-commits">1 commit</span>
+      </a>
+    </div>
+  </div>
+</section>
+
 <div class="cta-section">
   <div class="container">
     <div class="reveal">
@@ -362,6 +421,7 @@ const i18n = {
     'roles.r3.l1': 'Access to listings', 'roles.r3.l2': 'Client matching',
     'roles.r3.l3': 'Commission tracking', 'roles.r3.l4': 'Collaboration tools',
     'tech.label': 'Technology', 'tech.title': 'Built for the ecosystem',
+    'contributors.label': 'Contributors', 'contributors.title': 'Built by the community',
     'cta.label': 'Get Started',
     'cta.title': 'Join the enterprise service ecosystem',
     'cta.sub': 'Contact us to schedule a demo or get early access to Circle.',
@@ -401,6 +461,7 @@ const i18n = {
     'roles.r3.l1': '房源访问', 'roles.r3.l2': '客户匹配',
     'roles.r3.l3': '佣金追踪', 'roles.r3.l4': '协作工具',
     'tech.label': '技术栈', 'tech.title': '为生态而建',
+    'contributors.label': '贡献者', 'contributors.title': '社区共同打造',
     'cta.label': '开始使用',
     'cta.title': '加入企业服务生态',
     'cta.sub': '联系我们预约演示或获取园圈 Circle 的早期访问权限。',
