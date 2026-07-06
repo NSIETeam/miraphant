@@ -97,14 +97,14 @@
     text-decoration: none; color: var(--white);
     font-weight: 700; font-size: 18px; letter-spacing: -0.3px;
   }
-  .nav-logo-mark { width: 36px; height: 28px; transition: transform 0.3s var(--ease-out); }
+  .nav-logo-mark { width: 32px; height: 32px; transition: transform 0.3s var(--ease-out); }
   .nav-logo:hover .nav-logo-mark { transform: scale(1.08); }
-  .nav-right { display: flex; align-items: center; gap: 24px; }
-  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-links { display: flex; gap: 20px; list-style: none; }
   .nav-links a {
     text-decoration: none; color: var(--gray-400);
-    font-size: 13px; font-weight: 500; transition: color 0.2s;
-    position: relative; letter-spacing: 0.2px;
+    font-size: 12px; font-weight: 500; transition: color 0.2s;
+    position: relative; letter-spacing: 0.2px; white-space: nowrap;
   }
   .nav-links a:hover, .nav-links a.active { color: var(--white); }
   .nav-links a::after {
@@ -125,8 +125,8 @@
 
   /* Hero */
   #hero {
-    min-height: auto; padding-top: 120px; display: flex; align-items: center;
-    padding: 56px 0 60px; position: relative;
+    min-height: 100vh; display: flex; align-items: center;
+    padding: 80px 0 60px; position: relative;
   }
   .hero-content { max-width: 900px; margin: 0 auto; text-align: center; }
   .hero-badge {
@@ -178,7 +178,7 @@
   @keyframes logoFadeIn { to { opacity: 1; } }
 
   /* Sections */
-  .section { padding: 64px 0; }
+  .section { padding: 80px 0; }
   .section.border-b { border-bottom: 1px solid var(--gray-100); }
   .section .label {
     font-size: 11px; font-weight: 700;
@@ -331,7 +331,7 @@
 <nav id="nav">
   <div class="container nav-inner">
     <a href="#" class="nav-logo">
-      <img src="logo.png" alt="Miraphant" class="nav-logo-mark" style="width:36px;height:36px">
+      <img src="logo.png" alt="Miraphant" class="nav-logo-mark" style="width:32px;height:32px">
       Miraphant
     </a>
     <div class="nav-right">
