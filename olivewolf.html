@@ -46,6 +46,11 @@
   .product-hero h1 { font-size: clamp(36px, 5vw, 56px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px; }
   .product-hero .sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; margin-bottom: 32px; }
 
+  .demo-media { background: var(--gray-50); border-radius: 20px; border: 1px solid var(--gray-200); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.06); }
+  .demo-media img, .demo-media video { display: block; width: 100%; height: auto; }
+  .demo-caption { padding: 14px 18px; border-top: 1px solid var(--gray-200); display: flex; justify-content: space-between; gap: 16px; align-items: center; font-size: 12px; color: var(--gray-500); background: var(--white); }
+  .demo-caption strong { color: var(--black); font-weight: 700; }
+
   .btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 100px; background: var(--black); color: var(--white); font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s; }
   .btn-primary:hover { background: var(--gray-800); transform: translateY(-1px); }
   .btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 100px; border: 1px solid var(--gray-200); color: var(--black); font-weight: 500; font-size: 14px; text-decoration: none; transition: all 0.2s; }
@@ -147,17 +152,12 @@
         <a href="#editions" class="btn-secondary" data-i18n="hero.editions">Editions →</a>
       </div>
     </div>
-    <div class="reveal rd3" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center">
-      <svg width="120" height="160" viewBox="0 0 120 160" fill="none">
-        <circle cx="60" cy="52" r="28" stroke="#999" stroke-width="1.5" fill="none"/>
-        <path d="M 38 48 Q 60 40 82 48" stroke="#CCC" stroke-width="1" fill="none"/>
-        <circle cx="50" cy="52" r="2.5" fill="#666"/>
-        <circle cx="70" cy="52" r="2.5" fill="#666"/>
-        <path d="M 52 64 Q 60 68 68 64" stroke="#666" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        <path d="M 32 100 Q 60 88 88 100 L 92 150 L 28 150 Z" stroke="#999" stroke-width="1.5" fill="#F0F0F0"/>
-        <path d="M 100 70 Q 110 75 105 85" stroke="#CCC" stroke-width="1" fill="none" stroke-dasharray="2,2"/>
-        <path d="M 20 70 Q 10 75 15 85" stroke="#CCC" stroke-width="1" fill="none" stroke-dasharray="2,2"/>
-      </svg>
+    <div class="reveal rd3 demo-media">
+      <img src="assets/olivewolf-demo.svg" alt="OliveWolf real-time digital human demo preview" loading="eager">
+      <div class="demo-caption">
+        <span><strong data-i18n="hero.demo.title">Demo preview</strong></span>
+        <span data-i18n="hero.demo.desc">Voice → LLM → TTS → avatar rendering</span>
+      </div>
     </div>
   </div>
 </section>
@@ -340,6 +340,8 @@ const i18n = {
     'hero.sub': 'A real-time, audio-driven digital human framework built on dual render backends. Open-source core with enterprise-grade deployment. From a single portrait to a speaking, listening, thinking avatar.',
     'hero.gh': 'View on GitHub →',
     'hero.editions': 'Editions →',
+    'hero.demo.title': 'Demo preview',
+    'hero.demo.desc': 'Voice → LLM → TTS → avatar rendering',
     'pillars.label': "OliveWolf's DNA",
     'pillars.title': 'Four principles that define OliveWolf',
     'pillars.p1': 'Audio drives lip movement frame-by-frame. Low-latency streaming pipeline turns speech into a talking avatar in under two seconds — ask a question, get a face that answers.',
@@ -401,6 +403,8 @@ const i18n = {
     'hero.sub': '基于双渲染后端的实时音频驱动数字人框架。开源核心，企业级部署。从一张照片，到会听、会想、会说话的数字人。',
     'hero.gh': '在 GitHub 查看 →',
     'hero.editions': '版本 →',
+    'hero.demo.title': '演示预览',
+    'hero.demo.desc': '语音 → 大模型 → 语音合成 → 数字人渲染',
     'pillars.label': 'OliveWolf 的基因',
     'pillars.title': '定义 OliveWolf 的四项原则',
     'pillars.p1': '音频逐帧驱动口型。低延迟流式管线让语音在两秒内变成会说话的数字人——你提问，一张正在回答的脸就出现。',
