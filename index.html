@@ -81,12 +81,12 @@
   /* Nav */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 1px solid transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
     transition: border-color 0.3s, background 0.3s;
   }
-  nav.scrolled { border-bottom-color: var(--gray-200); background: rgba(255,255,255,0.92); }
+  nav.scrolled { border-bottom-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.92); }
   .nav-inner {
     display: flex; align-items: center; justify-content: space-between;
     height: 64px; transition: height 0.3s;
@@ -94,7 +94,7 @@
   nav.scrolled .nav-inner { height: 56px; }
   .nav-logo {
     display: flex; align-items: center; gap: 10px;
-    text-decoration: none; color: var(--black);
+    text-decoration: none; color: var(--white);
     font-weight: 700; font-size: 18px; letter-spacing: -0.3px;
   }
   .nav-logo-mark { width: 28px; height: 28px; transition: transform 0.3s var(--ease-out); }
@@ -102,26 +102,26 @@
   .nav-right { display: flex; align-items: center; gap: 24px; }
   .nav-links { display: flex; gap: 28px; list-style: none; }
   .nav-links a {
-    text-decoration: none; color: var(--gray-500);
+    text-decoration: none; color: var(--gray-400);
     font-size: 13px; font-weight: 500; transition: color 0.2s;
     position: relative; letter-spacing: 0.2px;
   }
-  .nav-links a:hover, .nav-links a.active { color: var(--black); }
+  .nav-links a:hover, .nav-links a.active { color: var(--white); }
   .nav-links a::after {
     content: ''; position: absolute; bottom: -4px; left: 0;
-    width: 0; height: 1.5px; background: var(--black);
+    width: 0; height: 1.5px; background: var(--white);
     transition: width 0.25s var(--ease-out);
   }
   .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
-  .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; color: var(--black); }
+  .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; color: var(--white); }
   .lang-btn {
     background: none; border: none; cursor: pointer;
-    font-size: 12px; font-weight: 600; color: var(--gray-400);
+    font-size: 12px; font-weight: 600; color: var(--gray-500);
     padding: 4px 8px; border-radius: 4px; font-family: inherit;
     transition: all 0.2s;
   }
-  .lang-btn:hover { color: var(--gray-700); background: var(--gray-100); }
-  .lang-btn.active { color: var(--black); background: var(--gray-100); }
+  .lang-btn:hover { color: var(--white); background: rgba(255,255,255,0.1); }
+  .lang-btn.active { color: var(--white); background: rgba(255,255,255,0.15); }
 
   /* Hero */
   #hero {
@@ -314,7 +314,7 @@
     .nav-links { display: none; }
     .nav-links.open {
       display: flex; flex-direction: column; position: absolute;
-      top: 64px; left: 0; right: 0; background: var(--white);
+      top: 64px; left: 0; right: 0; background: rgba(0,0,0,0.95);
       padding: 16px 24px; border-bottom: 1px solid var(--gray-200); gap: 16px;
     }
     .nav-toggle { display: block; }
@@ -341,7 +341,7 @@
         <li><a href="manifesto.html" data-i18n="nav.manifesto">Manifesto</a></li>
         <li><a href="#club" data-i18n="nav.club">AI Club</a></li>
       </ul>
-      <div style="display:flex;gap:4px;padding-left:16px;border-left:1px solid var(--gray-200)">
+      <div style="display:flex;gap:4px;padding-left:16px;border-left:1px solid rgba(255,255,255,0.15)">
         <button class="lang-btn active" data-lang="en">EN</button>
         <button class="lang-btn" data-lang="zh">中</button>
       </div>

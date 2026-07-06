@@ -27,7 +27,7 @@
 
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--gray-200);
   }
   .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
@@ -37,8 +37,8 @@
   .nav-back { text-decoration: none; color: var(--gray-500); font-size: 13px; font-weight: 500; transition: color 0.2s; }
   .nav-back:hover { color: var(--black); }
   .lang-btn { background: none; border: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--gray-400); padding: 4px 8px; border-radius: 4px; font-family: inherit; transition: all 0.2s; }
-  .lang-btn:hover { color: var(--gray-700); background: var(--gray-100); }
-  .lang-btn.active { color: var(--black); background: var(--gray-100); }
+  .lang-btn:hover { color: var(--white); background: rgba(255,255,255,0.1); }
+  .lang-btn.active { color: var(--white); background: rgba(255,255,255,0.15); }
 
   .product-hero { padding: 120px 0 60px; border-bottom: 1px solid var(--gray-100); }
   .product-hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
@@ -118,7 +118,7 @@
     </a>
     <div class="nav-right">
       <a href="index.html" class="nav-back" data-i18n="nav.back">← Back</a>
-      <div style="display:flex;gap:4px;padding-left:12px;border-left:1px solid var(--gray-200)">
+      <div style="display:flex;gap:4px;padding-left:12px;border-left:1px solid rgba(255,255,255,0.15)">
         <button class="lang-btn active" data-lang="en">EN</button>
         <button class="lang-btn" data-lang="zh">中</button>
       </div>
