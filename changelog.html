@@ -659,7 +659,7 @@ function renderContributorStats() {
     var color = colors[i % colors.length];
     html += '<div class="contrib-chip" onclick="showContributorDetail(\'' + name.replace(/'/g,"\\'") + '\')" style="cursor:pointer">' +
       '<div class="contrib-avatar" style="background:' + color + '">' + initials + '</div><div>' +
-      '<div class="contrib-name">' + name + '</div><div class="contrib-count">' + count + ' commits 路 \u70b9\u51fb\u67e5\u770b\u8be6\u60c5</div>' +
+      '<div class="contrib-name">' + name + '</div><div class="contrib-count">' + count + ' commits \u00b7 \u70b9\u51fb\u67e5\u770b\u8be6\u60c5</div>' +
       '<div class="contrib-bar"><div class="contrib-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div></div></div>';
   });
   document.getElementById('contributors').innerHTML = html;
@@ -804,7 +804,7 @@ async function loadCommits() {
       DATA_LOADED = true;
       document.getElementById('lastUpdate').textContent = new Date(data.generated_at).toLocaleString();
     }
-  } catch(e) { console.warn('fetch error:', e); var banner = document.createElement('div'); banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.15)'; banner.textContent = '鏈兘鍔犺浇鏈€鏂版暟鎹紝褰撳墠鏄剧ず缂撳瓨鍐呭'; document.body.appendChild(banner); setTimeout(function(){ banner.style.opacity='0'; banner.style.transition='opacity 1s'; setTimeout(function(){ banner.remove(); }, 1000); }, 5000); }
+  } catch(e) { console.warn('fetch error:', e); var banner = document.createElement('div'); banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.15)'; banner.textContent = '\u672a\u80fd\u52a0\u8f7d\u6700\u65b0\u6570\u636e\uff0c\u5f53\u524d\u663e\u793a\u7f13\u5b58\u5185\u5bb9'; document.body.appendChild(banner); setTimeout(function(){ banner.style.opacity='0'; banner.style.transition='opacity 1s'; setTimeout(function(){ banner.remove(); }, 1000); }, 5000); }
   COMMITS.sort(function(a, b) { return new Date(b.d) - new Date(a.d); });
   render();
   renderContributorStats();
