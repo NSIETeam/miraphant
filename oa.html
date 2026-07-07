@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Miraphant OA — Office Automation</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="js/portal.css">
+<style>
+:root{--w:#FFF;--b:#000;--g50:#F9F9F9;--g100:#F0F0F0;--g200:#E5E5E5;--g300:#CCC;--g400:#999;--g500:#666;--g600:#444;--g700:#333;--g800:#222;--ease:cubic-bezier(.16,1,.3,1);--sh-sm:0 1px 3px rgba(0,0,0,.04);--sh-md:0 4px 16px rgba(0,0,0,.06);--sh-lg:0 12px 40px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Inter',sans-serif;background:var(--w);color:var(--b);-webkit-font-smoothing:antialiased;overflow-x:hidden;animation:fi .4s var(--ease)}@keyframes fi{from{opacity:0}to{opacity:1}}
+.mono{font-family:'JetBrains Mono',monospace}.container{max-width:1100px;margin:0 auto;padding:0 24px}
+#hero{min-height:45vh;display:flex;align-items:center;padding:100px 0 30px}.hero-content{max-width:900px;margin:0 auto;text-align:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;border:1px solid var(--g200);background:var(--w);font-size:12px;font-weight:500;color:var(--g500);margin-bottom:20px;box-shadow:var(--sh-sm)}.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--b);animation:pulse 2s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero-title{font-size:clamp(28px,4.5vw,48px);font-weight:900;line-height:1.05;letter-spacing:-.035em;margin-bottom:14px}.hero-title .light{font-weight:300;color:var(--g400)}.hero-sub{font-size:clamp(14px,1.1vw,16px);color:var(--g500);line-height:1.7;max-width:520px;margin:0 auto}
+.section{padding:50px 0}.section.bb{border-bottom:1px solid var(--g100)}.section .label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--g400);margin-bottom:12px}.section-title{font-size:clamp(22px,2.8vw,34px);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:10px}.section-sub{font-size:14px;color:var(--g500);line-height:1.7}
+.stats-row{display:flex;gap:16px;margin-top:24px;flex-wrap:wrap}.stat-box{padding:20px 24px;border:1px solid var(--g200);border-radius:16px;flex:1;min-width:160px;transition:all .3s var(--ease)}.stat-box:hover{border-color:var(--b);transform:translateY(-2px);box-shadow:var(--sh-sm)}.stat-box .num{font-size:28px;font-weight:800;letter-spacing:-1px}.stat-box .lbl{font-size:11px;color:var(--g400);margin-top:4px;letter-spacing:1px;text-transform:uppercase}
+.oa-tabs{display:flex;gap:0;margin-bottom:28px;border-bottom:1px solid var(--g200);overflow-x:auto}.oa-tab{padding:12px 24px;font-size:13px;font-weight:500;color:var(--g400);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .25s var(--ease);background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}.oa-tab:hover{color:var(--b)}.oa-tab.active{color:var(--b);border-bottom-color:var(--b);font-weight:600}
+.btn-p{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:100px;background:var(--b);color:var(--w);font-weight:600;font-size:13px;text-decoration:none;transition:all .25s var(--ease);box-shadow:var(--sh-sm);border:none;cursor:pointer;font-family:inherit}.btn-p:hover{background:var(--g800);transform:translateY(-2px)}.btn-s{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:100px;border:1px solid var(--g200);color:var(--b);font-weight:500;font-size:13px;text-decoration:none;transition:all .25s var(--ease);background:var(--w);cursor:pointer;font-family:inherit}.btn-s:hover{border-color:var(--b)}.btn-sm{padding:6px 14px;font-size:12px}.btn-gh{background:none;border:none;color:var(--g500);font-size:12px;cursor:pointer;padding:5px 10px;font-family:inherit;transition:color .2s;border-radius:6px}.btn-gh:hover{color:var(--b);background:var(--g100)}
+.tw{border:1px solid var(--g200);border-radius:16px;overflow:hidden;background:var(--w)}.ts{overflow-x:auto}table{width:100%;border-collapse:collapse}th{text-align:left;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--g400);padding:12px 20px;border-bottom:1px solid var(--g200);white-space:nowrap}td{padding:14px 20px;font-size:13px;border-bottom:1px solid var(--g50);white-space:nowrap}tr:last-child td{border-bottom:none}tbody tr{transition:background .15s}tbody tr:hover{background:var(--g50)}
+.bg{display:inline-block;padding:3px 10px;font-size:11px;font-weight:500;border-radius:100px}.bg-p{background:var(--g100);color:var(--g600)}.bg-a{background:var(--b);color:var(--w)}.bg-r{background:#FFF0F0;color:#C00;border:1px solid #FCC}.bg-pr{background:#F0F0FF;color:#33C;border:1px solid #CCF}.bg-d{background:#F0FFF0;color:#060;border:1px solid #CFC}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}.mo.show{opacity:1;visibility:visible}.mo-box{background:var(--w);border-radius:20px;width:90%;max-width:560px;max-height:85vh;overflow-y:auto;transform:translateY(20px) scale(.98);transition:transform .3s var(--ease)}.mo.show .mo-box{transform:translateY(0) scale(1)}.mo-h{display:flex;align-items:center;justify-content:space-between;padding:24px;border-bottom:1px solid var(--g100)}.mo-t{font-size:17px;font-weight:700}.mo-x{font-size:22px;color:var(--g400);cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:8px;transition:.2s}.mo-x:hover{color:var(--b);background:var(--g100)}.mo-b{padding:24px}.mo-f{padding:16px 24px;border-top:1px solid var(--g100);display:flex;justify-content:flex-end;gap:12px}
+.fg{margin-bottom:18px}.fl{display:block;font-size:12px;font-weight:600;margin-bottom:6px}.fl .req{color:#C00}.fi,.fs,.ft{width:100%;padding:11px 14px;border:1px solid var(--g200);border-radius:10px;background:var(--w);font-size:14px;font-family:inherit;transition:border-color .2s}.fi:focus,.fs:focus,.ft:focus{border-color:var(--b);outline:none}.ft{resize:vertical;min-height:72px}.fr{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ic-prev{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.id-card{width:300px;height:470px;border-radius:18px;overflow:hidden;box-shadow:var(--sh-lg);display:flex;flex-direction:column}.id-card.dark{background:var(--b);color:var(--w)}.id-card.light{background:var(--w);color:var(--b);border:1px solid var(--g200)}.id-card-accent{height:5px}.dark .id-card-accent{background:var(--w)}.light .id-card-accent{background:var(--b)}.id-card-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:32px 24px}.id-card-logo{font-size:15px;font-weight:800;letter-spacing:-.5px;margin-bottom:24px}.id-card-photo{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;margin-bottom:16px}.dark .id-card-photo{background:rgba(255,255,255,.1)}.light .id-card-photo{background:var(--g100)}.id-card-name{font-size:20px;font-weight:800;margin-bottom:4px}.id-card-role{font-size:12px;opacity:.5;margin-bottom:20px}.id-card-info{width:100%;border-top:1px solid currentColor;opacity:.7;padding-top:14px}.id-card-ir{display:flex;justify-content:space-between;font-size:11px;padding:4px 0}.id-card-il{opacity:.5}.id-card-footer{padding:8px 24px;font-size:8px;letter-spacing:2px;text-transform:uppercase;opacity:.3;text-align:center}
+.toast{position:fixed;bottom:32px;right:32px;background:var(--b);color:var(--w);padding:12px 20px;border-radius:10px;font-size:13px;z-index:400;transform:translateY(100px);opacity:0;transition:all .3s var(--ease);box-shadow:var(--sh-lg)}.toast.show{transform:translateY(0);opacity:1}
+.empty{text-align:center;padding:40px 20px;color:var(--g400);font-size:14px}
+.ftabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.ftab{padding:5px 14px;border:1px solid var(--g200);border-radius:100px;background:var(--w);font-size:12px;font-weight:500;cursor:pointer;color:var(--g500);transition:all .2s;font-family:inherit}.ftab:hover{border-color:var(--g400)}.ftab.active{background:var(--b);color:var(--w);border-color:var(--b)}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease),transform .6s var(--ease)}.reveal.visible{opacity:1;transform:translateY(0)}.rd1{transition-delay:.08s}.rd2{transition-delay:.16s}
+@media(max-width:768px){.fr{grid-template-columns:1fr}.stat-box{min-width:calc(50% - 8px)}}
+</style>
+</head>
+<body>
+<script src="js/auth.js"></script>
+<script>if(!window.checkAuth())window.location.href="index.html#employee-portal";</script>
+<nav class="portal-nav" id="nav"><div class="portal-nav-inner">
+<a href="portal.html" class="portal-nav-logo"><img src="logo.png" style="width:32px;height:32px" alt="Miraphant"> Miraphant</a>
+<ul class="portal-nav-links" id="navLinks">
+<li><a href="portal.html">Portal</a></li>
+<li><a href="oa.html" class="active">OA</a></li>
+<li><a href="followup.html">Follow-up</a></li>
+<li><a href="changelog.html">Log</a></li>
+</ul>
+<div class="portal-nav-right"><button class="portal-logout-btn" onclick="doLogout()">Logout</button></div>
+<button class="portal-nav-toggle" id="navToggle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+</div></nav>
+<section id="hero"><div class="container" style="width:100%"><div class="hero-content">
+<div class="reveal"><div class="hero-badge"><span class="hero-badge-dot"></span>Miraphant OA</div></div>
+<div class="reveal rd1"><h1 class="hero-title"><span>Office operations,</span><br><span class="light">automated.</span></h1></div>
+<div class="reveal rd2"><p class="hero-sub">Reimbursement, leave, travel, and ID badge management.</p></div>
+</div></div></section>
+<section class="section bb" style="padding-top:0"><div class="container"><div class="stats-row" id="oaStats"></div></div></section>
+<section class="section bb" style="padding-top:0"><div class="container">
+<div class="reveal" style="max-width:560px;margin-bottom:20px"><div class="label">Modules</div><h2 class="section-title">Four modules, one workflow</h2><p class="section-sub">Submit, track, and approve.</p></div>
+<div class="oa-tabs">
+<button class="oa-tab active" data-m="reimburse">Reimbursement</button>
+<button class="oa-tab" data-m="leave">Leave</button>
+<button class="oa-tab" data-m="travel">Travel</button>
+<button class="oa-tab" data-m="badge">ID Badge</button>
+</div>
+<div id="mc"></div>
+</div></section>
+<div style="padding:32px 0;text-align:center;color:var(--g400);font-size:12px;border-top:1px solid var(--g100);background:var(--w)"><div class="container">© 2026 Miraphant, Inc.</div></div>
+<script src="js/oa-app.js"></script>
+</body>
+</html>

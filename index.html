@@ -28,6 +28,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="js/portal.css">
 
 <!-- Structured Data for SEO -->
 <script type="application/ld+json">
@@ -530,12 +531,14 @@
     </div>
     <div class="footer-bottom">
       <span data-i18n="footer.copy">© 2026 Miraphant, Inc.</span>
+      <button class="portal-employee-link" onclick="handleEmployeePortal()">Employee Portal</button>
     </div>
   </div>
 </footer>
 
 <button id="back-to-top" aria-label="Back to top">↑</button>
 
+<script src="js/auth.js"></script>
 <script>
 const i18n = {
   en: {
@@ -686,6 +689,28 @@ document.querySelectorAll('.nav-links a').forEach(a => {
 document.getElementById('back-to-top').addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
+
+// Employee Portal
+function handleEmployeePortal() {
+  if (window.checkAuth()) {
+    window.location.href = 'portal.html';
+  } else {
+    window.showLoginModal(function() {
+      window.location.href = 'portal.html';
+    });
+  }
+}
+if (window.location.hash === '#employee-portal') {
+  if (!window.checkAuth()) {
+    setTimeout(function() {
+      window.showLoginModal(function() {
+        window.location.href = 'portal.html';
+      });
+    }, 500);
+  } else {
+    window.location.href = 'portal.html';
+  }
+}
 
 // Reveal animation
 const observer = new IntersectionObserver((entries)=>{

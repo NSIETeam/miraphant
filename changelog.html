@@ -94,6 +94,7 @@
     .commit-body::before{left:-4px}
   }
 </style>
+<link rel="stylesheet" href="js/portal.css">
 </head>
 <body>
 
@@ -109,10 +110,15 @@
       Miraphant
     </a>
     <ul class="nav-links">
+      <li><a href="portal.html">Portal</a></li>
+      <li><a href="oa.html">OA</a></li>
+      <li><a href="followup.html">Follow-up</a></li>
+      <li><a href="changelog.html" class="active">Log</a></li>
       <li><a href="#timeline">Timeline</a></li>
       <li><a href="#contributors">Contributors</a></li>
       <li><button class="export-btn" id="exportBtn" style="margin-left:8px">Export Notes</button></li>
       <li><button class="export-btn" id="importBtn">Import Notes</button></li>
+      <li><button class="portal-logout-btn" onclick="doLogout()" style="margin-left:8px;border:1px solid var(--g200);color:var(--g500)">Logout</button></li>
     </ul>
   </div>
 </nav>
@@ -160,6 +166,8 @@
   </div>
 </footer>
 
+<script src="js/auth.js"></script>
+<script>if(!window.checkAuth())window.location.href="index.html#employee-portal";</script>
 <script>
 
 // ===== Data: Fallback commits (embedded, updated by GitHub Actions via commits.json) =====
@@ -644,6 +652,11 @@ var _contributors = new Set(COMMITS.map(function(c) { return displayName(c.a); }
 document.getElementById('totalContributors').textContent = _contributors.size;
 loadCommits();
 
+
+// Auto-refresh every 15 minutes
+setTimeout(function(){
+  window.location.reload();
+}, 15 * 60 * 1000);
 </script>
 </body>
 </html>
