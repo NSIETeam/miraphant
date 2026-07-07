@@ -483,7 +483,7 @@ const FALLBACK_COMMITS = [
   {d:"2026-04-28T13:24:00Z",a:"NIETeam",m:"✨ 开箱即用体验增强：记忆系统、会话管理、沙箱卡片、首次引导",r:"EasyHermes"},
   {d:"2026-04-28T11:08:11Z",a:"NIETeam",m:"🎉 EasyHermes v1.0.0 — 初始版本",r:"EasyHermes"}
 ];
-const COMMITS = [...FALLBACK_COMMITS];
+let COMMITS = [...FALLBACK_COMMITS];
 let DATA_LOADED = false;
 
 // ===== Author name mapping =====
@@ -798,11 +798,12 @@ async function loadCommits() {
   try {
     var resp = await fetch('commits.json?v=' + Date.now());
     if (resp.ok) {
-      var data = await resp.json();
-      COMMITS.length = 0;
-      COMMITS.push.apply(COMMITS, data.commits);
-      DATA_LOADED = true;
-      document.getElementById('lastUpdate').textContent = new Date(data.generated_at).toLocaleString();
+      try {
+        var data = await resp.json();
+        COMMITS = data.commits.slice();
+        DATA_LOADED = true;
+        document.getElementById('lastUpdate').textContent = new Date(data.generated_at).toLocaleString();
+      } catch(pe) { console.warn('JSON parse error:', pe); }
     }
   } catch(e) { console.warn('fetch error:', e); var banner = document.createElement('div'); banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.15)'; banner.textContent = '\u672a\u80fd\u52a0\u8f7d\u6700\u65b0\u6570\u636e\uff0c\u5f53\u524d\u663e\u793a\u7f13\u5b58\u5185\u5bb9'; document.body.appendChild(banner); setTimeout(function(){ banner.style.opacity='0'; banner.style.transition='opacity 1s'; setTimeout(function(){ banner.remove(); }, 1000); }, 5000); }
   COMMITS.sort(function(a, b) { return new Date(b.d) - new Date(a.d); });
