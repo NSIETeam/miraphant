@@ -740,7 +740,7 @@ function showContributorDetail(name) {
 
   Object.keys(byDay).sort(function(a,b){return b.localeCompare(a);}).forEach(function(day) {
     var dayCommits = byDay[day];
-    var d = new Date(dayCommits[0].d);
+    var d = toCNDate(dayCommits[0].d);
     var weekday = d.toLocaleDateString('zh-CN', {weekday:'long', timeZone:'UTC'});
     var summary = summarizeDay(dayCommits);
 
