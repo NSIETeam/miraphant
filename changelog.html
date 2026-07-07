@@ -411,6 +411,16 @@ const COMMITS = [
 // Sort by date descending
 COMMITS.sort((a, b) => new Date(b.d) - new Date(a.d));
 
+// ===== Author name mapping =====
+const AUTHOR_MAP = {
+  'NSIETeam': 'KING（瞿铭）',
+  'Jeremy-Curry30': 'Jeremy（叶绩）',
+  'Felix201209': 'Felix（于朋正）',
+  'krx521920': '魏文宇',
+  'Yu Peng Zheng': 'Felix（于朋正）',
+};
+function displayName(a) { return AUTHOR_MAP[a] || a; }
+
 // ===== State =====
 let activeFilter = 'all';
 let searchTerm = '';
@@ -542,7 +552,7 @@ function render() {
         <span class="repo-badge repo-${c.r.toLowerCase()}">${c.r}</span>
         <div style="flex:1">
           <div class="commit-msg">${c.m}</div>
-          <div class="commit-author">${c.a}</div>
+          <div class="commit-author">${displayName(c.a)}</div>
           ${noteHtml}
         </div>
       </div>
@@ -559,7 +569,7 @@ function render() {
 // ===== Contributor stats =====
 function renderContributorStats() {
   const counts = {};
-  COMMITS.forEach(c => { counts[c.a] = (counts[c.a] || 0) + 1; });
+  COMMITS.forEach(c => { const name = displayName(c.a); counts[name] = (counts[name] || 0) + 1; });
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const max = sorted[0][1];
   const colors = ['#000','#555','#888','#aaa','#ccc'];
@@ -602,7 +612,7 @@ render();
 renderContributorStats();
 updateNoteCount();
 
-const contributors = new Set(COMMITS.map(c => c.a));
+const contributors = new Set(COMMITS.map(c => displayName(c.a)));
 document.getElementById('totalContributors').textContent = contributors.size;
 </script>
 </body>
