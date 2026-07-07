@@ -15,7 +15,10 @@ REPOS = [
 ]
 
 def fetch_commits(owner, repo, label):
-    """Fetch all commits from a repo via gh CLI"""
+    """Fetch all commits from a repo via gh CLI.
+    Returns (commits, ok). ok=False means the fetch failed (auth/404/etc) —
+    caller MUST NOT treat an empty list here as "repo has zero commits";
+    it should fall back to the previously known-good data for this repo."""
     try:
         result = subprocess.run(
             ["gh", "api", f"repos/{owner}/{repo}/commits", "--paginate", "-q",
@@ -24,7 +27,7 @@ def fetch_commits(owner, repo, label):
         )
         if result.returncode != 0:
             print(f"WARN: Failed to fetch {owner}/{repo}: {result.stderr[:200]}", file=sys.stderr)
-            return []
+            return [], False
 
         commits = []
         for line in result.stdout.strip().split('\n'):
@@ -44,16 +47,38 @@ def fetch_commits(owner, repo, label):
                 "r": label
             })
         print(f"  {owner}/{repo}: {len(commits)} commits", file=sys.stderr)
-        return commits
+        # A successful API call that legitimately returns zero commits is
+        # extremely unlikely for any active repo in REPOS; treat 0 as a
+        # soft failure too so we never silently wipe out real history.
+        return commits, len(commits) > 0
     except Exception as e:
         print(f"WARN: Error fetching {owner}/{repo}: {e}", file=sys.stderr)
-        return []
+        return [], False
+
+def load_previous_commits():
+    """Load the commits.json currently on disk (if any) so failed fetches
+    can fall back to last-known-good data instead of wiping a repo out."""
+    output_path = os.path.join(os.path.dirname(__file__), "..", "commits.json")
+    try:
+        with open(output_path, encoding='utf-8') as f:
+            data = json.load(f)
+        by_repo = {}
+        for c in data.get("commits", []):
+            by_repo.setdefault(c["r"], []).append(c)
+        return by_repo
+    except Exception:
+        return {}
 
 def main():
     print("Fetching commits from all repos...", file=sys.stderr)
+    previous_by_repo = load_previous_commits()
     all_commits = []
     for owner, repo, label in REPOS:
-        commits = fetch_commits(owner, repo, label)
+        commits, ok = fetch_commits(owner, repo, label)
+        if not ok:
+            fallback = previous_by_repo.get(label, [])
+            print(f"  {owner}/{repo}: fetch failed/empty, keeping {len(fallback)} previously known commits", file=sys.stderr)
+            commits = fallback
         all_commits.extend(commits)
 
     # Sort by date descending
