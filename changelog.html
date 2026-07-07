@@ -21,6 +21,11 @@
   .nav-links a{text-decoration:none;color:var(--g500);font-size:13px;font-weight:500;transition:color .2s}
   .nav-links a:hover{color:var(--black)}
   .nav-links a.active{color:var(--black);font-weight:600}
+  .nav-toggle{display:none;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px;z-index:101}
+  .nav-toggle span{display:block;width:22px;height:2px;background:var(--black);transition:all .3s}
+  .nav-toggle.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .nav-toggle.open span:nth-child(2){opacity:0}
+  .nav-toggle.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 
   .hero{padding:100px 0 40px;border-bottom:1px solid var(--g100)}
   .hero h1{font-size:clamp(32px,5vw,52px);font-weight:900;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px}
@@ -108,7 +113,12 @@
   footer{padding:40px 0 24px;border-top:1px solid var(--g100);text-align:center;color:var(--g400);font-size:12px}
 
   @media(max-width:768px){
-    .nav-links{display:none}
+    .nav-toggle{display:flex}
+    .nav-links{display:none;position:fixed;top:60px;left:0;right:0;flex-direction:column;background:#fff;border-bottom:1px solid var(--g200);padding:16px 24px;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.08);z-index:99}
+    .nav-links.open{display:flex}
+    .nav-links li{list-style:none}
+    .nav-links .export-btn{margin-left:0!important;width:100%;text-align:center}
+    .nav-links .portal-logout-btn{margin-left:0!important;width:100%;text-align:center}
     .timeline::before{left:0}
     .commit-entry{grid-template-columns:1fr;gap:4px}
     .commit-date{text-align:left;padding-right:0;padding-left:0}
@@ -132,7 +142,7 @@
       </svg>
       Miraphant
     </a>
-    <ul class="nav-links">
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button><ul class="nav-links">
       <li><a href="portal.html">Portal</a></li>
       <li><a href="oa.html">OA</a></li>
       <li><a href="followup.html">Follow-up</a></li>
@@ -800,6 +810,12 @@ document.querySelectorAll('.filter-btn').forEach(function(btn) {
 document.getElementById('searchBox').addEventListener('input', function(e) {
   searchTerm = e.target.value;
   render();
+});
+
+// ===== Mobile nav toggle =====
+document.getElementById('navToggle').addEventListener('click', function() {
+  this.classList.toggle('open');
+  document.querySelector('.nav-links').classList.toggle('open');
 });
 
 // ===== Init =====
