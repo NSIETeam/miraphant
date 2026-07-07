@@ -565,13 +565,18 @@ window.importNotes = function() {
 };
 
 // ===== Format =====
-function formatDate(iso) {
+function toCNDate(iso) {
   var d = new Date(iso);
+  var cn = new Date(d.getTime() + 8 * 3600 * 1000);
+  return cn;
+}
+function formatDate(iso) {
+  var d = toCNDate(iso);
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return {
-    day: months[d.getMonth()] + ' ' + d.getDate(),
-    time: String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'),
-    dateKey: d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+    day: months[d.getUTCMonth()] + ' ' + d.getUTCDate(),
+    time: String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0'),
+    dateKey: d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0')
   };
 }
 
@@ -592,7 +597,7 @@ function render() {
     var note = getNote(noteId);
     if (f.dateKey !== lastDateKey) {
       lastDateKey = f.dateKey;
-      var weekday = new Date(c.d).toLocaleDateString('en-US', { weekday: 'long' });
+      var weekday = toCNDate(c.d).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
       html += '<div class="date-header">' + f.dateKey + ' — ' + weekday + '</div>';
     }
     var safeId = noteId.replace(/'/g, "\\'");
@@ -701,8 +706,8 @@ function showContributorDetail(name) {
   // Group by day
   var byDay = {};
   myCommits.forEach(function(c) {
-    var d = new Date(c.d);
-    var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var d = toCNDate(c.d);
+    var key = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
     if (!byDay[key]) byDay[key] = [];
     byDay[key].push(c);
   });
@@ -711,8 +716,8 @@ function showContributorDetail(name) {
   myCommits.forEach(function(c) { repoSet[c.r] = true; });
   var repoCount = Object.keys(repoSet).length;
   var dayCount = Object.keys(byDay).length;
-  var firstDate = myCommits[myCommits.length-1] ? new Date(myCommits[myCommits.length-1].d).toLocaleDateString('zh-CN') : '';
-  var lastDate = myCommits[0] ? new Date(myCommits[0].d).toLocaleDateString('zh-CN') : '';
+  var firstDate = myCommits[myCommits.length-1] ? toCNDate(myCommits[myCommits.length-1].d).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : '';
+  var lastDate = myCommits[0] ? toCNDate(myCommits[0].d).toLocaleDateString('zh-CN', { timeZone: 'UTC' }) : '';
 
   var html = '<div class="contrib-modal-overlay" id="contribOverlay" onclick="if(event.target===this)closeContribModal()">' +
     '<div class="contrib-modal">' +
@@ -727,7 +732,7 @@ function showContributorDetail(name) {
   Object.keys(byDay).sort(function(a,b){return b.localeCompare(a);}).forEach(function(day) {
     var dayCommits = byDay[day];
     var d = new Date(dayCommits[0].d);
-    var weekday = d.toLocaleDateString('zh-CN', {weekday:'long'});
+    var weekday = d.toLocaleDateString('zh-CN', {weekday:'long', timeZone:'UTC'});
     var summary = summarizeDay(dayCommits);
 
     html += '<div class="contrib-day">' +
