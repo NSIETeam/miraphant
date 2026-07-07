@@ -152,7 +152,7 @@
     <p>Miraphant 全线产品代码贡献时间线 — 按时间倒序排列，涵盖 Otto、Circle、OliveWolf、Miraphant 官网、EasyHermes 五大项目。</p>
     <div class="stats-row">
       <div class="stat-box"><div class="num" id="totalCommits">0</div><div class="lbl">Total Commits</div></div>
-      <div class="stat-box"><div class="num" id="totalRepos">5</div><div class="lbl">Repositories</div></div>
+      <div class="stat-box"><div class="num" id="totalRepos">0</div><div class="lbl">Repositories</div></div>
       <div class="stat-box"><div class="num" id="totalContributors">4</div><div class="lbl">Contributors</div></div>
       <div class="stat-box"><div class="num" id="totalNotes">0</div><div class="lbl">Notes Saved</div></div>
       <div class="stat-box"><div class="num" id="lastUpdate" style="font-size:11px;color:var(--g500);padding-top:8px">Loading...</div><div class="lbl">Last Sync</div></div>
@@ -583,7 +583,7 @@ function render() {
     if (searchTerm && c.m.toLowerCase().indexOf(searchTerm.toLowerCase()) === -1 && c.a.toLowerCase().indexOf(searchTerm.toLowerCase()) === -1 && displayName(c.a).toLowerCase().indexOf(searchTerm.toLowerCase()) === -1) return false;
     return true;
   });
-  document.getElementById('totalCommits').textContent = filtered.length;
+  document.getElementById('totalCommits').textContent = COMMITS.length;
   var html = '';
   var lastDateKey = '';
   filtered.forEach(function(c) {
@@ -777,6 +777,8 @@ async function loadCommits() {
   renderContributorStats();
   var contributors = new Set(COMMITS.map(function(c) { return displayName(c.a); }));
   document.getElementById('totalContributors').textContent = contributors.size;
+  var repos = new Set(COMMITS.map(function(c) { return c.r; }));
+  document.getElementById('totalRepos').textContent = repos.size;
 }
 
 // ===== Filter buttons =====
@@ -802,6 +804,8 @@ renderContributorStats();
 updateNoteCount();
 var _contributors = new Set(COMMITS.map(function(c) { return displayName(c.a); }));
 document.getElementById('totalContributors').textContent = _contributors.size;
+var _repos = new Set(COMMITS.map(function(c) { return c.r; }));
+document.getElementById('totalRepos').textContent = _repos.size;
 loadCommits();
 
 
