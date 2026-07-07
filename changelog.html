@@ -616,9 +616,9 @@ function render() {
       : '<div class="commit-note-row"><span class="commit-note-empty" onclick="editNote(\'' + safeId + '\')">+ 添加备注</span></div>';
     html += '<div class="commit-entry" data-repo="' + c.r + '" data-note-id="' + noteId.replace(/"/g,'&quot;') + '">' +
       '<div class="commit-date"><div class="day">' + f.day + '</div><div class="time">' + f.time + '</div></div>' +
-      '<div class="commit-body"><span class="repo-badge repo-' + c.r.toLowerCase() + '">' + c.r + '</span>' +
-      '<div style="flex:1"><div class="commit-msg">' + c.m + '</div>' +
-      '<div class="commit-author">' + displayName(c.a) + '</div>' + noteHtml + '</div></div></div>';
+      '<div class="commit-body"><span class="repo-badge repo-' + escapeHtml(c.r.toLowerCase()) + '">' + escapeHtml(c.r) + '</span>' +
+      '<div style="flex:1"><div class="commit-msg">' + escapeHtml(c.m) + '</div>' +
+      '<div class="commit-author">' + escapeHtml(displayName(c.a)) + '</div>' + noteHtml + '</div></div></div>';
   });
   if (filtered.length === 0) {
     html = '<div style="padding:60px 0;text-align:center;color:var(--g400)">No commits found.</div>';
@@ -733,7 +733,7 @@ function showContributorDetail(name) {
     '<div class="contrib-modal">' +
     '<div class="contrib-modal-header">' +
     '<div class="contrib-modal-avatar" style="background:' + color + '">' + initials + '</div>' +
-    '<div><div class="contrib-modal-name">' + name + '</div>' +
+    '<div><div class="contrib-modal-name">' + escapeHtml(name) + '</div>' +
     '<div class="contrib-modal-meta">' + totalCount + ' 娆℃彁浜?路 ' + dayCount + ' 澶╂椿璺?路 ' + repoCount + ' 涓」鐩? +
     (firstDate ? ' 路 ' + firstDate + ' ~ ' + lastDate : '') + '</div></div>' +
     '<button class="contrib-modal-close" onclick="closeContribModal()">&times;</button></div>' +
@@ -751,8 +751,8 @@ function showContributorDetail(name) {
       '<div class="contrib-day-summary">' + summary + '</div>' +
       '<div class="contrib-day-commits">';
     dayCommits.forEach(function(c) {
-      html += '<div class="contrib-day-commit"><span class="repo-badge repo-' + c.r.toLowerCase() + '">' + c.r + '</span>' +
-        '<span class="contrib-day-commit-msg">' + c.m + '</span></div>';
+      html += '<div class="contrib-day-commit"><span class="repo-badge repo-' + escapeHtml(c.r.toLowerCase()) + '">' + escapeHtml(c.r) + '</span>' +
+        '<span class="contrib-day-commit-msg">' + escapeHtml(c.m) + '</span></div>';
     });
     html += '</div></div>';
   });
