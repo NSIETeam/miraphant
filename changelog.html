@@ -116,6 +116,7 @@
       <div class="stat-box"><div class="num" id="totalRepos">5</div><div class="lbl">Repositories</div></div>
       <div class="stat-box"><div class="num" id="totalContributors">4</div><div class="lbl">Contributors</div></div>
       <div class="stat-box"><div class="num" id="totalNotes">0</div><div class="lbl">Notes Saved</div></div>
+      <div class="stat-box"><div class="num" id="lastUpdate" style="font-size:11px;color:var(--g500);padding-top:8px">Loading...</div><div class="lbl">Last Sync</div></div>
     </div>
     <div class="contributor-stats" id="contributorStats"></div>
   </div>
@@ -406,10 +407,44 @@ const COMMITS = [
   {d:"2026-04-28T11:08:11Z",a:"NIETeam",m:"🎉 EasyHermes v1.0.0 — 初始版本",r:"EasyHermes"}
 ];
 
+const COMMITS = [];
+let DATA_LOADED = false;
+
 // === END COMMIT DATA ===
 
-// Sort by date descending
-COMMITS.sort((a, b) => new Date(b.d) - new Date(a.d));
+// ===== Load commits from commits.json (auto-updated by GitHub Actions) =====
+async function loadCommits() {
+  try {
+    const resp = await fetch('commits.json?v=' + Date.now());
+    if (resp.ok) {
+      const data = await resp.json();
+      COMMITS.length = 0;
+      COMMITS.push(...data.commits);
+      DATA_LOADED = true;
+      console.log(`Loaded ${data.total} commits, generated at ${data.generated_at}`);
+      document.getElementById('lastUpdate').textContent = 'Updated: ' + new Date(data.generated_at).toLocaleString();
+    } else {
+      console.warn('Failed to load commits.json, using fallback data');
+      loadFallback();
+    }
+  } catch(e) {
+    console.warn('Error loading commits.json:', e);
+    loadFallback();
+  }
+  // Sort by date descending
+  COMMITS.sort((a, b) => new Date(b.d) - new Date(a.d));
+  render();
+  renderContributorStats();
+  const contributors = new Set(COMMITS.map(c => displayName(c.a)));
+  document.getElementById('totalContributors').textContent = contributors.size;
+}
+
+// Fallback: if commits.json not available, use embedded data
+function loadFallback() {
+  COMMITS.length = 0;
+  // Sort by date descending
+  COMMITS.sort((a, b) => new Date(b.d) - new Date(a.d));
+}
 
 // ===== Author name mapping =====
 const AUTHOR_MAP = {
@@ -608,12 +643,11 @@ document.getElementById('searchBox').addEventListener('input', e => {
 });
 
 // ===== Init =====
-render();
-renderContributorStats();
-updateNoteCount();
+// Show loading state
+document.getElementById('commitList').innerHTML = '<div style="padding:60px 0;text-align:center;color:var(--g400)">Loading commits...</div>';
 
-const contributors = new Set(COMMITS.map(c => displayName(c.a)));
-document.getElementById('totalContributors').textContent = contributors.size;
+// Load data then render
+loadCommits();
 </script>
 </body>
 </html>
