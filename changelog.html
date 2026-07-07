@@ -70,6 +70,16 @@
   .export-btn{padding:6px 14px;border:1px solid var(--g200);border-radius:100px;background:var(--white);font-size:12px;font-weight:500;cursor:pointer;color:var(--g500);transition:all .2s}
   .export-btn:hover{border-color:var(--black);color:var(--black)}
 
+  .contributor-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:32px}
+  .contrib-chip{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--g200);border-radius:12px;transition:border-color .2s}
+  .contrib-chip:hover{border-color:var(--g400)}
+  .contrib-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0}
+  .contrib-name{font-size:14px;font-weight:600;color:var(--g700)}
+  .contrib-count{font-size:12px;color:var(--g400);margin-top:2px}
+  .contrib-bar{width:100%;height:4px;background:var(--g100);border-radius:2px;margin-top:8px;overflow:hidden}
+  .contrib-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+  #contributors{scroll-margin-top:80px}
+
   .date-header{grid-column:1/-1;padding:20px 0 8px;font-size:12px;font-weight:700;color:var(--g400);letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid var(--g100);margin-bottom:4px}
 
   footer{padding:40px 0 24px;border-top:1px solid var(--g100);text-align:center;color:var(--g400);font-size:12px}
@@ -118,7 +128,7 @@
       <div class="stat-box"><div class="num" id="totalNotes">0</div><div class="lbl">Notes Saved</div></div>
       <div class="stat-box"><div class="num" id="lastUpdate" style="font-size:11px;color:var(--g500);padding-top:8px">Loading...</div><div class="lbl">Last Sync</div></div>
     </div>
-    <div class="contributor-stats" id="contributorStats"></div>
+    <div class="contributor-stats" id="contributors"></div>
   </div>
 </section>
 
@@ -587,7 +597,7 @@ function renderContributorStats() {
       '<div class="contrib-name">' + name + '</div><div class="contrib-count">' + count + ' commits</div>' +
       '<div class="contrib-bar"><div class="contrib-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div></div></div>';
   });
-  document.getElementById('contributorStats').innerHTML = html;
+  document.getElementById('contributors').innerHTML = html;
 }
 
 // ===== Load fresh data =====
