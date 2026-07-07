@@ -151,7 +151,6 @@
 
 <script>
 const COMMITS = [
-  // === Otto (Felix201209/otto) ===
   {d:"2026-07-06T14:32:09Z",a:"Yu Peng Zheng",m:"优化加固: 止血假成功壳 + doctor 依赖体检 + 企业看板/能力补真 + 补测试 (#20)",r:"otto"},
   {d:"2026-07-06T07:06:33Z",a:"krx521920",m:"chore: add requirements.txt + update QUICKSTART/install.sh with optional Python deps",r:"otto"},
   {d:"2026-07-06T06:52:44Z",a:"krx521920",m:"feat: add Mem0 structured memory + LangGraph task orchestration + OR-Tools optimization + multi-agent collaboration + proactive service + knowledge transfer",r:"otto"},
@@ -174,7 +173,7 @@ const COMMITS = [
   {d:"2026-07-05T10:58:03Z",a:"NSIETeam",m:"style: remove emojis and optimize layout according to Material design",r:"otto"},
   {d:"2026-07-05T04:59:45Z",a:"Felix201209",m:"chore(release): v1.3.0",r:"otto"},
   {d:"2026-07-05T04:58:02Z",a:"Felix201209",m:"fix(desktop): 多会话草稿隔离 + 流式出错后无法继续对话",r:"otto"},
-  {d:"2026-07-05T04:23:14Z",a:"Felix201209",m:"feat(server): 聊天记录本地持久化(被动保存) + agent 主动保存修复",r:"otto"},
+  {d:"2026-07-05T04:23:14Z",a:"Felix201209",m:"联系 feat(server): 聊天记录本地持久化(被动保存) + agent 主动保存修复",r:"otto"},
   {d:"2026-07-05T03:14:04Z",a:"Felix201209",m:"feat(desktop): 正文渲染支持 GFM 表格",r:"otto"},
   {d:"2026-07-05T03:03:32Z",a:"Felix201209",m:"fix(skills): seed 放到 server.start() 眼前触发 + asar 安全的手写递归复制",r:"otto"},
   {d:"2026-07-05T02:58:15Z",a:"Felix201209",m:"feat(skills): 8 个办公 skill 随包预置 + 桌面端启动初始化技能上下文",r:"otto"},
@@ -207,7 +206,7 @@ const COMMITS = [
   {d:"2026-06-28T14:19:38Z",a:"Yu Peng Zheng",m:"feat(desktop): Otto 桌面端 — Electron + 本地 app server + 飞书双向 + webview 渲染层 (#18)",r:"otto"},
   {d:"2026-06-28T07:47:32Z",a:"Felix201209",m:"feat(desktop): Otto 桌面端 — Electron + 本地 app server + 飞书双向 + webview 渲染层",r:"otto"},
   {d:"2026-06-27T10:55:32Z",a:"Felix201209",m:"feat: 独立 Otto 产品——彻底切断 easycode/dvcode/母公司，BYO-key 化",r:"otto"},
-  {d:"2026-06-15T15:32:22Z",a:"Felix201209",m:"feat(setup): non-interactive 'otto setup --provider --key --model' (no TUI paste)",r:"otto"},
+  {d:"2026-06-15T15:32:22Z",a:"Felix201209",m:"feat(setup): non-interactive \'otto setup --provider --key --model\' (no TUI paste)",r:"otto"},
   {d:"2026-06-15T15:09:29Z",a:"Felix201209",m:"fix(input): Ctrl+V pastes API key from OS clipboard + non-wrapping single-line input",r:"otto"},
   {d:"2026-06-15T14:52:53Z",a:"Felix201209",m:"feat(model-setup): branded provider presets with auto-filled endpoints + compact list",r:"otto"},
   {d:"2026-06-15T14:22:56Z",a:"Felix201209",m:"feat(setup): otto setup → custom-model wizard; route auth-required to custom models (no easycode)",r:"otto"},
@@ -218,8 +217,12 @@ const COMMITS = [
   {d:"2026-06-15T10:18:56Z",a:"Felix201209",m:"fix(feishu): strip inline-code backticks for lark_md (was showing raw ` symbols)",r:"otto"},
   {d:"2026-06-15T04:45:16Z",a:"Felix201209",m:"chore: add one-command install.sh + QUICKSTART for onboarding",r:"otto"},
   {d:"2026-06-15T01:08:05Z",a:"Felix201209",m:"feat: Otto product baseline (independent fork from EasyCode)",r:"otto"},
-
-  // === Circle ===
+  {d:"2026-07-07T02:33:15Z",a:"Jeremy-Curry30",m:"design: 全域统一品牌绿色 + impeccable/taste-skill设计规范修复",r:"circle"},
+  {d:"2026-07-06T15:34:48Z",a:"Jeremy-Curry30",m:"chore: 删除无用的onBuildingClick死代码",r:"circle"},
+  {d:"2026-07-06T15:32:27Z",a:"Jeremy-Curry30",m:"design: 按impeccable产品级标准重写Chat面板 - 语义z-index/规整动效/产品token/无障碍",r:"circle"},
+  {d:"2026-07-06T15:12:10Z",a:"Jeremy-Curry30",m:"fix: 房源卡片改用a标签直接跳转，解决onClick不可靠",r:"circle"},
+  {d:"2026-07-06T14:54:35Z",a:"Jeremy-Curry30",m:"fix: 移除hover TypeScript错误",r:"circle"},
+  {d:"2026-07-06T14:54:01Z",a:"Jeremy-Curry30",m:"feat: Chat侧边栏显示房源卡片，点击直接跳转详情页",r:"circle"},
   {d:"2026-07-06T14:36:49Z",a:"Jeremy-Curry30",m:"feat: AI对话改成从下往上弹出的侧边栏，支持实时筛选房源",r:"circle"},
   {d:"2026-07-06T14:27:38Z",a:"Jeremy-Curry30",m:"refactor: 删除快速提示按钮",r:"circle"},
   {d:"2026-07-06T14:16:51Z",a:"Jeremy-Curry30",m:"trigger: rebuild",r:"circle"},
@@ -279,7 +282,7 @@ const COMMITS = [
   {d:"2026-07-03T05:35:47Z",a:"NSIETeam",m:"fix: /p/[id]落地页适配静态导出(generateStaticParams)",r:"circle"},
   {d:"2026-07-03T05:30:24Z",a:"NSIETeam",m:"fix: 修复静态导出模式下hydration mismatch导致管理按钮无法点击",r:"circle"},
   {d:"2026-07-03T05:27:58Z",a:"NSIETeam",m:"feat: PRD全部补齐(P0-2防跳单闭环/P1-2实名/P1-3付费/P2-2政策)",r:"circle"},
-  {d:"2026-07-03T04:06:12Z",a:"NSIETeam",m:"fix: find页返回按钮加'返回'文字标签(更醒目)",r:"circle"},
+  {d:"2026-07-03T04:06:12Z",a:"NSIETeam",m:"fix: find页返回按钮加\'返回\'文字标签(更醒目)",r:"circle"},
   {d:"2026-07-03T04:03:00Z",a:"NSIETeam",m:"feat: 园区政策详细化 + find页返回按钮",r:"circle"},
   {d:"2026-07-03T03:24:17Z",a:"NSIETeam",m:"chore: 删除死代码和过时旧页面(全站清理)",r:"circle"},
   {d:"2026-07-03T02:36:25Z",a:"NSIETeam",m:"ci: 重试部署(Pages偶发失败)",r:"circle"},
@@ -362,8 +365,6 @@ const COMMITS = [
   {d:"2026-06-27T02:59:20Z",a:"NSIETeam",m:"fix: 静态导出支持动态路由",r:"circle"},
   {d:"2026-06-27T02:45:53Z",a:"NSIETeam",m:"ci: 添加GitHub Pages自动部署",r:"circle"},
   {d:"2026-06-27T02:30:52Z",a:"NSIETeam",m:"feat: 圆圈平台 - AI驱动的产业地产招商平台",r:"circle"},
-
-  // === OliveWolf ===
   {d:"2026-07-06T04:45:39Z",a:"NSIETeam",m:"add working training worker and customer package workflow",r:"OliveWolf"},
   {d:"2026-07-06T04:40:23Z",a:"NSIETeam",m:"add customer deploy package and training job workflow",r:"OliveWolf"},
   {d:"2026-07-06T04:29:52Z",a:"NSIETeam",m:"add Studio web console, API key guard and avatar upload",r:"OliveWolf"},
@@ -371,28 +372,28 @@ const COMMITS = [
   {d:"2026-07-06T04:11:13Z",a:"NSIETeam",m:"productize OliveWolf branding and generic scene presets",r:"OliveWolf"},
   {d:"2026-07-06T01:53:48Z",a:"NSIETeam",m:"rename to OliveWolf: 通用化定位, 绑定 Miraphant",r:"OliveWolf"},
   {d:"2026-07-05T15:12:10Z",a:"NSIETeam",m:"init: 5i5j 数字人框架 - LHM+LivePortrait双后端实时问答",r:"OliveWolf"},
-
-  // === Miraphant ===
+  {d:"2026-07-06T15:04:24Z",a:"NSIETeam",m:"changelog: inline notes editing + contributor stats + export/import",r:"miraphant"},
+  {d:"2026-07-06T14:45:27Z",a:"NSIETeam",m:"Add code contribution log — timeline of all 5 projects",r:"miraphant"},
   {d:"2026-07-06T05:56:14Z",a:"NSIETeam",m:"Fix layout: nav overlap, hero centering, consistent spacing",r:"miraphant"},
   {d:"2026-07-06T05:52:26Z",a:"NSIETeam",m:"Larger nav logo (36px), reduce section spacing and hero height",r:"miraphant"},
   {d:"2026-07-06T05:47:41Z",a:"NSIETeam",m:"Dark navbar: black background, white text/logo, all pages",r:"miraphant"},
   {d:"2026-07-06T05:44:23Z",a:"NSIETeam",m:"Switch to official PNG logo across all pages; remove old SVG logos",r:"miraphant"},
   {d:"2026-07-06T05:32:17Z",a:"NSIETeam",m:"Replace logo with official interlocking rings design across all pages",r:"miraphant"},
   {d:"2026-07-06T05:27:04Z",a:"NSIETeam",m:"Pro polish: scroll progress bar, nav active highlight, back-to-top, page transitions, OG/Twitter cards, SEO structured data, 404 page, hover shadows, micro-animations",r:"miraphant"},
-  {d:"2026-07-06T05:00:05Z",a:"NSIETeam",m:"Add creator/leader callout section; fix Circle platform link",r:"miraphant"},
+  {d:"2026-07-06T05:00:05Z",a:"NSIETeam",m:"Add creator/leader callout section; fix Circle platform link to https://nsieteam.github.io/circle/",r:"miraphant"},
   {d:"2026-07-06T04:51:50Z",a:"NSIETeam",m:"simplify OliveWolf page and add free package download",r:"miraphant"},
   {d:"2026-07-06T04:24:22Z",a:"NSIETeam",m:"position OliveWolf Studio as customer product",r:"miraphant"},
   {d:"2026-07-06T04:11:04Z",a:"NSIETeam",m:"add OliveWolf demo preview media",r:"miraphant"},
-  {d:"2026-07-06T02:30:38Z",a:"NSIETeam",m:"Add about.html page; redirect nav/footer About links; update email to NSIETeam@outlook.com",r:"miraphant"},
+  {d:"2026-07-06T02:30:38Z",a:"NSIETeam",m:"Add about.html page; redirect nav/footer About links; update email to NSIETeam@outlook.com across all pages",r:"miraphant"},
   {d:"2026-07-06T02:25:51Z",a:"NSIETeam",m:"Remove Philosophy section from homepage — consolidated into Manifesto",r:"miraphant"},
-  {d:"2026-07-06T02:17:38Z",a:"NSIETeam",m:"Add Manifesto page — 7 positions referencing Anthropic RSP, Constitutional AI, 3H's, interpretability, data sovereignty, benchmarks, augmentation",r:"miraphant"},
+  {d:"2026-07-06T02:17:38Z",a:"NSIETeam",m:"Add Manifesto page — 7 positions referencing Anthropic RSP, Constitutional AI, 3H\'s, interpretability, data sovereignty, benchmarks, augmentation",r:"miraphant"},
   {d:"2026-07-06T02:05:37Z",a:"NSIETeam",m:"feat: add ai club product page",r:"miraphant"},
   {d:"2026-07-06T01:58:42Z",a:"NSIETeam",m:"feat: add otto minor update section",r:"miraphant"},
   {d:"2026-07-06T01:53:51Z",a:"NSIETeam",m:"add OliveWolf product page + nav entry",r:"miraphant"},
   {d:"2026-07-06T01:52:09Z",a:"NSIETeam",m:"copy: add otto minor update notes",r:"miraphant"},
   {d:"2026-07-06T01:51:33Z",a:"NSIETeam",m:"copy: add otto minor update note",r:"miraphant"},
   {d:"2026-07-06T01:49:52Z",a:"NSIETeam",m:"copy: expand otto business value scenarios",r:"miraphant"},
-  {d:"2026-07-06T01:45:00Z",a:"NSIETeam",m:"Circle: add contributors section with GitHub avatars",r:"miraphant"},
+  {d:"2026-07-06T01:45:00Z",a:"NSIETeam",m:"Circle: add contributors section with GitHub avatars (NSIETeam + krx521920)",r:"miraphant"},
   {d:"2026-07-06T01:43:22Z",a:"NSIETeam",m:"copy: clarify otto customer value",r:"miraphant"},
   {d:"2026-07-06T01:37:07Z",a:"NSIETeam",m:"feat: add otto organizational memory section",r:"miraphant"},
   {d:"2026-07-05T14:28:45Z",a:"NSIETeam",m:"AI Club: rebased on org training PPT — concepts, Otto bootcamp, Skill engine, real ROI, concerns, rollout plan",r:"miraphant"},
@@ -400,10 +401,8 @@ const COMMITS = [
   {d:"2026-07-05T14:07:27Z",a:"NSIETeam",m:"Rebuild: i18n for all pages, Otto 4 pillars, Circle ecosystem, no emoji",r:"miraphant"},
   {d:"2026-07-05T14:00:48Z",a:"NSIETeam",m:"Restructure: product pages (Otto, Circle), AI Club, enterprise focus",r:"miraphant"},
   {d:"2026-07-05T13:50:10Z",a:"NSIETeam",m:"Initial commit: Miraphant brand site with i18n (EN/ZH)",r:"miraphant"},
-
-  // === EasyHermes ===
   {d:"2026-04-28T13:24:00Z",a:"NIETeam",m:"✨ 开箱即用体验增强：记忆系统、会话管理、沙箱卡片、首次引导",r:"EasyHermes"},
-  {d:"2026-04-28T11:08:11Z",a:"NIETeam",m:"🎉 EasyHermes v1.0.0 — 初始版本",r:"EasyHermes"},
+  {d:"2026-04-28T11:08:11Z",a:"NIETeam",m:"🎉 EasyHermes v1.0.0 — 初始版本",r:"EasyHermes"}
 ];
 
 // === END COMMIT DATA ===
