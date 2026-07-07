@@ -5,82 +5,199 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Miraphant Employee Portal</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="js/portal.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Inter',sans-serif;background:#000;color:#fff;-webkit-font-smoothing:antialiased;overflow-x:hidden;animation:fi .4s cubic-bezier(.16,1,.3,1)}@keyframes fi{from{opacity:0}to{opacity:1}}
-.container{max-width:1100px;margin:0 auto;padding:0 24px}
-.portal-hero{min-height:60vh;display:flex;align-items:center;padding:120px 0 40px}.portal-hero-content{max-width:800px;margin:0 auto;text-align:center}
-.portal-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:12px;font-weight:500;color:rgba(255,255,255,.4);margin-bottom:24px}.portal-badge-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 2s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.portal-hero-title{font-size:clamp(32px,5vw,52px);font-weight:900;line-height:1.05;letter-spacing:-.035em;margin-bottom:16px}.portal-hero-title .light{font-weight:300;color:rgba(255,255,255,.4)}
-.portal-hero-sub{font-size:clamp(15px,1.2vw,17px);color:rgba(255,255,255,.4);line-height:1.7;max-width:560px;margin:0 auto}
-.portal-cards{padding:0 0 60px}.portal-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
-.portal-card{padding:40px 32px;border-radius:20px;border:1px solid rgba(255,255,255,.08);text-decoration:none;color:inherit;transition:all .3s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;cursor:pointer}
-.portal-card::before{content:"";position:absolute;top:0;left:0;right:0;height:0;background:rgba(255,255,255,.03);transition:height .3s cubic-bezier(.16,1,.3,1);z-index:0}.portal-card:hover::before{height:100%}.portal-card:hover{border-color:rgba(255,255,255,.2);transform:translateY(-4px)}.portal-card>*{position:relative;z-index:1}
-.portal-card-icon{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;margin-bottom:20px}.portal-card-icon svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.5}
-.portal-card h3{font-size:20px;font-weight:700;margin-bottom:8px}.portal-card p{font-size:13px;color:rgba(255,255,255,.4);line-height:1.7}.portal-card-tag{display:inline-block;margin-top:16px;padding:3px 10px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.4)}
-.portal-card::after{content:"92";position:absolute;top:40px;right:32px;font-size:20px;color:rgba(255,255,255,.15);transition:all .25s}.portal-card:hover::after{color:#fff;transform:translateX(6px)}
-.portal-section{padding:60px 0;border-top:1px solid rgba(255,255,255,.05)}.portal-section .label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:14px}.portal-section-title{font-size:clamp(24px,3vw,36px);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:12px}
-.portal-footer{padding:40px 0;text-align:center;color:rgba(255,255,255,.2);font-size:12px;border-top:1px solid rgba(255,255,255,.05)}
-.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}.reveal.visible{opacity:1;transform:translateY(0)}.rd1{transition-delay:.08s}.rd2{transition-delay:.16s}.rd3{transition-delay:.24s}
-@media(max-width:768px){.portal-cards-grid{grid-template-columns:1fr}.portal-nav-links{display:none}.portal-nav-toggle{display:block}.portal-nav-links.open{display:flex;flex-direction:column;position:absolute;top:64px;left:0;right:0;background:rgba(0,0,0,.95);padding:16px 24px;gap:16px}}
+.mono{font-family:'JetBrains Mono',monospace}.container{max-width:1100px;margin:0 auto;padding:0 24px}
+.portal-hero{padding:100px 0 30px}.portal-hero-content{max-width:800px;margin:0 auto;text-align:center}
+.portal-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:12px;font-weight:500;color:rgba(255,255,255,.4);margin-bottom:20px}.portal-badge-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 2s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.portal-hero-title{font-size:clamp(28px,4.5vw,46px);font-weight:900;line-height:1.05;letter-spacing:-.035em;margin-bottom:14px}.portal-hero-title .light{font-weight:300;color:rgba(255,255,255,.4)}
+.portal-hero-sub{font-size:15px;color:rgba(255,255,255,.4);line-height:1.7;max-width:520px;margin:0 auto}
+.dash-section{padding:40px 0;border-top:1px solid rgba(255,255,255,.05)}.ds-label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:16px}
+.ds-title{font-size:clamp(20px,2.5vw,30px);font-weight:800;letter-spacing:-.03em;margin-bottom:20px}
+/* Stats */
+.stats-row{display:flex;gap:16px;flex-wrap:wrap}.stat-box{padding:24px;border:1px solid rgba(255,255,255,.08);border-radius:16px;flex:1;min-width:160px;transition:all .3s cubic-bezier(.16,1,.3,1)}.stat-box:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px)}.stat-box .num{font-size:32px;font-weight:800;letter-spacing:-1px}.stat-box .lbl{font-size:11px;color:rgba(255,255,255,.3);margin-top:6px;letter-spacing:1px;text-transform:uppercase}.stat-box .sub{font-size:12px;color:rgba(255,255,255,.3);margin-top:8px}
+/* Two column layout */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+/* Cards */
+.dash-card{border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;transition:border-color .3s}.dash-card:hover{border-color:rgba(255,255,255,.12)}
+.dash-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.dash-card-head h3{font-size:14px;font-weight:600}
+.dash-card-link{font-size:12px;color:rgba(255,255,255,.3);text-decoration:none;transition:color .2s}.dash-card-link:hover{color:#fff}
+/* Todo items */
+.todo-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05);transition:padding-left .2s}.todo-item:last-child{border-bottom:none}.todo-item:hover{padding-left:4px}
+.todo-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.todo-dot.red{background:#ff4444}.todo-dot.yellow{background:#ffaa00}.todo-dot.green{background:#44ff44}.todo-dot.gray{background:#555}
+.todo-text{font-size:13px;flex:1;min-width:0}.todo-text .title{color:rgba(255,255,255,.8);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.todo-text .meta{color:rgba(255,255,255,.3);font-size:11px;margin-top:2px}
+.todo-action{font-size:11px;color:rgba(255,255,255,.4);padding:4px 10px;border:1px solid rgba(255,255,255,.1);border-radius:100px;text-decoration:none;transition:all .2s;white-space:nowrap}.todo-action:hover{color:#fff;border-color:rgba(255,255,255,.3)}
+/* Project status */
+.proj-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)}.proj-item:last-child{border-bottom:none}
+.proj-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0}.pb-otto{background:#1a1a2e;color:#00E5FF}.pb-circle{background:#E8F5E9;color:#2E7D32}.pb-olivewolf{background:#FFF3E0;color:#E65100}.pb-miraphant{background:#F3E5F5;color:#6A1B9A}.pb-easyhermes{background:#E3F2FD;color:#1565C0}
+.proj-text{flex:1;min-width:0}.proj-text .title{font-size:13px;font-weight:500;color:rgba(255,255,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.proj-text .meta{font-size:11px;color:rgba(255,255,255,.3);margin-top:2px}
+.proj-status{font-size:11px;padding:3px 10px;border-radius:100px;white-space:nowrap;flex-shrink:0}.ps-on{background:rgba(255,255,255,.1);color:#fff}.ps-done{background:rgba(68,255,68,.1);color:#44ff44;border:1px solid rgba(68,255,68,.2)}.ps-hold{background:rgba(255,255,255,.05);color:rgba(255,255,255,.3)}.ps-plan{background:rgba(51,51,204,.15);color:#6666ff}.ps-risk{background:rgba(255,68,68,.1);color:#ff6666;border:1px solid rgba(255,68,68,.2)}
+/* Timeline */
+.timeline-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)}.timeline-item:last-child{border-bottom:none}
+.tl-icon{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.tl-content{flex:1;min-width:0}.tl-content .text{font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;word-break:break-word}.tl-content .meta{font-size:11px;color:rgba(255,255,255,.3);margin-top:4px}
+.tl-time{font-size:11px;color:rgba(255,255,255,.2);white-space:nowrap;flex-shrink:0;margin-left:auto}
+/* Quick actions */
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.qa-btn{padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:12px;text-decoration:none;color:inherit;transition:all .3s;text-align:center;cursor:pointer}.qa-btn:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px);background:rgba(255,255,255,.02)}.qa-btn svg{width:22px;height:22px;stroke:rgba(255,255,255,.5);fill:none;stroke-width:1.5;margin:0 auto 8px;display:block}.qa-btn:hover svg{stroke:#fff}.qa-btn span{font-size:12px;color:rgba(255,255,255,.5);transition:color .3s}.qa-btn:hover span{color:#fff}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}.reveal.visible{opacity:1;transform:translateY(0)}
+.empty{text-align:center;padding:32px;color:rgba(255,255,255,.2);font-size:13px}
+@media(max-width:768px){.dash-grid{grid-template-columns:1fr}.qa-grid{grid-template-columns:repeat(2,1fr)}.portal-nav-links{display:none}.portal-nav-toggle{display:block}.portal-nav-links.open{display:flex;flex-direction:column;position:absolute;top:64px;left:0;right:0;background:rgba(0,0,0,.95);padding:16px 24px;gap:16px}}
 </style>
 </head>
 <body>
 <script src="js/auth.js"></script>
 <script>if(!window.checkAuth())window.location.href="index.html#employee-portal";</script>
 <nav class="portal-nav" id="nav"><div class="portal-nav-inner">
-<a href="portal.html" class="portal-nav-logo"><img src="logo.png" style="width:32px;height:32px" alt="Miraphant"> Miraphant</a>
+<a href="index.html" class="portal-nav-logo"><img src="logo.png" style="width:32px;height:32px" alt="Miraphant"> Miraphant</a>
 <ul class="portal-nav-links" id="navLinks">
-<li><a href="portal.html" class="active">Portal</a></li>
+<li><a href="portal.html" class="active">Dashboard</a></li>
 <li><a href="oa.html">OA</a></li>
 <li><a href="followup.html">Follow-up</a></li>
 <li><a href="changelog.html">Log</a></li>
 </ul>
-<div class="portal-nav-right">
-<button class="portal-logout-btn" onclick="doLogout()">Logout</button>
-</div>
+<div class="portal-nav-right"><button class="portal-logout-btn" onclick="doLogout()">Logout</button></div>
 <button class="portal-nav-toggle" id="navToggle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
 </div></nav>
 
 <section class="portal-hero"><div class="container" style="width:100%"><div class="portal-hero-content">
 <div class="reveal"><div class="portal-badge"><span class="portal-badge-dot"></span>Employee Portal</div></div>
-<div class="reveal rd1"><h1 class="portal-hero-title">Internal tools,<br><span class="light">all in one place.</span></h1></div>
-<div class="reveal rd2"><p class="portal-hero-sub">OA system, project follow-up, and contribution log — built for the Miraphant team.</p></div>
+<div class="reveal"><h1 class="portal-hero-title"><span>Internal tools,</span><br><span class="light">all in one place.</span></h1></div>
+<div class="reveal"><p class="portal-hero-sub" id="welcomeText">Welcome back. Here is your workspace overview.</p></div>
 </div></div></section>
 
-<section class="portal-cards"><div class="container">
-<div class="reveal" style="max-width:600px;margin-bottom:8px"><div class="label">Workspace</div><h2 class="portal-section-title">Three tools, one portal</h2></div>
-<div class="portal-cards-grid">
-<a href="oa.html" class="portal-card reveal rd1">
-<div class="portal-card-icon"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/></svg></div>
-<h3>OA System</h3>
-<p>Reimbursement, leave, travel, and ID badge management. Submit, track, and approve.</p>
-<span class="portal-card-tag">4 Modules</span>
-</a>
-<a href="followup.html" class="portal-card reveal rd2">
-<div class="portal-card-icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>
-<h3>Project Follow-up</h3>
-<p>Track project status updates by repo. Linked with contribution log for context.</p>
-<span class="portal-card-tag">5 Projects</span>
-</a>
-<a href="changelog.html" class="portal-card reveal rd3">
-<div class="portal-card-icon"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
-<h3>Contribution Log</h3>
-<p>Auto-generated commit timeline across all Miraphant repositories. Filter, search, and annotate.</p>
-<span class="portal-card-tag">Auto-sync</span>
-</a>
+<!-- Stats -->
+<section class="dash-section" style="border-top:none;padding-top:0"><div class="container">
+<div class="ds-label">Overview</div>
+<div class="stats-row" id="dashStats"></div>
+</div></section>
+
+<!-- Quick Actions -->
+<section class="dash-section"><div class="container">
+<div class="ds-label">Quick Actions</div>
+<div class="qa-grid" id="qaGrid"></div>
+</div></section>
+
+<!-- Two Column: Todos + Project Status -->
+<section class="dash-section"><div class="container">
+<div class="dash-grid">
+<div class="dash-card reveal">
+<div class="dash-card-head"><h3>My Pending Items</h3><a href="oa.html" class="dash-card-link">View OA</a></div>
+<div id="todoList"></div>
+</div>
+<div class="dash-card reveal">
+<div class="dash-card-head"><h3>Project Status</h3><a href="followup.html" class="dash-card-link">View All</a></div>
+<div id="projList"></div>
+</div>
 </div>
 </div></section>
 
-<div class="portal-footer"><div class="container">&copy; 2026 Miraphant, Inc. / Employee Portal</div></div>
+<!-- Activity Timeline -->
+<section class="dash-section" style="padding-bottom:60px"><div class="container">
+<div class="ds-label">Recent Activity</div>
+<div class="ds-title" style="margin-bottom:20px">Latest updates across all tools</div>
+<div class="dash-card reveal">
+<div id="timeline"></div>
+</div>
+</div></section>
+
+<div style="padding:32px 0;text-align:center;color:rgba(255,255,255,.15);font-size:12px;border-top:1px solid rgba(255,255,255,.05)"><div class="container">&copy; 2026 Miraphant, Inc. / Employee Portal</div></div>
 
 <script>
-var nav=document.getElementById("nav");window.addEventListener("scroll",function(){nav.classList.toggle("scrolled",window.scrollY>40)},{passive:true});
-document.getElementById("navToggle").addEventListener("click",function(){document.getElementById("navLinks").classList.toggle("open")});
-var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting)x.target.classList.add("visible")})},{threshold:.1});document.querySelectorAll(".reveal").forEach(function(el){obs.observe(el)});
-document.querySelectorAll("a[href$=".html"]").forEach(function(a){a.addEventListener("click",function(e){var h=a.getAttribute("href");if(h&&!h.startsWith("http")){e.preventDefault();document.body.style.opacity="0";document.body.style.transition="opacity .15s";setTimeout(function(){window.location.href=h},150)}})});
+var DB={get:function(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){localStorage.setItem(k,JSON.stringify(v))}};
+var cu={name:'Chen Xue',dept:'Design',role:'Design Director',id:'MF-004'};
+
+function seedOA(){
+if(!DB.get('oa-reimburse'))DB.set('oa-reimburse',[{id:'R001',applicant:'Chen Xue',dept:'Design',type:'transport',amount:120,invoiceNo:'INV-2026-004',reason:'Commute taxi',date:'2026-07-02',status:'pending'},{id:'R002',applicant:'Chen Xue',dept:'Design',type:'office',amount:380,invoiceNo:'INV-2026-005',reason:'Design software license',date:'2026-07-04',status:'pending'}]);
+if(!DB.get('oa-leave'))DB.set('oa-leave',[{id:'L001',applicant:'Chen Xue',dept:'Design',type:'annual',startDate:'2026-07-15',endDate:'2026-07-16',days:2,reason:'Family trip',status:'pending'}]);
+if(!DB.get('oa-travel'))DB.set('oa-travel',[{id:'T001',applicant:'Chen Xue',dept:'Design',destination:'Shanghai',purpose:'Design summit',transport:'train',startDate:'2026-07-20',endDate:'2026-07-22',budget:3000,status:'approved'}]);
+if(!DB.get('oa-badge'))DB.set('oa-badge',[{id:'B001',name:'Chen Xue',role:'Design Director',dept:'Design',employeeId:'MF-004',phone:'138****1234',validUntil:'2027-12-31',style:'dark',status:'done'}]);
+}
+function seedFU(){
+if(!DB.get('fu-updates'))DB.set('fu-updates',[
+{id:'F001',repo:'otto',title:'Mem0 structured memory integration',status:'done',owner:'krx521920',date:'2026-07-06T06:52',next:'Monitor memory retrieval accuracy'},
+{id:'F002',repo:'otto',title:'Feishu project collaboration',status:'on',owner:'NSIETeam',date:'2026-07-06T06:28',next:'Ship collaboration planner v2'},
+{id:'F003',repo:'miraphant',title:'Website OA system + employee portal',status:'on',owner:'NSIETeam',date:'2026-07-07T12:10',next:'Deploy to GitHub Pages + test auth'},
+{id:'F004',repo:'OliveWolf',title:'Real-time audio-driven conversation',status:'plan',owner:'Felix201209',date:'2026-07-04T11:00',next:'Benchmark latency on enterprise GPU'},
+{id:'F005',repo:'circle',title:'AI-driven property matching engine',status:'on',owner:'NSIETeam',date:'2026-07-03T14:00',next:'Onboard first 3 enterprise clients'},
+{id:'F006',repo:'EasyHermes',title:'Core pipeline optimization',status:'hold',owner:'krx521920',date:'2026-07-02T09:00',next:'Resume after Otto v1.4 release'}
+]);
+}
+
+function renderStats(){
+var r=DB.get('oa-reimburse',[]).filter(function(x){return x.applicant===cu.name});
+var l=DB.get('oa-leave',[]).filter(function(x){return x.applicant===cu.name});
+var tr=DB.get('oa-travel',[]).filter(function(x){return x.applicant===cu.name});
+var fu=DB.get('fu-updates',[]);
+var pending=r.filter(function(x){return x.status==='pending'}).length+l.filter(function(x){return x.status==='pending'}).length+tr.filter(function(x){return x.status==='pending'}).length;
+var activeProj=fu.filter(function(x){return x.status==='on'}).length;
+var doneProj=fu.filter(function(x){return x.status==='done'}).length;
+var stats=[
+{num:pending,lbl:'My Pending',sub:'OA applications'},
+{num:activeProj,lbl:'Active Projects',sub:'In progress now'},
+{num:fu.length,lbl:'Follow-up Items',sub:'Across 5 repos'},
+{num:r.length+l.length+tr.length,lbl:'My Total Apps',sub:'All time'}
+];
+document.getElementById('dashStats').innerHTML=stats.map(function(s){return'<div class="stat-box"><div class="num">'+s.num+'</div><div class="lbl">'+s.lbl+'</div><div class="sub">'+s.sub+'</div></div>'}).join('');
+}
+
+function renderQA(){
+var actions=[
+{href:'oa.html',icon:'M9 12l2 2 4-4M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z',label:'New Reimbursement'},
+{href:'oa.html',icon:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',label:'New Leave'},
+{href:'oa.html',icon:'M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z',label:'New Travel'},
+{href:'followup.html',icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2',label:'Update Status'}
+];
+document.getElementById('qaGrid').innerHTML=actions.map(function(a){return'<a href="'+a.href+'" class="qa-btn"><svg viewBox="0 0 24 24"><path d="'+a.icon+'"/></svg><span>'+a.label+'</span></a>'}).join('');
+}
+
+function renderTodos(){
+var r=DB.get('oa-reimburse',[]).filter(function(x){return x.applicant===cu.name&&x.status==='pending'});
+var l=DB.get('oa-leave',[]).filter(function(x){return x.applicant===cu.name&&x.status==='pending'});
+var tr=DB.get('oa-travel',[]).filter(function(x){return x.applicant===cu.name&&x.status==='pending'});
+var items=[];
+r.forEach(function(x){items.push({dot:'yellow',title:x.reason,meta:'Reimbursement / '+x.date,action:'oa.html',actionLabel:'Review'})});
+l.forEach(function(x){items.push({dot:'yellow',title:x.reason,meta:'Leave / '+x.startDate+' - '+x.endDate,action:'oa.html',actionLabel:'Review'})});
+tr.forEach(function(x){items.push({dot:'yellow',title:x.destination+': '+x.purpose,meta:'Travel / '+x.startDate,action:'oa.html',actionLabel:'Review'})});
+var el=document.getElementById('todoList');
+if(items.length===0){el.innerHTML='<div class="empty">No pending items. You are all caught up.</div>';return}
+el.innerHTML=items.map(function(i){return'<div class="todo-item"><div class="todo-dot '+i.dot+'"></div><div class="todo-text"><div class="title">'+i.title+'</div><div class="meta">'+i.meta+'</div></div><a href="'+i.action+'" class="todo-action">'+i.actionLabel+'</a></div>'}).join('');
+}
+
+function renderProjects(){
+var fu=DB.get('fu-updates',[]);
+var repoMap={otto:'Otto',circle:'Circle',OliveWolf:'OliveWolf',miraphant:'Miraphant',EasyHermes:'EasyHermes'};
+var statusMap={on:{cls:'ps-on',label:'Active'},done:{cls:'ps-done',label:'Done'},hold:{cls:'ps-hold',label:'On Hold'},plan:{cls:'ps-plan',label:'Planned'},risk:{cls:'ps-risk',label:'At Risk'}};
+var el=document.getElementById('projList');
+if(fu.length===0){el.innerHTML='<div class="empty">No project updates.</div>';return}
+el.innerHTML=fu.map(function(p){var s=statusMap[p.status]||statusMap.plan;return'<div class="proj-item"><span class="proj-badge pb-'+p.repo+'">'+repoMap[p.repo]+'</span><div class="proj-text"><div class="title">'+p.title+'</div><div class="meta">'+p.next+'</div></div><span class="proj-status '+s.cls+'">'+s.label+'</span></div>'}).join('');
+}
+
+function renderTimeline(){
+var r=DB.get('oa-reimburse',[]).filter(function(x){return x.applicant===cu.name});
+var l=DB.get('oa-leave',[]).filter(function(x){return x.applicant===cu.name});
+var tr=DB.get('oa-travel',[]).filter(function(x){return x.applicant===cu.name});
+var fu=DB.get('fu-updates',[]);
+var items=[];
+r.forEach(function(x){items.push({icon:'R',text:'Reimbursement: '+x.reason+' ('+x.amount+')',time:x.date})});
+l.forEach(function(x){items.push({icon:'L',text:'Leave: '+x.reason+' ('+x.days+' days)',time:x.startDate})});
+tr.forEach(function(x){items.push({icon:'T',text:'Travel to '+x.destination+': '+x.purpose,time:x.startDate})});
+fu.forEach(function(x){items.push({icon:'F',text:'['+x.repo+'] '+x.title,time:x.date})});
+items.sort(function(a,b){return(b.time||'').localeCompare(a.time||'')});
+items=items.slice(0,10);
+var el=document.getElementById('timeline');
+if(items.length===0){el.innerHTML='<div class="empty">No recent activity.</div>';return}
+el.innerHTML=items.map(function(i){return'<div class="timeline-item"><div class="tl-icon">'+i.icon+'</div><div class="tl-content"><div class="text">'+i.text+'</div></div><div class="tl-time">'+i.time+'</div></div>'}).join('');
+}
+
+function renderAll(){renderStats();renderQA();renderTodos();renderProjects();renderTimeline()}
+var nav=document.getElementById('nav');window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
+document.getElementById('navToggle').addEventListener('click',function(){document.getElementById('navLinks').classList.toggle('open')});
+var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting)x.target.classList.add('visible')})},{threshold:.1});document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el)});
+document.querySelectorAll('a[href$=".html"]').forEach(function(a){a.addEventListener('click',function(e){var h=a.getAttribute('href');if(h&&!h.startsWith('http')){e.preventDefault();document.body.style.opacity='0';document.body.style.transition='opacity .15s';setTimeout(function(){window.location.href=h},150)}})});
+seedOA();seedFU();renderAll();
 </script>
 </body>
 </html>

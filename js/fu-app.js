@@ -1,28 +1,116 @@
-var repos=[{id:'all',name:'All Projects'},{id:'otto',name:'Otto',badge:'rb-otto'},{id:'circle',name:'Circle',badge:'rb-circle'},{id:'OliveWolf',name:'OliveWolf',badge:'rb-olivewolf'},{id:'miraphant',name:'Miraphant',badge:'rb-miraphant'},{id:'EasyHermes',name:'EasyHermes',badge:'rb-easyhermes'}];
-var curRepo='all';
+var repos=[
+{id:'otto',name:'Otto',badge:'rb-otto',color:'#00E5FF'},
+{id:'circle',name:'Circle',badge:'rb-circle',color:'#2E7D32'},
+{id:'OliveWolf',name:'OliveWolf',badge:'rb-olivewolf',color:'#E65100'},
+{id:'miraphant',name:'Miraphant',badge:'rb-miraphant',color:'#6A1B9A'},
+{id:'EasyHermes',name:'EasyHermes',badge:'rb-easyhermes',color:'#1565C0'}
+];
+var curRepo='otto';
 var DB={get:function(k,d){try{var v=localStorage.getItem('fu-'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){localStorage.setItem('fu-'+k,JSON.stringify(v))}};
-function seed(){if(!DB.get('updates'))DB.set('updates',[
-{id:'F001',repo:'otto',title:'Mem0 structured memory integration',status:'done',owner:'krx521920',date:'2026-07-06',next:'Monitor memory retrieval accuracy',note:'Mem0 + LangGraph task orchestration deployed. OR-Tools optimization active.'},
-{id:'F002',repo:'otto',title:'Feishu project collaboration',status:'on',owner:'NSIETeam',date:'2026-07-06',next:'Ship project collaboration planner v2',note:'Extended feishu actions + planner framework added.'},
-{id:'F003',repo:'otto',title:'Codebase memory MCP adapter',status:'on',owner:'NSIETeam',date:'2026-07-06',next:'Wire MCP tools to project memory manager',note:'CLI project memory commands + org memory MVP in progress.'},
-{id:'F004',repo:'miraphant',title:'Website OA system integration',status:'on',owner:'NSIETeam',date:'2026-07-07',next:'Deploy to GitHub Pages + test auth flow',note:'OA, follow-up, and contribution log merged into employee portal with password auth.'},
-{id:'F005',repo:'OliveWolf',title:'Real-time audio-driven conversation',status:'plan',owner:'Felix201209',date:'2026-07-04',next:'Benchmark latency on enterprise GPU',note:'Dual render backends working. Need enterprise deployment testing.'},
-{id:'F006',repo:'circle',name:'Circle',title:'AI-driven property matching engine',status:'on',owner:'NSIETeam',date:'2026-07-03',next:'Onboard first 3 enterprise clients',note:'Matching algorithm v2 deployed. B2B platform ready for pilot.'},
-{id:'F007',repo:'EasyHermes',title:'Core pipeline optimization',status:'hold',owner:'krx521920',date:'2026-07-02',next:'Resume after Otto v1.4 release',note:'On hold pending Otto memory module completion.'}
-])}
+var cu={name:'Chen Xue',dept:'Design',role:'Design Director',id:'MF-004'};
+function nowTS(){var d=new Date();function p(n){return String(n).padStart(2,'0')}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
+function todayDate(){return new Date().toISOString().slice(0,10)}
+function seed(){
+repos.forEach(function(r){
+if(!DB.get('entries-'+r.id)){
+var seedData=getSeed(r.id);
+if(seedData.length>0)DB.set('entries-'+r.id,seedData);
+}
+});
+}
+function getSeed(repo){
+var seeds={
+otto:[
+{ts:'2026-07-06 06:52',author:'krx521920',status:'done',content:'Mem0 structured memory + LangGraph task orchestration + OR-Tools optimization deployed. Multi-agent collaboration active.',next:'Monitor memory retrieval accuracy in production'},
+{ts:'2026-07-06 06:28',author:'NSIETeam',status:'on',content:'Feishu project collaboration actions extended. Planner framework added.',next:'Ship collaboration planner v2 with task assignment'},
+{ts:'2026-07-06 01:00',author:'NSIETeam',status:'on',content:'Codebase memory MCP adapter + CLI project memory commands wired to org memory MVP.',next:'Connect MCP tools to project memory manager'}
+],
+circle:[
+{ts:'2026-07-03 14:00',author:'NSIETeam',status:'on',content:'AI-driven property matching algorithm v2 deployed. B2B platform ready for pilot.',next:'Onboard first 3 enterprise clients for beta'}
+],
+OliveWolf:[
+{ts:'2026-07-04 11:00',author:'Felix201209',status:'plan',content:'Dual render backends working. Real-time audio-driven conversation functional.',next:'Benchmark latency on enterprise GPU (RTX 4090)'}
+],
+miraphant:[
+{ts:'2026-07-07 12:10',author:'NSIETeam',status:'on',content:'Employee portal with OA system, follow-up tracker, and contribution log. Password auth implemented.',next:'Deploy to GitHub Pages + test auth flow on mobile'}
+],
+EasyHermes:[
+{ts:'2026-07-02 09:00',author:'krx521920',status:'hold',content:'Core pipeline optimization paused pending Otto memory module.',next:'Resume after Otto v1.4 release'}
+]
+};
+return seeds[repo]||[];
+}
 function sBg(s){var m={on:'bg-on',hold:'bg-hold',done:'bg-done',risk:'bg-risk',plan:'bg-plan'};var l={on:'Active',hold:'On Hold',done:'Done',risk:'At Risk',plan:'Planned'};return'<span class="bg '+(m[s]||'bg-plan')+'">'+l[s]+'</span>'}
-function repoBadge(r){var rd=repos.find(function(x){return x.id===r});if(!rd||!rd.badge)return r;return'<span class="repo-badge '+rd.badge+'">'+rd.name+'</span>'}
 function toast(m){var e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.className='toast';document.body.appendChild(e)}e.textContent=m;e.classList.add('show');setTimeout(function(){e.classList.remove('show')},2500)}
-function openM(h){var o=document.getElementById('mo');if(!o){o=document.createElement('div');o.id='mo';o.className='mo';document.body.appendChild(o);o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('show')})}o.innerHTML='<div class="mo-box">'+h+'</div>';o.classList.add('show')}
-function closeM(){var o=document.getElementById('mo');if(o)o.classList.remove('show')}
-function renderTabs(){document.getElementById('repoTabs').innerHTML=repos.map(function(r){return'<button class="repo-tab '+(curRepo===r.id?'active':'')+'" onclick="curRepo=\''+r.id+'\';renderAll()">'+r.name+'</button>'}).join('')}
-function renderStats(){var d=DB.get('updates',[]);var s=[{l:'Total',v:d.length},{l:'Active',v:d.filter(function(x){return x.status==='on'}).length},{l:'Done',v:d.filter(function(x){return x.status==='done'}).length},{l:'At Risk',v:d.filter(function(x){return x.status==='risk'}).length},{l:'On Hold',v:d.filter(function(x){return x.status==='hold'}).length}];document.getElementById('fuStats').innerHTML=s.map(function(x){return'<div class="stat-box"><div class="num">'+x.v+'</div><div class="lbl">'+x.l+'</div></div>'}).join('')}
-function renderTable(){var d=DB.get('updates',[]);if(curRepo!=='all')d=d.filter(function(x){return x.repo===curRepo});var rd=repos.find(function(x){return x.id===curRepo});document.getElementById('repoTitle').textContent=rd?rd.name:'All Projects';var body=document.getElementById('fuBody');if(d.length===0){body.innerHTML='<tr><td colspan="8"><div class="empty">No updates</div></td></tr>';return}body.innerHTML=d.map(function(r){return'<tr><td class="mono" style="font-size:12px">'+r.id+'</td><td>'+repoBadge(r.repo)+'</td><td style="max-width:180px;font-weight:600">'+r.title+'</td><td>'+sBg(r.status)+'</td><td>'+r.owner+'</td><td>'+r.date+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.next+'</td><td><div style="display:flex;gap:2px"><button class="btn-gh" onclick="editFU(\''+r.id+'\')">Edit</button><button class="btn-gh" onclick="delFU(\''+r.id+'\')">Delete</button></div></td></tr>'}).join('')}
-function openFU(id){var r=null;if(id){r=DB.get('updates',[]).find(function(x){return x.id===id})}var repoOpts=repos.filter(function(x){return x.id!=='all'}).map(function(x){return'<option value="'+x.id+'"'+(r&&r.repo===x.id?' selected':'')+'> '+x.name+'</option>'}).join('');openM('<div class="mo-h"><div class="mo-t">'+(r?'Edit Update':'New Update')+'</div><button class="mo-x" onclick="closeM()">&times;</button></div><div class="mo-b"><input type="hidden" id="fu_id" value="'+(r?r.id:'')+'"><div class="fr"><div class="fg"><label class="fl">Project <span class="req">*</span></label><select class="fs" id="fu_repo">'+repoOpts+'</select></div><div class="fg"><label class="fl">Status</label><select class="fs" id="fu_status"><option value="on"'+(r&&r.status==='on'?' selected':'')+'>Active</option><option value="plan"'+(r&&r.status==='plan'?' selected':'')+'>Planned</option><option value="hold"'+(r&&r.status==='hold'?' selected':'')+'>On Hold</option><option value="risk"'+(r&&r.status==='risk'?' selected':'')+'>At Risk</option><option value="done"'+(r&&r.status==='done'?' selected':'')+'>Done</option></select></div></div><div class="fg"><label class="fl">Title <span class="req">*</span></label><input class="fi" id="fu_title" value="'+(r?r.title:'')+'"></div><div class="fr"><div class="fg"><label class="fl">Owner</label><input class="fi" id="fu_owner" value="'+(r?r.owner:'NSIETeam')+'"></div><div class="fg"><label class="fl">Date</label><input class="fi" id="fu_date" type="date" value="'+(r?r.date:new Date().toISOString().slice(0,10))+'"></div></div><div class="fg"><label class="fl">Next Step</label><input class="fi" id="fu_next" value="'+(r?r.next:'')+'"></div><div class="fg"><label class="fl">Notes</label><textarea class="ft" id="fu_note">'+(r?r.note:'')+'</textarea></div></div><div class="mo-f"><button class="btn-s" onclick="closeM()">Cancel</button><button class="btn-p" onclick="saveFU()">Save</button></div>')}
-function saveFU(){var id=document.getElementById('fu_id').value;var title=document.getElementById('fu_title').value.trim();if(!title){toast('Title required!');return}var data={repo:document.getElementById('fu_repo').value,status:document.getElementById('fu_status').value,title:title,owner:document.getElementById('fu_owner').value||'NSIETeam',date:document.getElementById('fu_date').value||new Date().toISOString().slice(0,10),next:document.getElementById('fu_next').value||'',note:document.getElementById('fu_note').value||''};var d=DB.get('updates',[]);if(id){var r=d.find(function(x){return x.id===id});if(r){Object.assign(r,data)}}else{var seq=String(d.length+1).padStart(3,'0');data.id='F'+seq;d.unshift(data)}DB.set('updates',d);closeM();renderAll();toast('Saved')}
-function editFU(id){openFU(id)}
-function delFU(id){var d=DB.get('updates',[]).filter(function(x){return x.id!==id});DB.set('updates',d);renderAll();toast('Deleted')}
-function renderAll(){renderTabs();renderStats();renderTable()}
+function renderStats(){
+var total=0,active=0,done=0,risk=0,hold=0;
+repos.forEach(function(r){var d=DB.get('entries-'+r.id,[]);total+=d.length;if(d.length>0){var last=d[0];if(last.status==='on')active++;if(last.status==='done')done++;if(last.status==='risk')risk++;if(last.status==='hold')hold++}});
+var s=[{n:repos.length,l:'Projects'},{n:active,l:'Active'},{n:done,l:'Done'},{n:total,l:'Total Entries'}];
+document.getElementById('fuStats').innerHTML=s.map(function(x){return'<div class="stat-box"><div class="num">'+x.n+'</div><div class="lbl">'+x.l+'</div></div>'}).join('');
+}
+function renderTabs(){
+document.getElementById('repoTabs').innerHTML=repos.map(function(r){
+return'<button class="repo-tab '+(curRepo===r.id?'active':'')+'" onclick="switchRepo(\''+r.id+'\')"><span class="repo-badge '+r.badge+'">'+r.name+'</span></button>'
+}).join('');
+}
+function switchRepo(id){curRepo=id;renderProject()}
+function renderProject(){
+var r=repos.find(function(x){return x.id===curRepo});
+var entries=DB.get('entries-'+curRepo,[]);
+var lastStatus=entries.length>0?entries[0].status:'plan';
+var html='<div class="project-header reveal visible">'+
+'<div class="project-title"><span class="repo-badge '+r.badge+'">'+r.name+'</span> <span style="color:var(--g400);font-size:14px;font-weight:400">'+entries.length+' entries / last: '+sBg(lastStatus)+'</span></div>'+
+'</div>';
+/* Entry form */
+html+='<div class="tw" style="margin-bottom:24px;padding:20px">'+
+'<div style="font-size:12px;font-weight:600;margin-bottom:12px;color:var(--g600)">Add Update (auto-timestamped)</div>'+
+'<div class="fi-row">'+
+'<input type="text" class="fi-input" id="newContent" placeholder="What happened? (status update, milestone, blocker...)">'+
+'<select class="fi-select" id="newStatus"><option value="on">Active</option><option value="done">Done</option><option value="plan">Planned</option><option value="hold">On Hold</option><option value="risk">At Risk</option></select>'+
+'<input type="text" class="fi-input" id="newNext" placeholder="Next step (optional)" style="max-width:200px">'+
+'<button class="btn-p btn-sm" onclick="addEntry()">+ Add</button>'+
+'</div>'+
+'<div style="font-size:11px;color:var(--g400);margin-top:8px">Timestamp: <span class="mono-ts">'+nowTS()+'</span> / Author: '+cu.name+'</div>'+
+'</div>';
+/* Entries table */
+html+='<div class="tw"><div class="ts"><table><thead><tr><th style="width:140px">Timestamp</th><th style="width:80px">Author</th><th style="width:80px">Status</th><th>Update</th><th>Next Step</th><th style="width:60px"></th></tr></thead><tbody>';
+if(entries.length===0){
+html+='<tr><td colspan="6"><div class="empty">No entries yet. Add the first update above.</div></td></tr>';
+}else{
+entries.forEach(function(e){
+html+='<tr>'+
+'<td class="mono-ts">'+e.ts+'</td>'+
+'<td style="font-size:12px">'+e.author+'</td>'+
+'<td>'+sBg(e.status)+'</td>'+
+'<td style="max-width:300px">'+e.content+'</td>'+
+'<td style="max-width:200px;color:var(--g500);font-size:12px">'+(e.next||'—')+'</td>'+
+'<td><button class="btn-gh" onclick="delEntry(\''+e.ts+'\')">Delete</button></td>'+
+'</tr>';
+});
+}
+html+='</tbody></table></div></div>';
+document.getElementById('projectArea').innerHTML=html;
+/* Update timestamp live */
+setInterval(function(){var ts=document.querySelector('.mono-ts');if(ts&&ts.id==='')ts.textContent=nowTS()},30000);
+}
+function addEntry(){
+var content=document.getElementById('newContent').value.trim();
+if(!content){toast('Please enter update content');return}
+var status=document.getElementById('newStatus').value;
+var next=document.getElementById('newNext').value.trim();
+var entries=DB.get('entries-'+curRepo,[]);
+entries.unshift({ts:nowTS(),author:cu.name,status:status,content:content,next:next});
+DB.set('entries-'+curRepo,entries);
+renderStats();renderProject();
+toast('Entry added');
+}
+function delEntry(ts){
+var entries=DB.get('entries-'+curRepo,[]).filter(function(x){return x.ts!==ts});
+DB.set('entries-'+curRepo,entries);
+renderStats();renderProject();
+toast('Deleted');
+}
+function renderAll(){renderStats();renderTabs();renderProject()}
 var nav=document.getElementById('nav');window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
 document.getElementById('navToggle').addEventListener('click',function(){document.getElementById('navLinks').classList.toggle('open')});
 document.querySelectorAll('a[href$=".html"]').forEach(function(a){a.addEventListener('click',function(e){var h=a.getAttribute('href');if(h&&!h.startsWith('http')){e.preventDefault();document.body.style.opacity='0';document.body.style.transition='opacity .15s';setTimeout(function(){window.location.href=h},150)}})});
