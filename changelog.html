@@ -492,7 +492,7 @@ const AUTHOR_MAP = {
   'NIETeam': 'KING（瞿铭）',
 };
 function displayName(a) { return AUTHOR_MAP[a] || a; }
-function isBot(a) { return a === 'github-actions[bot]' || a === 'github-actions[bot]\n' || a.indexOf('[bot]') !== -1; }
+function isBot(a) { return a.indexOf('[bot]') !== -1; }
 
 // ===== State =====
 let activeFilter = 'all';
