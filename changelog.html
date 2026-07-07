@@ -80,6 +80,29 @@
   .contrib-bar-fill{height:100%;border-radius:2px;transition:width .3s}
   #contributors{scroll-margin-top:80px}
 
+  .contrib-chip{cursor:pointer}
+  .contrib-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:200;display:none;animation:fadeIn .2s ease}
+  .contrib-modal-overlay.show{display:flex;align-items:flex-start;justify-content:center;padding:80px 20px 40px;overflow-y:auto}
+  .contrib-modal{background:#fff;border-radius:16px;max-width:680px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.2);overflow:hidden;animation:slideUp .3s cubic-bezier(.16,1,.3,1)}
+  @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .contrib-modal-header{padding:28px 32px 20px;border-bottom:1px solid var(--g100);display:flex;align-items:center;gap:16px}
+  .contrib-modal-avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;flex-shrink:0}
+  .contrib-modal-name{font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .contrib-modal-meta{font-size:13px;color:var(--g400);margin-top:4px}
+  .contrib-modal-close{margin-left:auto;width:36px;height:36px;border-radius:50%;border:none;background:var(--g100);cursor:pointer;font-size:18px;color:var(--g500);transition:all .2s;display:flex;align-items:center;justify-content:center}
+  .contrib-modal-close:hover{background:var(--g200);color:var(--black)}
+  .contrib-modal-body{padding:8px 0;max-height:60vh;overflow-y:auto}
+  .contrib-day{padding:16px 32px;border-bottom:1px solid var(--g50)}
+  .contrib-day:last-child{border-bottom:none}
+  .contrib-day-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .contrib-day-date{font-size:13px;font-weight:700;color:var(--g700)}
+  .contrib-day-count{font-size:11px;color:var(--g400);background:var(--g100);padding:2px 8px;border-radius:100px}
+  .contrib-day-summary{font-size:13px;color:var(--g600);line-height:1.7;margin-bottom:8px;padding:10px 14px;background:var(--g50);border-radius:8px;border-left:3px solid var(--g300)}
+  .contrib-day-commits{display:flex;flex-direction:column;gap:4px}
+  .contrib-day-commit{font-size:12px;color:var(--g500);line-height:1.5;padding:4px 0;display:flex;gap:8px;align-items:flex-start}
+  .contrib-day-commit .repo-badge{font-size:10px;padding:1px 6px}
+  .contrib-day-commit-msg{flex:1;word-break:break-word}
+
   .date-header{grid-column:1/-1;padding:20px 0 8px;font-size:12px;font-weight:700;color:var(--g400);letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid var(--g100);margin-bottom:4px}
 
   footer{padding:40px 0 24px;border-top:1px solid var(--g100);text-align:center;color:var(--g400);font-size:12px}
@@ -601,12 +624,141 @@ function renderContributorStats() {
     var pct = Math.round(count / max * 100);
     var initials = name.substring(0, 2).toUpperCase();
     var color = colors[i % colors.length];
-    html += '<div class="contrib-chip"><div class="contrib-avatar" style="background:' + color + '">' + initials + '</div><div>' +
-      '<div class="contrib-name">' + name + '</div><div class="contrib-count">' + count + ' commits</div>' +
+    html += '<div class="contrib-chip" onclick="showContributorDetail(\'' + name.replace(/'/g,"\\'") + '\')" style="cursor:pointer">' +
+      '<div class="contrib-avatar" style="background:' + color + '">' + initials + '</div><div>' +
+      '<div class="contrib-name">' + name + '</div><div class="contrib-count">' + count + ' commits 路 鐐瑰嚮鏌ョ湅璇︽儏</div>' +
       '<div class="contrib-bar"><div class="contrib-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div></div></div>';
   });
   document.getElementById('contributors').innerHTML = html;
 }
+
+// ===== Contributor detail modal =====
+function summarizeDay(commits) {
+  var repos = {};
+  var types = {feat:0, fix:0, refactor:0, chore:0, style:0, test:0, docs:0, ci:0, other:0};
+  commits.forEach(function(c) {
+    var r = c.r;
+    if (!repos[r]) repos[r] = [];
+    repos[r].push(c.m);
+    var m = c.m.toLowerCase();
+    if (/^feat|^add\b|\bfeat\b/.test(m)) types.feat++;
+    else if (/^fix|\bfix\b|\bresolve\b|\bpatch\b/.test(m)) types.fix++;
+    else if (/^refactor|\brefactor\b|\brebuild\b|\bclean\b|\bsimplify\b/.test(m)) types.refactor++;
+    else if (/^chore|\bchore\b|\bversion\b|\brelease\b/.test(m)) types.chore++;
+    else if (/^style|\bstyle\b|\bui\b|\bvisual\b|\bcolor\b|\blayout\b/.test(m)) types.style++;
+    else if (/^test|\btest\b/.test(m)) types.test++;
+    else if (/^docs|\bdocs\b|\breadme\b/.test(m)) types.docs++;
+    else if (/^ci|\bci\b|\bdeploy\b|\bbuild\b/.test(m)) types.ci++;
+    else types.other++;
+  });
+
+  var parts = [];
+  var repoNames = Object.keys(repos);
+  if (repoNames.length === 1) {
+    parts.push(repoNames[0] + ' 椤圭洰');
+  } else {
+    parts.push(repoNames.length + ' 涓」鐩紙' + repoNames.join('銆?) + '锛?);
+  }
+
+  var typeParts = [];
+  if (types.feat) typeParts.push('寮€鍙戞柊鍔熻兘 ' + types.feat + ' 椤?);
+  if (types.fix) typeParts.push('淇闂 ' + types.fix + ' 椤?);
+  if (types.refactor) typeParts.push('閲嶆瀯/浼樺寲 ' + types.refactor + ' 椤?);
+  if (types.style) typeParts.push('瑙嗚/UI璋冩暣 ' + types.style + ' 椤?);
+  if (types.test) typeParts.push('琛ュ厖娴嬭瘯 ' + types.test + ' 椤?);
+  if (types.chore) typeParts.push('宸ョ▼缁存姢 ' + types.chore + ' 椤?);
+  if (types.ci) typeParts.push('CI/閮ㄧ讲 ' + types.ci + ' 椤?);
+  if (types.docs) typeParts.push('鏂囨。鏇存柊 ' + types.docs + ' 椤?);
+  if (types.other) typeParts.push('鍏朵粬鎻愪氦 ' + types.other + ' 椤?);
+  if (typeParts.length) parts.push(typeParts.join('锛?));
+
+  // Extract key themes from commit messages
+  var themes = {};
+  commits.forEach(function(c) {
+    var m = c.m.replace(/^(feat|fix|refactor|chore|style|test|docs|ci|build|audit|iter|trigger|merge|copy)\b\(?[^)]*\)?[:锛歖\s*/i, '');
+    m = m.replace(/^\[[^\]]*\]\s*/, '');
+    if (m.length > 60) m = m.substring(0, 60) + '...';
+    themes[m] = (themes[m] || 0) + 1;
+  });
+  var topThemes = Object.entries(themes).sort(function(a,b){return b[1]-a[1];}).slice(0,3).map(function(e){return e[0];});
+  if (topThemes.length) parts.push('閲嶇偣锛? + topThemes.join('锛?));
+
+  return parts.join('銆?);
+}
+
+function showContributorDetail(name) {
+  var myCommits = COMMITS.filter(function(c) { return displayName(c.a) === name; });
+  myCommits.sort(function(a, b) { return new Date(b.d) - new Date(a.d); });
+
+  var counts = {};
+  COMMITS.forEach(function(c) { var n = displayName(c.a); counts[n] = (counts[n] || 0) + 1; });
+  var totalCount = counts[name] || 0;
+  var colors = ['#000','#555','#888','#aaa','#ccc','#e5e5e5'];
+  var idx = Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).indexOf(name);
+  var color = colors[idx % colors.length];
+  var initials = name.substring(0, 2).toUpperCase();
+
+  // Group by day
+  var byDay = {};
+  myCommits.forEach(function(c) {
+    var d = new Date(c.d);
+    var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    if (!byDay[key]) byDay[key] = [];
+    byDay[key].push(c);
+  });
+
+  var repoSet = {};
+  myCommits.forEach(function(c) { repoSet[c.r] = true; });
+  var repoCount = Object.keys(repoSet).length;
+  var dayCount = Object.keys(byDay).length;
+  var firstDate = myCommits[myCommits.length-1] ? new Date(myCommits[myCommits.length-1].d).toLocaleDateString('zh-CN') : '';
+  var lastDate = myCommits[0] ? new Date(myCommits[0].d).toLocaleDateString('zh-CN') : '';
+
+  var html = '<div class="contrib-modal-overlay" id="contribOverlay" onclick="if(event.target===this)closeContribModal()">' +
+    '<div class="contrib-modal">' +
+    '<div class="contrib-modal-header">' +
+    '<div class="contrib-modal-avatar" style="background:' + color + '">' + initials + '</div>' +
+    '<div><div class="contrib-modal-name">' + name + '</div>' +
+    '<div class="contrib-modal-meta">' + totalCount + ' 娆℃彁浜?路 ' + dayCount + ' 澶╂椿璺?路 ' + repoCount + ' 涓」鐩? +
+    (firstDate ? ' 路 ' + firstDate + ' ~ ' + lastDate : '') + '</div></div>' +
+    '<button class="contrib-modal-close" onclick="closeContribModal()">&times;</button></div>' +
+    '<div class="contrib-modal-body">';
+
+  Object.keys(byDay).sort(function(a,b){return b.localeCompare(a);}).forEach(function(day) {
+    var dayCommits = byDay[day];
+    var d = new Date(dayCommits[0].d);
+    var weekday = d.toLocaleDateString('zh-CN', {weekday:'long'});
+    var summary = summarizeDay(dayCommits);
+
+    html += '<div class="contrib-day">' +
+      '<div class="contrib-day-header"><span class="contrib-day-date">' + day + ' ' + weekday + '</span>' +
+      '<span class="contrib-day-count">' + dayCommits.length + ' 娆℃彁浜?/span></div>' +
+      '<div class="contrib-day-summary">' + summary + '</div>' +
+      '<div class="contrib-day-commits">';
+    dayCommits.forEach(function(c) {
+      html += '<div class="contrib-day-commit"><span class="repo-badge repo-' + c.r.toLowerCase() + '">' + c.r + '</span>' +
+        '<span class="contrib-day-commit-msg">' + c.m + '</span></div>';
+    });
+    html += '</div></div>';
+  });
+
+  html += '</div></div></div>';
+
+  var old = document.getElementById('contribOverlay');
+  if (old) old.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.body.style.overflow = 'hidden';
+}
+
+function closeContribModal() {
+  var overlay = document.getElementById('contribOverlay');
+  if (overlay) overlay.remove();
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeContribModal();
+});
 
 // ===== Load fresh data =====
 async function loadCommits() {
