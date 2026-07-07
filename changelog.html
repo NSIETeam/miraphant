@@ -149,8 +149,6 @@
       <li><a href="changelog.html" class="active">Log</a></li>
       <li><a href="#timeline">Timeline</a></li>
       <li><a href="#contributors">Contributors</a></li>
-      <li><button class="export-btn" id="exportBtn" style="margin-left:8px">Export Notes</button></li>
-      <li><button class="export-btn" id="importBtn">Import Notes</button></li>
       <li><button class="portal-logout-btn" onclick="doLogout()" style="margin-left:8px;border:1px solid var(--g200);color:var(--g500)">Logout</button></li>
     </ul>
   </div>
@@ -812,10 +810,6 @@ document.getElementById('searchBox').addEventListener('input', function(e) {
   searchTerm = e.target.value;
   render();
 });
-
-// ===== Nav export/import buttons =====
-document.getElementById('exportBtn').addEventListener('click', exportNotes);
-document.getElementById('importBtn').addEventListener('click', importNotes);
 
 // ===== Mobile nav toggle =====
 document.getElementById('navToggle').addEventListener('click', function() {
