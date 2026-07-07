@@ -919,10 +919,15 @@ document.getElementById('searchBox').addEventListener('input', e => {
 });
 
 // ===== Init =====
-// Show loading state
-document.getElementById('commitList').innerHTML = '<div style="padding:60px 0;text-align:center;color:var(--g400)">Loading commits...</div>';
+// Immediately render fallback data (never show blank page)
+COMMITS.push(...FALLBACK_COMMITS);
+COMMITS.sort((a, b) => new Date(b.d) - new Date(a.d));
+render();
+renderContributorStats();
+const _contributors = new Set(COMMITS.map(c => displayName(c.a)));
+document.getElementById('totalContributors').textContent = _contributors.size;
 
-// Load data then render
+// Then try to load fresh data from commits.json
 loadCommits();
 </script>
 </body>
