@@ -34,11 +34,6 @@
 .proj-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0}.pb-otto{background:#0ea5e9;color:#fff}.pb-circle{background:#E8F5E9;color:#2E7D32}.pb-olivewolf{background:#FFF3E0;color:#E65100}.pb-miraphant{background:#F3E5F5;color:#6A1B9A}.pb-easyhermes{background:#E3F2FD;color:#1565C0}
 .proj-text{flex:1;min-width:0}.proj-text .title{font-size:13px;font-weight:500;color:rgba(255,255,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.proj-text .meta{font-size:11px;color:rgba(255,255,255,.3);margin-top:2px}
 .proj-status{font-size:11px;padding:3px 10px;border-radius:100px;white-space:nowrap;flex-shrink:0}.ps-on{background:rgba(255,255,255,.1);color:#fff}.ps-done{background:rgba(68,255,68,.1);color:#44ff44;border:1px solid rgba(68,255,68,.2)}.ps-hold{background:rgba(255,255,255,.05);color:rgba(255,255,255,.3)}.ps-plan{background:rgba(51,51,204,.15);color:#6666ff}.ps-risk{background:rgba(255,68,68,.1);color:#ff6666;border:1px solid rgba(255,68,68,.2)}
-/* Timeline */
-.timeline-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)}.timeline-item:last-child{border-bottom:none}
-.tl-icon{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
-.tl-content{flex:1;min-width:0}.tl-content .text{font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;word-break:break-word}.tl-content .meta{font-size:11px;color:rgba(255,255,255,.3);margin-top:4px}
-.tl-time{font-size:11px;color:rgba(255,255,255,.2);white-space:nowrap;flex-shrink:0;margin-left:auto}
 /* Quick actions */
 .qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .qa-btn{padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:12px;text-decoration:none;color:inherit;transition:all .3s;text-align:center;cursor:pointer}.qa-btn:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px);background:rgba(255,255,255,.02)}.qa-btn svg{width:22px;height:22px;stroke:rgba(255,255,255,.5);fill:none;stroke-width:1.5;margin:0 auto 8px;display:block}.qa-btn:hover svg{stroke:#fff}.qa-btn span{font-size:12px;color:rgba(255,255,255,.5);transition:color .3s}.qa-btn:hover span{color:#fff}
@@ -91,15 +86,6 @@
 <div class="dash-card-head"><h3>Project Status</h3><a href="followup.html" class="dash-card-link">View All</a></div>
 <div id="projList"></div>
 </div>
-</div>
-</div></section>
-
-<!-- Activity Timeline -->
-<section class="dash-section" style="padding-bottom:60px"><div class="container">
-<div class="ds-label">Recent Activity</div>
-<div class="ds-title" style="margin-bottom:20px">Latest updates across all tools</div>
-<div class="dash-card reveal">
-<div id="timeline"></div>
 </div>
 </div></section>
 
@@ -163,16 +149,6 @@ out.push({repo:r.id,repoName:r.name,title:e.content,status:e.status,next:e.next,
 });
 return out;
 }
-function getFollowupAllEntries(){
-var out=[];
-FU_REPOS.forEach(function(r){
-var entries=DB.get(fuKey(r.id),[]);
-entries.forEach(function(e){
-out.push({repo:r.id,repoName:r.name,title:e.content,status:e.status,next:e.next,ts:e.ts,author:e.author});
-});
-});
-return out;
-}
 
 function renderStats(){
 var r=DB.get('oa-reimburse',[]).filter(function(x){return x.applicant===cu.name});
@@ -222,26 +198,8 @@ if(fu.length===0){el.innerHTML='<div class="empty">No project updates yet. <a hr
 el.innerHTML=fu.map(function(p){var s=statusMap[p.status]||statusMap.plan;return'<div class="proj-item"><span class="proj-badge pb-'+p.repo.toLowerCase()+'">'+p.repoName+'</span><div class="proj-text"><div class="title">'+p.title+'</div><div class="meta">'+(p.next||'\u2014')+'</div></div><span class="proj-status '+s.cls+'">'+s.label+'</span></div>'}).join('');
 }
 
-function renderTimeline(){
-var r=DB.get('oa-reimburse',[]).filter(function(x){return x.applicant===cu.name});
-var l=DB.get('oa-leave',[]).filter(function(x){return x.applicant===cu.name});
-var tr=DB.get('oa-travel',[]).filter(function(x){return x.applicant===cu.name});
-var fu=getFollowupAllEntries();
-var items=[];
-r.forEach(function(x){items.push({icon:'R',text:'Reimbursement: '+x.reason+' ('+fmtMoney(x.amount)+')',time:x.date})});
-l.forEach(function(x){items.push({icon:'L',text:'Leave: '+x.reason+' ('+x.days+' days)',time:x.startDate})});
-tr.forEach(function(x){items.push({icon:'T',text:'Travel to '+x.destination+': '+x.purpose,time:x.startDate})});
-fu.forEach(function(x){items.push({icon:'F',text:'['+x.repoName+'] '+x.title,time:x.ts})});
-items.sort(function(a,b){return(b.time||'').localeCompare(a.time||'')});
-items=items.slice(0,10);
-var el=document.getElementById('timeline');
-if(items.length===0){el.innerHTML='<div class="empty">No recent activity.</div>';return}
-el.innerHTML=items.map(function(i){return'<div class="timeline-item"><div class="tl-icon">'+i.icon+'</div><div class="tl-content"><div class="text">'+i.text+'</div></div><div class="tl-time">'+i.time+'</div></div>'}).join('');
-}
 
-function fmtMoney(n){return'\u00a5'+Number(n).toLocaleString('zh-CN',{minimumFractionDigits:0,maximumFractionDigits:0})}
-
-function renderAll(){renderStats();renderQA();renderTodos();renderProjects();renderTimeline()}
+function renderAll(){renderStats();renderQA();renderTodos();renderProjects()}
 var nav=document.getElementById('nav');window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
 document.getElementById('navToggle').addEventListener('click',function(){document.getElementById('navLinks').classList.toggle('open')});
 var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting)x.target.classList.add('visible')})},{threshold:.1});document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el)});
