@@ -659,7 +659,7 @@ function renderContributorStats() {
     var color = colors[i % colors.length];
     html += '<div class="contrib-chip" onclick="showContributorDetail(\'' + name.replace(/'/g,"\\'") + '\')" style="cursor:pointer">' +
       '<div class="contrib-avatar" style="background:' + color + '">' + initials + '</div><div>' +
-      '<div class="contrib-name">' + name + '</div><div class="contrib-count">' + count + ' commits 路 鐐瑰嚮鏌ョ湅璇︽儏</div>' +
+      '<div class="contrib-name">' + name + '</div><div class="contrib-count">' + count + ' commits 路 \u70b9\u51fb\u67e5\u770b\u8be6\u60c5</div>' +
       '<div class="contrib-bar"><div class="contrib-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div></div></div>';
   });
   document.getElementById('contributors').innerHTML = html;
