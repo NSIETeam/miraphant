@@ -17,23 +17,24 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup GitHub CLI
         run: |
-          gh auth setup-git
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          echo "$GH_TOKEN" | gh auth login --with-token
+          gh auth status
 
       - name: Fetch all commits
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OTTO_PAT: ${{ secrets.OTTO_PAT }}
         run: |
-          # For Otto (private repo under Felix201209), use OTTO_PAT if available
+          # If OTTO_PAT is set, use it for private repo access (Felix201209/otto)
           if [ -n "$OTTO_PAT" ]; then
-            echo "Using OTTO_PAT for private repo access"
+            echo "Using OTTO_PAT for Otto private repo access"
             echo "$OTTO_PAT" | gh auth login --with-token
           fi
           python3 scripts/fetch_commits.py
@@ -41,8 +42,11 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          git diff --quiet commits.json || echo "changed=true" >> $GITHUB_OUTPUT
-          if [ ! -f commits.json ]; then echo "changed=true" >> $GITHUB_OUTPUT; fi
+          if [ -f commits.json ]; then
+            git diff --quiet commits.json || echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit and push
         if: steps.changes.outputs.changed == 'true'
