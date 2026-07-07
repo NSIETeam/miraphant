@@ -617,7 +617,7 @@ function renderContributorStats() {
   COMMITS.forEach(function(c) { var n = displayName(c.a); counts[n] = (counts[n] || 0) + 1; });
   var sorted = Object.entries(counts).sort(function(a, b) { return b[1] - a[1]; });
   var max = sorted[0][1];
-  var colors = ['#000','#555','#888','#aaa','#ccc','#e5e5e5'];
+  var colors = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2','#db2777','#4f46e5','#16a34a','#ea580c'];
   var html = '';
   sorted.forEach(function(entry, i) {
     var name = entry[0], count = entry[1];
@@ -693,7 +693,7 @@ function showContributorDetail(name) {
   var counts = {};
   COMMITS.forEach(function(c) { var n = displayName(c.a); counts[n] = (counts[n] || 0) + 1; });
   var totalCount = counts[name] || 0;
-  var colors = ['#000','#555','#888','#aaa','#ccc','#e5e5e5'];
+  var colors = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2','#db2777','#4f46e5','#16a34a','#ea580c'];
   var idx = Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).indexOf(name);
   var color = colors[idx % colors.length];
   var initials = name.substring(0, 2).toUpperCase();
