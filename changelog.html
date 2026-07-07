@@ -562,9 +562,23 @@ window.importNotes = function() {
       try {
         var imported = JSON.parse(ev.target.result);
         var notes = getNotes();
-        var merged = Object.assign({}, notes, imported);
-        localStorage.setItem(NOTES_KEY, JSON.stringify(merged));
-        render(); updateNoteCount();
+        var conflicts = 0;
+          Object.keys(imported).forEach(function(k) {
+            if (notes[k] && notes[k] !== imported[k]) conflicts++;
+          });
+          var doMerge = function() {
+            var merged = Object.assign({}, notes, imported);
+            localStorage.setItem(NOTES_KEY, JSON.stringify(merged));
+            render(); updateNoteCount();
+            alert('Imported ' + Object.keys(imported).length + ' notes' + (conflicts > 0 ? ' (' + conflicts + ' conflicts overwritten)' : ''));
+          };
+          if (conflicts > 0) {
+            if (confirm('Detected ' + conflicts + ' conflicting notes. Import will overwrite local. Continue?')) {
+              doMerge();
+            }
+          } else {
+            doMerge();
+          }
         alert('已导入 ' + Object.keys(imported).length + ' 条备注');
       } catch(err) { alert('文件格式错误'); }
     };
