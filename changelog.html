@@ -580,7 +580,7 @@ function render() {
   var list = document.getElementById('commitList');
   var filtered = COMMITS.filter(function(c) {
     if (activeFilter !== 'all' && c.r !== activeFilter) return false;
-    if (searchTerm && c.m.toLowerCase().indexOf(searchTerm.toLowerCase()) === -1 && c.a.toLowerCase().indexOf(searchTerm.toLowerCase()) === -1) return false;
+    if (searchTerm && c.m.toLowerCase().indexOf(searchTerm.toLowerCase()) === -1 && c.a.toLowerCase().indexOf(searchTerm.toLowerCase()) === -1 && displayName(c.a).toLowerCase().indexOf(searchTerm.toLowerCase()) === -1) return false;
     return true;
   });
   document.getElementById('totalCommits').textContent = filtered.length;
