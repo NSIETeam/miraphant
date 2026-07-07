@@ -115,29 +115,77 @@ if(!DB.get('oa-leave'))DB.set('oa-leave',[{id:'L001',applicant:'Chen Xue',dept:'
 if(!DB.get('oa-travel'))DB.set('oa-travel',[{id:'T001',applicant:'Chen Xue',dept:'Design',destination:'Shanghai',purpose:'Design summit',transport:'train',startDate:'2026-07-20',endDate:'2026-07-22',budget:3000,status:'approved'}]);
 if(!DB.get('oa-badge'))DB.set('oa-badge',[{id:'B001',name:'Chen Xue',role:'Design Director',dept:'Design',employeeId:'MF-004',phone:'138****1234',validUntil:'2027-12-31',style:'dark',status:'done'}]);
 }
-function seedFU(){
-if(!DB.get('fu-updates'))DB.set('fu-updates',[
-{id:'F001',repo:'otto',title:'Mem0 structured memory integration',status:'done',owner:'krx521920',date:'2026-07-06T06:52',next:'Monitor memory retrieval accuracy'},
-{id:'F002',repo:'otto',title:'Feishu project collaboration',status:'on',owner:'NSIETeam',date:'2026-07-06T06:28',next:'Ship collaboration planner v2'},
-{id:'F003',repo:'miraphant',title:'Website OA system + employee portal',status:'on',owner:'NSIETeam',date:'2026-07-07T12:10',next:'Deploy to GitHub Pages + test auth'},
-{id:'F004',repo:'OliveWolf',title:'Real-time audio-driven conversation',status:'plan',owner:'Felix201209',date:'2026-07-04T11:00',next:'Benchmark latency on enterprise GPU'},
-{id:'F005',repo:'circle',title:'AI-driven property matching engine',status:'on',owner:'NSIETeam',date:'2026-07-03T14:00',next:'Onboard first 3 enterprise clients'},
-{id:'F006',repo:'EasyHermes',title:'Core pipeline optimization',status:'hold',owner:'krx521920',date:'2026-07-02T09:00',next:'Resume after Otto v1.4 release'}
-]);
+/* Follow-up data is owned by fu-app.js (followup.html). Read the SAME localStorage
+   keys it writes to: 'fu-entries-{repoId}' holding [{ts,author,status,content,next}, ...].
+   Do NOT seed a separate/duplicate dataset here — that caused the Dashboard to show
+   stale data disconnected from the real Follow-up page. */
+var FU_REPOS=[
+{id:'otto',name:'Otto'},
+{id:'circle',name:'Circle'},
+{id:'OliveWolf',name:'OliveWolf'},
+{id:'miraphant',name:'Miraphant'},
+{id:'EasyHermes',name:'EasyHermes'}
+];
+function fuKey(repoId){return 'fu-entries-'+repoId}
+/* Same seed content as js/fu-app.js — keep in sync if that seed data changes. */
+function seedFollowupIfEmpty(){
+var seeds={
+otto:[
+{ts:'2026-07-06 06:52',author:'krx521920',status:'done',content:'Mem0 structured memory + LangGraph task orchestration + OR-Tools optimization deployed. Multi-agent collaboration active.',next:'Monitor memory retrieval accuracy in production'},
+{ts:'2026-07-06 06:28',author:'NSIETeam',status:'on',content:'Feishu project collaboration actions extended. Planner framework added.',next:'Ship collaboration planner v2 with task assignment'},
+{ts:'2026-07-06 01:00',author:'NSIETeam',status:'on',content:'Codebase memory MCP adapter + CLI project memory commands wired to org memory MVP.',next:'Connect MCP tools to project memory manager'}
+],
+circle:[
+{ts:'2026-07-03 14:00',author:'NSIETeam',status:'on',content:'AI-driven property matching algorithm v2 deployed. B2B platform ready for pilot.',next:'Onboard first 3 enterprise clients for beta'}
+],
+OliveWolf:[
+{ts:'2026-07-04 11:00',author:'Felix201209',status:'plan',content:'Dual render backends working. Real-time audio-driven conversation functional.',next:'Benchmark latency on enterprise GPU (RTX 4090)'}
+],
+miraphant:[
+{ts:'2026-07-07 12:10',author:'NSIETeam',status:'on',content:'Employee portal with OA system, follow-up tracker, and contribution log. Password auth implemented.',next:'Deploy to GitHub Pages + test auth flow on mobile'}
+],
+EasyHermes:[
+{ts:'2026-07-02 09:00',author:'krx521920',status:'hold',content:'Core pipeline optimization paused pending Otto memory module.',next:'Resume after Otto v1.4 release'}
+]
+};
+FU_REPOS.forEach(function(r){
+if(!DB.get(fuKey(r.id))&&seeds[r.id])DB.set(fuKey(r.id),seeds[r.id]);
+});
+}
+function getFollowupLatestPerRepo(){
+var out=[];
+FU_REPOS.forEach(function(r){
+var entries=DB.get(fuKey(r.id),[]);
+if(entries.length>0){
+var e=entries[0];
+out.push({repo:r.id,repoName:r.name,title:e.content,status:e.status,next:e.next,ts:e.ts,author:e.author});
+}
+});
+return out;
+}
+function getFollowupAllEntries(){
+var out=[];
+FU_REPOS.forEach(function(r){
+var entries=DB.get(fuKey(r.id),[]);
+entries.forEach(function(e){
+out.push({repo:r.id,repoName:r.name,title:e.content,status:e.status,next:e.next,ts:e.ts,author:e.author});
+});
+});
+return out;
 }
 
 function renderStats(){
 var r=DB.get('oa-reimburse',[]).filter(function(x){return x.applicant===cu.name});
 var l=DB.get('oa-leave',[]).filter(function(x){return x.applicant===cu.name});
 var tr=DB.get('oa-travel',[]).filter(function(x){return x.applicant===cu.name});
-var fu=DB.get('fu-updates',[]);
+var fu=getFollowupLatestPerRepo();
 var pending=r.filter(function(x){return x.status==='pending'}).length+l.filter(function(x){return x.status==='pending'}).length+tr.filter(function(x){return x.status==='pending'}).length;
 var activeProj=fu.filter(function(x){return x.status==='on'}).length;
 var doneProj=fu.filter(function(x){return x.status==='done'}).length;
 var stats=[
 {num:pending,lbl:'My Pending',sub:'OA applications'},
 {num:activeProj,lbl:'Active Projects',sub:'In progress now'},
-{num:fu.length,lbl:'Follow-up Items',sub:'Across 5 repos'},
+{num:fu.length,lbl:'Tracked Repos',sub:'With updates'},
 {num:r.length+l.length+tr.length,lbl:'My Total Apps',sub:'All time'}
 ];
 document.getElementById('dashStats').innerHTML=stats.map(function(s){return'<div class="stat-box"><div class="num">'+s.num+'</div><div class="lbl">'+s.lbl+'</div><div class="sub">'+s.sub+'</div></div>'}).join('');
@@ -167,24 +215,23 @@ el.innerHTML=items.map(function(i){return'<div class="todo-item"><div class="tod
 }
 
 function renderProjects(){
-var fu=DB.get('fu-updates',[]);
-var repoMap={otto:'Otto',circle:'Circle',OliveWolf:'OliveWolf',miraphant:'Miraphant',EasyHermes:'EasyHermes'};
+var fu=getFollowupLatestPerRepo();
 var statusMap={on:{cls:'ps-on',label:'Active'},done:{cls:'ps-done',label:'Done'},hold:{cls:'ps-hold',label:'On Hold'},plan:{cls:'ps-plan',label:'Planned'},risk:{cls:'ps-risk',label:'At Risk'}};
 var el=document.getElementById('projList');
-if(fu.length===0){el.innerHTML='<div class="empty">No project updates.</div>';return}
-el.innerHTML=fu.map(function(p){var s=statusMap[p.status]||statusMap.plan;return'<div class="proj-item"><span class="proj-badge pb-'+p.repo+'">'+repoMap[p.repo]+'</span><div class="proj-text"><div class="title">'+p.title+'</div><div class="meta">'+p.next+'</div></div><span class="proj-status '+s.cls+'">'+s.label+'</span></div>'}).join('');
+if(fu.length===0){el.innerHTML='<div class="empty">No project updates yet. <a href="followup.html" style="color:#fff">Add one</a>.</div>';return}
+el.innerHTML=fu.map(function(p){var s=statusMap[p.status]||statusMap.plan;return'<div class="proj-item"><span class="proj-badge pb-'+p.repo.toLowerCase()+'">'+p.repoName+'</span><div class="proj-text"><div class="title">'+p.title+'</div><div class="meta">'+(p.next||'\u2014')+'</div></div><span class="proj-status '+s.cls+'">'+s.label+'</span></div>'}).join('');
 }
 
 function renderTimeline(){
 var r=DB.get('oa-reimburse',[]).filter(function(x){return x.applicant===cu.name});
 var l=DB.get('oa-leave',[]).filter(function(x){return x.applicant===cu.name});
 var tr=DB.get('oa-travel',[]).filter(function(x){return x.applicant===cu.name});
-var fu=DB.get('fu-updates',[]);
+var fu=getFollowupAllEntries();
 var items=[];
-r.forEach(function(x){items.push({icon:'R',text:'Reimbursement: '+x.reason+' ('+x.amount+')',time:x.date})});
+r.forEach(function(x){items.push({icon:'R',text:'Reimbursement: '+x.reason+' ('+fmtMoney(x.amount)+')',time:x.date})});
 l.forEach(function(x){items.push({icon:'L',text:'Leave: '+x.reason+' ('+x.days+' days)',time:x.startDate})});
 tr.forEach(function(x){items.push({icon:'T',text:'Travel to '+x.destination+': '+x.purpose,time:x.startDate})});
-fu.forEach(function(x){items.push({icon:'F',text:'['+x.repo+'] '+x.title,time:x.date})});
+fu.forEach(function(x){items.push({icon:'F',text:'['+x.repoName+'] '+x.title,time:x.ts})});
 items.sort(function(a,b){return(b.time||'').localeCompare(a.time||'')});
 items=items.slice(0,10);
 var el=document.getElementById('timeline');
@@ -192,12 +239,14 @@ if(items.length===0){el.innerHTML='<div class="empty">No recent activity.</div>'
 el.innerHTML=items.map(function(i){return'<div class="timeline-item"><div class="tl-icon">'+i.icon+'</div><div class="tl-content"><div class="text">'+i.text+'</div></div><div class="tl-time">'+i.time+'</div></div>'}).join('');
 }
 
+function fmtMoney(n){return'\u00a5'+Number(n).toLocaleString('zh-CN',{minimumFractionDigits:0,maximumFractionDigits:0})}
+
 function renderAll(){renderStats();renderQA();renderTodos();renderProjects();renderTimeline()}
 var nav=document.getElementById('nav');window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
 document.getElementById('navToggle').addEventListener('click',function(){document.getElementById('navLinks').classList.toggle('open')});
 var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting)x.target.classList.add('visible')})},{threshold:.1});document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el)});
 document.querySelectorAll('a[href$=".html"]').forEach(function(a){a.addEventListener('click',function(e){var h=a.getAttribute('href');if(h&&!h.startsWith('http')){e.preventDefault();document.body.style.opacity='0';document.body.style.transition='opacity .15s';setTimeout(function(){window.location.href=h},150)}})});
-seedOA();seedFU();renderAll();
+seedOA();seedFollowupIfEmpty();renderAll();
 </script>
 </body>
 </html>

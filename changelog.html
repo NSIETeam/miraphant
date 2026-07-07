@@ -688,35 +688,35 @@ function summarizeDay(commits) {
   var parts = [];
   var repoNames = Object.keys(repos);
   if (repoNames.length === 1) {
-    parts.push(repoNames[0] + ' 椤圭洰');
+    parts.push(repoNames[0] + ' \u9879\u76ee');
   } else {
-    parts.push(repoNames.length + ' 涓」鐩紙' + repoNames.join('銆?) + '锛?);
+    parts.push(repoNames.length + ' \u4e2a\u9879\u76ee\uff08' + repoNames.join('\u3001') + '\uff09');
   }
 
   var typeParts = [];
-  if (types.feat) typeParts.push('寮€鍙戞柊鍔熻兘 ' + types.feat + ' 椤?);
-  if (types.fix) typeParts.push('淇闂 ' + types.fix + ' 椤?);
-  if (types.refactor) typeParts.push('閲嶆瀯/浼樺寲 ' + types.refactor + ' 椤?);
-  if (types.style) typeParts.push('瑙嗚/UI璋冩暣 ' + types.style + ' 椤?);
-  if (types.test) typeParts.push('琛ュ厖娴嬭瘯 ' + types.test + ' 椤?);
-  if (types.chore) typeParts.push('宸ョ▼缁存姢 ' + types.chore + ' 椤?);
-  if (types.ci) typeParts.push('CI/閮ㄧ讲 ' + types.ci + ' 椤?);
-  if (types.docs) typeParts.push('鏂囨。鏇存柊 ' + types.docs + ' 椤?);
-  if (types.other) typeParts.push('鍏朵粬鎻愪氦 ' + types.other + ' 椤?);
-  if (typeParts.length) parts.push(typeParts.join('锛?));
+  if (types.feat) typeParts.push('\u5f00\u53d1\u65b0\u529f\u80fd ' + types.feat + ' \u9879');
+  if (types.fix) typeParts.push('\u4fee\u590d\u95ee\u9898 ' + types.fix + ' \u9879');
+  if (types.refactor) typeParts.push('\u91cd\u6784/\u4f18\u5316 ' + types.refactor + ' \u9879');
+  if (types.style) typeParts.push('\u89c6\u89c9/UI\u8c03\u6574 ' + types.style + ' \u9879');
+  if (types.test) typeParts.push('\u8865\u5145\u6d4b\u8bd5 ' + types.test + ' \u9879');
+  if (types.chore) typeParts.push('\u5de5\u7a0b\u7ef4\u62a4 ' + types.chore + ' \u9879');
+  if (types.ci) typeParts.push('CI/\u90e8\u7f72 ' + types.ci + ' \u9879');
+  if (types.docs) typeParts.push('\u6587\u6863\u66f4\u65b0 ' + types.docs + ' \u9879');
+  if (types.other) typeParts.push('\u5176\u4ed6\u63d0\u4ea4 ' + types.other + ' \u9879');
+  if (typeParts.length) parts.push(typeParts.join('\uff0c'));
 
   // Extract key themes from commit messages
   var themes = {};
   commits.forEach(function(c) {
-    var m = c.m.replace(/^(feat|fix|refactor|chore|style|test|docs|ci|build|audit|iter|trigger|merge|copy)\b\(?[^)]*\)?[:锛歖\s*/i, '');
+    var m = c.m.replace(/^(feat|fix|refactor|chore|style|test|docs|ci|build|audit|iter|trigger|merge|copy)\b\(?[^)]*\)?[:\uff1a]?\s*/i, '');
     m = m.replace(/^\[[^\]]*\]\s*/, '');
     if (m.length > 60) m = m.substring(0, 60) + '...';
     themes[m] = (themes[m] || 0) + 1;
   });
   var topThemes = Object.entries(themes).sort(function(a,b){return b[1]-a[1];}).slice(0,3).map(function(e){return e[0];});
-  if (topThemes.length) parts.push('閲嶇偣锛? + topThemes.join('锛?));
+  if (topThemes.length) parts.push('\u91cd\u70b9\uff1a' + topThemes.join('\uff0c'));
 
-  return parts.join('銆?);
+  return parts.join('\u3002');
 }
 
 function showContributorDetail(name) {
@@ -752,8 +752,8 @@ function showContributorDetail(name) {
     '<div class="contrib-modal-header">' +
     '<div class="contrib-modal-avatar" style="background:' + color + '">' + initials + '</div>' +
     '<div><div class="contrib-modal-name">' + escapeHtml(name) + '</div>' +
-    '<div class="contrib-modal-meta">' + totalCount + ' 娆℃彁浜?路 ' + dayCount + ' 澶╂椿璺?路 ' + repoCount + ' 涓」鐩? +
-    (firstDate ? ' 路 ' + firstDate + ' ~ ' + lastDate : '') + '</div></div>' +
+    '<div class="contrib-modal-meta">' + totalCount + ' \u6b21\u63d0\u4ea4 \u00b7 ' + dayCount + ' \u5929\u6d3b\u8dc3 \u00b7 ' + repoCount + ' \u4e2a\u9879\u76ee' +
+    (firstDate ? ' \u00b7 ' + firstDate + ' ~ ' + lastDate : '') + '</div></div>' +
     '<button class="contrib-modal-close" onclick="closeContribModal()">&times;</button></div>' +
     '<div class="contrib-modal-body">';
 
@@ -765,7 +765,7 @@ function showContributorDetail(name) {
 
     html += '<div class="contrib-day">' +
       '<div class="contrib-day-header"><span class="contrib-day-date">' + day + ' ' + weekday + '</span>' +
-      '<span class="contrib-day-count">' + dayCommits.length + ' 娆℃彁浜?/span></div>' +
+      '<span class="contrib-day-count">' + dayCommits.length + ' \u6b21\u63d0\u4ea4</span></div>' +
       '<div class="contrib-day-summary">' + summary + '</div>' +
       '<div class="contrib-day-commits">';
     dayCommits.forEach(function(c) {

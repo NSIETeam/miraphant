@@ -6,6 +6,7 @@ var repos=[
 {id:'EasyHermes',name:'EasyHermes',badge:'rb-easyhermes',color:'#1565C0'}
 ];
 var curRepo='otto';
+var liveTimestampInterval=null;
 var DB={get:function(k,d){try{var v=localStorage.getItem('fu-'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){localStorage.setItem('fu-'+k,JSON.stringify(v))}};
 var cu={name:'Chen Xue',dept:'Design',role:'Design Director',id:'MF-004'};
 function nowTS(){var d=new Date();function p(n){return String(n).padStart(2,'0')}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
@@ -84,14 +85,18 @@ html+='<tr>'+
 '<td>'+sBg(e.status)+'</td>'+
 '<td style="max-width:300px">'+e.content+'</td>'+
 '<td style="max-width:200px;color:var(--g500);font-size:12px">'+(e.next||'—')+'</td>'+
-'<td><button class="btn-gh" onclick="delEntry(\''+e.ts+'\')">Delete</button></td>'+
+'<td><button class="btn-gh" onclick="delEntry(\''+(e.id||e.ts)+'\')">Delete</button></td>'+
 '</tr>';
 });
 }
 html+='</tbody></table></div></div>';
 document.getElementById('projectArea').innerHTML=html;
-/* Update timestamp live */
-setInterval(function(){var ts=document.querySelector('.mono-ts');if(ts&&ts.id==='')ts.textContent=nowTS()},30000);
+/* Update the "next timestamp" preview in the add-entry form once per minute, without leaking intervals across re-renders. */
+if(liveTimestampInterval)clearInterval(liveTimestampInterval);
+liveTimestampInterval=setInterval(function(){
+var preview=document.querySelector('#projectArea .fi-row')&&document.querySelector('#projectArea .fi-row').parentElement.querySelector('.mono-ts');
+if(preview)preview.textContent=nowTS();
+},30000);
 }
 function addEntry(){
 var content=document.getElementById('newContent').value.trim();
@@ -99,13 +104,15 @@ if(!content){toast('Please enter update content');return}
 var status=document.getElementById('newStatus').value;
 var next=document.getElementById('newNext').value.trim();
 var entries=DB.get('entries-'+curRepo,[]);
-entries.unshift({ts:nowTS(),author:cu.name,status:status,content:content,next:next});
+entries.unshift({id:'e'+Date.now()+Math.random().toString(36).slice(2,6),ts:nowTS(),author:cu.name,status:status,content:content,next:next});
 DB.set('entries-'+curRepo,entries);
 renderStats();renderProject();
 toast('Entry added');
+document.getElementById('newContent').value='';
+document.getElementById('newNext').value='';
 }
-function delEntry(ts){
-var entries=DB.get('entries-'+curRepo,[]).filter(function(x){return x.ts!==ts});
+function delEntry(id){
+var entries=DB.get('entries-'+curRepo,[]).filter(function(x){return (x.id||x.ts)!==id});
 DB.set('entries-'+curRepo,entries);
 renderStats();renderProject();
 toast('Deleted');
@@ -114,4 +121,5 @@ function renderAll(){renderStats();renderTabs();renderProject()}
 var nav=document.getElementById('nav');window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
 document.getElementById('navToggle').addEventListener('click',function(){document.getElementById('navLinks').classList.toggle('open')});
 document.querySelectorAll('a[href$=".html"]').forEach(function(a){a.addEventListener('click',function(e){var h=a.getAttribute('href');if(h&&!h.startsWith('http')){e.preventDefault();document.body.style.opacity='0';document.body.style.transition='opacity .15s';setTimeout(function(){window.location.href=h},150)}})});
+var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting)x.target.classList.add('visible')})},{threshold:.1});document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el)});
 seed();renderAll();
