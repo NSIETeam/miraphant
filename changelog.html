@@ -6,6 +6,7 @@
 <title>Miraphant — Code Contribution Log</title>
 <link rel="icon" href="https://nsieteam.github.io/miraphant/favicon.svg" type="image/svg+xml">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="js/portal.css">
 <style>
   :root{--white:#FFF;--black:#000;--g50:#F9F9F9;--g100:#F0F0F0;--g200:#E5E5E5;--g300:#CCC;--g400:#999;--g500:#666;--g600:#444;--g700:#333;--g800:#222}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -13,19 +14,6 @@
   body{font-family:'Inter',sans-serif;background:var(--white);color:var(--black);-webkit-font-smoothing:antialiased}
   .mono{font-family:'JetBrains Mono',monospace}
   .container{max-width:1100px;margin:0 auto;padding:0 24px}
-
-  nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--g200)}
-  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:60px}
-  .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--black);font-weight:700;font-size:16px}
-  .nav-links{display:flex;gap:20px;list-style:none}
-  .nav-links a{text-decoration:none;color:var(--g500);font-size:13px;font-weight:500;transition:color .2s}
-  .nav-links a:hover{color:var(--black)}
-  .nav-links a.active{color:var(--black);font-weight:600}
-  .nav-toggle{display:none;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px;z-index:101}
-  .nav-toggle span{display:block;width:22px;height:2px;background:var(--black);transition:all .3s}
-  .nav-toggle.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
-  .nav-toggle.open span:nth-child(2){opacity:0}
-  .nav-toggle.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 
   .hero{padding:100px 0 40px;border-bottom:1px solid var(--g100)}
   .hero h1{font-size:clamp(32px,5vw,52px);font-weight:900;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px}
@@ -118,12 +106,6 @@
   footer{padding:40px 0 24px;border-top:1px solid var(--g100);text-align:center;color:var(--g400);font-size:12px}
 
   @media(max-width:768px){
-    .nav-toggle{display:flex}
-    .nav-links{display:none;position:fixed;top:60px;left:0;right:0;flex-direction:column;background:#fff;border-bottom:1px solid var(--g200);padding:16px 24px;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.08);z-index:99}
-    .nav-links.open{display:flex}
-    .nav-links li{list-style:none}
-    .nav-links .export-btn{margin-left:0!important;width:100%;text-align:center}
-    .nav-links .portal-logout-btn{margin-left:0!important;width:100%;text-align:center}
     .timeline::before{left:0}
     .commit-entry{grid-template-columns:1fr;gap:4px}
     .commit-date{text-align:left;padding-right:0;padding-left:0}
@@ -136,28 +118,19 @@
 </head>
 <body>
 
-<nav>
-  <div class="container nav-inner">
-    <a href="index.html" class="nav-logo">
-      <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-        <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#000"/>
-        <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#000"/>
-        <polygon points="8,12 11,12 10,16 7,16" fill="#000"/>
-        <polygon points="17,12 20,12 21,16 18,16" fill="#000"/>
-      </svg>
-      Miraphant
-    </a>
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button><ul class="nav-links">
-      <li><a href="portal.html">Portal</a></li>
-      <li><a href="oa.html">OA</a></li>
-      <li><a href="followup.html">Follow-up</a></li>
-      <li><a href="changelog.html" class="active">Log</a></li>
-      <li><a href="#timeline">Timeline</a></li>
-      <li><a href="#contributors">Contributors</a></li>
-      <li><button class="portal-logout-btn" onclick="doLogout()" style="margin-left:8px;border:1px solid var(--g200);color:var(--g500)">Logout</button></li>
-    </ul>
-  </div>
-</nav>
+<nav class="portal-nav" id="nav"><div class="portal-nav-inner">
+<a href="index.html" class="portal-nav-logo"><img src="logo.png" style="width:32px;height:32px" alt="Miraphant"> Miraphant</a>
+<ul class="portal-nav-links" id="navLinks">
+<li><a href="portal.html">Portal</a></li>
+<li><a href="oa.html">OA</a></li>
+<li><a href="followup.html">Follow-up</a></li>
+<li><a href="changelog.html" class="active">Log</a></li>
+<li><a href="#timeline">Timeline</a></li>
+<li><a href="#contributors">Contributors</a></li>
+</ul>
+<div class="portal-nav-right"><button class="portal-logout-btn" onclick="doLogout()">Logout</button></div>
+<button class="portal-nav-toggle" id="navToggle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+</div></nav>
 
 <section class="hero">
   <div class="container">
@@ -833,9 +806,9 @@ document.getElementById('searchBox').addEventListener('input', function(e) {
 
 // ===== Mobile nav toggle =====
 document.getElementById('navToggle').addEventListener('click', function() {
-  this.classList.toggle('open');
-  document.querySelector('.nav-links').classList.toggle('open');
+  document.getElementById('navLinks').classList.toggle('open');
 });
+var navEl=document.getElementById('nav');if(navEl)window.addEventListener('scroll',function(){navEl.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
 
 // ===== Init =====
 COMMITS.sort(function(a, b) { return new Date(b.d) - new Date(a.d); });

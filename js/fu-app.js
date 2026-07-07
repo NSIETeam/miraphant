@@ -55,6 +55,18 @@ return'<button class="repo-tab '+(curRepo===r.id?'active':'')+'" onclick="switch
 }).join('');
 }
 function switchRepo(id){curRepo=id;renderProject()}
+function collabInitials(name){var parts=name.trim().split(/\s+/);if(parts.length>=2)return(parts[0][0]+parts[1][0]).toUpperCase();return name.slice(0,2).toUpperCase()}
+function renderCollaborators(entries){
+if(entries.length===0)return'';
+var byAuthor={};
+entries.forEach(function(e){
+if(!byAuthor[e.author])byAuthor[e.author]={count:0,last:e.ts};
+byAuthor[e.author].count++;
+if(e.ts>byAuthor[e.author].last)byAuthor[e.author].last=e.ts;
+});
+var names=Object.keys(byAuthor).sort(function(a,b){return byAuthor[b].last.localeCompare(byAuthor[a].last)});
+return'<div class="collab-row">'+names.map(function(n){var d=byAuthor[n];return'<div class="collab-chip"><span class="collab-avatar">'+collabInitials(n)+'</span><div><div class="collab-name">'+n+'</div><div class="collab-count">'+d.count+' update'+(d.count>1?'s':'')+' <span class="collab-last">&middot; last '+d.last+'</span></div></div></div>'}).join('')+'</div>'
+}
 function renderProject(){
 var r=repos.find(function(x){return x.id===curRepo});
 var entries=DB.get('entries-'+curRepo,[]);
@@ -62,9 +74,11 @@ var lastStatus=entries.length>0?entries[0].status:'plan';
 var html='<div class="project-header reveal visible">'+
 '<div class="project-title"><span class="repo-badge '+r.badge+'">'+r.name+'</span> <span style="color:var(--g400);font-size:14px;font-weight:400">'+entries.length+' entries / last: '+sBg(lastStatus)+'</span></div>'+
 '</div>';
+/* Who's collaborating on this project, and how recently */
+html+=renderCollaborators(entries);
 /* Entry form */
 html+='<div class="tw" style="margin-bottom:24px;padding:20px">'+
-'<div style="font-size:12px;font-weight:600;margin-bottom:12px;color:var(--g600)">Add Update (auto-timestamped)</div>'+
+'<div style="font-size:12px;font-weight:600;margin-bottom:12px;color:var(--g600)">Add Update (auto-timestamped, permanent record)</div>'+
 '<div class="fi-row">'+
 '<input type="text" class="fi-input" id="newContent" placeholder="What happened? (status update, milestone, blocker...)">'+
 '<select class="fi-select" id="newStatus"><option value="on">Active</option><option value="done">Done</option><option value="plan">Planned</option><option value="hold">On Hold</option><option value="risk">At Risk</option></select>'+
@@ -73,10 +87,10 @@ html+='<div class="tw" style="margin-bottom:24px;padding:20px">'+
 '</div>'+
 '<div style="font-size:11px;color:var(--g400);margin-top:8px">Timestamp: <span class="mono-ts">'+nowTS()+'</span> / Author: '+cu.name+'</div>'+
 '</div>';
-/* Entries table */
-html+='<div class="tw"><div class="ts"><table><thead><tr><th style="width:140px">Timestamp</th><th style="width:80px">Author</th><th style="width:80px">Status</th><th>Update</th><th>Next Step</th><th style="width:60px"></th></tr></thead><tbody>';
+/* Entries table — append-only history, no deletion */
+html+='<div class="tw"><div class="ts"><table><thead><tr><th style="width:140px">Timestamp</th><th style="width:80px">Author</th><th style="width:80px">Status</th><th>Update</th><th>Next Step</th></tr></thead><tbody>';
 if(entries.length===0){
-html+='<tr><td colspan="6"><div class="empty">No entries yet. Add the first update above.</div></td></tr>';
+html+='<tr><td colspan="5"><div class="empty">No entries yet. Add the first update above.</div></td></tr>';
 }else{
 entries.forEach(function(e){
 html+='<tr>'+
@@ -85,7 +99,6 @@ html+='<tr>'+
 '<td>'+sBg(e.status)+'</td>'+
 '<td style="max-width:300px">'+e.content+'</td>'+
 '<td style="max-width:200px;color:var(--g500);font-size:12px">'+(e.next||'—')+'</td>'+
-'<td><button class="btn-gh" onclick="delEntry(\''+(e.id||e.ts)+'\')">Delete</button></td>'+
 '</tr>';
 });
 }
@@ -110,12 +123,6 @@ renderStats();renderProject();
 toast('Entry added');
 document.getElementById('newContent').value='';
 document.getElementById('newNext').value='';
-}
-function delEntry(id){
-var entries=DB.get('entries-'+curRepo,[]).filter(function(x){return (x.id||x.ts)!==id});
-DB.set('entries-'+curRepo,entries);
-renderStats();renderProject();
-toast('Deleted');
 }
 function renderAll(){renderStats();renderTabs();renderProject()}
 var nav=document.getElementById('nav');window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>40)},{passive:true});
