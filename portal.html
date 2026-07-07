@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Miraphant Employee Portal</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="js/portal.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Inter',sans-serif;background:#000;color:#fff;-webkit-font-smoothing:antialiased;overflow-x:hidden;animation:fi .4s cubic-bezier(.16,1,.3,1)}@keyframes fi{from{opacity:0}to{opacity:1}}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+.portal-hero{min-height:60vh;display:flex;align-items:center;padding:120px 0 40px}.portal-hero-content{max-width:800px;margin:0 auto;text-align:center}
+.portal-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:12px;font-weight:500;color:rgba(255,255,255,.4);margin-bottom:24px}.portal-badge-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:pulse 2s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.portal-hero-title{font-size:clamp(32px,5vw,52px);font-weight:900;line-height:1.05;letter-spacing:-.035em;margin-bottom:16px}.portal-hero-title .light{font-weight:300;color:rgba(255,255,255,.4)}
+.portal-hero-sub{font-size:clamp(15px,1.2vw,17px);color:rgba(255,255,255,.4);line-height:1.7;max-width:560px;margin:0 auto}
+.portal-cards{padding:0 0 60px}.portal-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
+.portal-card{padding:40px 32px;border-radius:20px;border:1px solid rgba(255,255,255,.08);text-decoration:none;color:inherit;transition:all .3s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;cursor:pointer}
+.portal-card::before{content:"";position:absolute;top:0;left:0;right:0;height:0;background:rgba(255,255,255,.03);transition:height .3s cubic-bezier(.16,1,.3,1);z-index:0}.portal-card:hover::before{height:100%}.portal-card:hover{border-color:rgba(255,255,255,.2);transform:translateY(-4px)}.portal-card>*{position:relative;z-index:1}
+.portal-card-icon{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;margin-bottom:20px}.portal-card-icon svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.5}
+.portal-card h3{font-size:20px;font-weight:700;margin-bottom:8px}.portal-card p{font-size:13px;color:rgba(255,255,255,.4);line-height:1.7}.portal-card-tag{display:inline-block;margin-top:16px;padding:3px 10px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.4)}
+.portal-card::after{content:"92";position:absolute;top:40px;right:32px;font-size:20px;color:rgba(255,255,255,.15);transition:all .25s}.portal-card:hover::after{color:#fff;transform:translateX(6px)}
+.portal-section{padding:60px 0;border-top:1px solid rgba(255,255,255,.05)}.portal-section .label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:14px}.portal-section-title{font-size:clamp(24px,3vw,36px);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:12px}
+.portal-footer{padding:40px 0;text-align:center;color:rgba(255,255,255,.2);font-size:12px;border-top:1px solid rgba(255,255,255,.05)}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}.reveal.visible{opacity:1;transform:translateY(0)}.rd1{transition-delay:.08s}.rd2{transition-delay:.16s}.rd3{transition-delay:.24s}
+@media(max-width:768px){.portal-cards-grid{grid-template-columns:1fr}.portal-nav-links{display:none}.portal-nav-toggle{display:block}.portal-nav-links.open{display:flex;flex-direction:column;position:absolute;top:64px;left:0;right:0;background:rgba(0,0,0,.95);padding:16px 24px;gap:16px}}
+</style>
+</head>
+<body>
+<script src="js/auth.js"></script>
+<script>if(!window.checkAuth())window.location.href="index.html#employee-portal";</script>
+<nav class="portal-nav" id="nav"><div class="portal-nav-inner">
+<a href="portal.html" class="portal-nav-logo"><img src="logo.png" style="width:32px;height:32px" alt="Miraphant"> Miraphant</a>
+<ul class="portal-nav-links" id="navLinks">
+<li><a href="portal.html" class="active">Portal</a></li>
+<li><a href="oa.html">OA</a></li>
+<li><a href="followup.html">Follow-up</a></li>
+<li><a href="changelog.html">Log</a></li>
+</ul>
+<div class="portal-nav-right">
+<button class="portal-logout-btn" onclick="doLogout()">Logout</button>
+</div>
+<button class="portal-nav-toggle" id="navToggle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+</div></nav>
+
+<section class="portal-hero"><div class="container" style="width:100%"><div class="portal-hero-content">
+<div class="reveal"><div class="portal-badge"><span class="portal-badge-dot"></span>Employee Portal</div></div>
+<div class="reveal rd1"><h1 class="portal-hero-title">Internal tools,<br><span class="light">all in one place.</span></h1></div>
+<div class="reveal rd2"><p class="portal-hero-sub">OA system, project follow-up, and contribution log — built for the Miraphant team.</p></div>
+</div></div></section>
+
+<section class="portal-cards"><div class="container">
+<div class="reveal" style="max-width:600px;margin-bottom:8px"><div class="label">Workspace</div><h2 class="portal-section-title">Three tools, one portal</h2></div>
+<div class="portal-cards-grid">
+<a href="oa.html" class="portal-card reveal rd1">
+<div class="portal-card-icon"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/></svg></div>
+<h3>OA System</h3>
+<p>Reimbursement, leave, travel, and ID badge management. Submit, track, and approve.</p>
+<span class="portal-card-tag">4 Modules</span>
+</a>
+<a href="followup.html" class="portal-card reveal rd2">
+<div class="portal-card-icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>
+<h3>Project Follow-up</h3>
+<p>Track project status updates by repo. Linked with contribution log for context.</p>
+<span class="portal-card-tag">5 Projects</span>
+</a>
+<a href="changelog.html" class="portal-card reveal rd3">
+<div class="portal-card-icon"><svg viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+<h3>Contribution Log</h3>
+<p>Auto-generated commit timeline across all Miraphant repositories. Filter, search, and annotate.</p>
+<span class="portal-card-tag">Auto-sync</span>
+</a>
+</div>
+</div></section>
+
+<div class="portal-footer"><div class="container">&copy; 2026 Miraphant, Inc. / Employee Portal</div></div>
+
+<script>
+var nav=document.getElementById("nav");window.addEventListener("scroll",function(){nav.classList.toggle("scrolled",window.scrollY>40)},{passive:true});
+document.getElementById("navToggle").addEventListener("click",function(){document.getElementById("navLinks").classList.toggle("open")});
+var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting)x.target.classList.add("visible")})},{threshold:.1});document.querySelectorAll(".reveal").forEach(function(el){obs.observe(el)});
+document.querySelectorAll("a[href$=".html"]").forEach(function(a){a.addEventListener("click",function(e){var h=a.getAttribute("href");if(h&&!h.startsWith("http")){e.preventDefault();document.body.style.opacity="0";document.body.style.transition="opacity .15s";setTimeout(function(){window.location.href=h},150)}})});
+</script>
+</body>
+</html>
