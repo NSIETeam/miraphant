@@ -812,6 +812,10 @@ document.getElementById('searchBox').addEventListener('input', function(e) {
   render();
 });
 
+// ===== Nav export/import buttons =====
+document.getElementById('exportBtn').addEventListener('click', exportNotes);
+document.getElementById('importBtn').addEventListener('click', importNotes);
+
 // ===== Mobile nav toggle =====
 document.getElementById('navToggle').addEventListener('click', function() {
   this.classList.toggle('open');
