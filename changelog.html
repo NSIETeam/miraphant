@@ -494,6 +494,7 @@ const AUTHOR_MAP = {
   'NIETeam': 'KING（瞿铭）',
 };
 function displayName(a) { return AUTHOR_MAP[a] || a; }
+function isBot(a) { return a === 'github-actions[bot]' || a === 'github-actions[bot]\n' || a.indexOf('[bot]') !== -1; }
 
 // ===== State =====
 let activeFilter = 'all';
@@ -629,7 +630,7 @@ function render() {
 // ===== Contributor stats =====
 function renderContributorStats() {
   var counts = {};
-  COMMITS.forEach(function(c) { var n = displayName(c.a); counts[n] = (counts[n] || 0) + 1; });
+  COMMITS.forEach(function(c) { if (isBot(c.a)) return; var n = displayName(c.a); counts[n] = (counts[n] || 0) + 1; });
   var sorted = Object.entries(counts).sort(function(a, b) { return b[1] - a[1]; });
   var max = sorted[0][1];
   var colors = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2','#db2777','#4f46e5','#16a34a','#ea580c'];
@@ -702,11 +703,11 @@ function summarizeDay(commits) {
 }
 
 function showContributorDetail(name) {
-  var myCommits = COMMITS.filter(function(c) { return displayName(c.a) === name; });
+  var myCommits = COMMITS.filter(function(c) { return displayName(c.a) === name && !isBot(c.a); });
   myCommits.sort(function(a, b) { return new Date(b.d) - new Date(a.d); });
 
   var counts = {};
-  COMMITS.forEach(function(c) { var n = displayName(c.a); counts[n] = (counts[n] || 0) + 1; });
+  COMMITS.forEach(function(c) { if (isBot(c.a)) return; var n = displayName(c.a); counts[n] = (counts[n] || 0) + 1; });
   var totalCount = counts[name] || 0;
   var colors = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2','#db2777','#4f46e5','#16a34a','#ea580c'];
   var idx = Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).indexOf(name);
@@ -790,7 +791,7 @@ async function loadCommits() {
   COMMITS.sort(function(a, b) { return new Date(b.d) - new Date(a.d); });
   render();
   renderContributorStats();
-  var contributors = new Set(COMMITS.map(function(c) { return displayName(c.a); }));
+  var contributors = new Set(COMMITS.filter(function(c) { return !isBot(c.a); }).map(function(c) { return displayName(c.a); }));
   document.getElementById('totalContributors').textContent = contributors.size;
   var repos = new Set(COMMITS.map(function(c) { return c.r; }));
   document.getElementById('totalRepos').textContent = repos.size;
@@ -827,7 +828,7 @@ COMMITS.sort(function(a, b) { return new Date(b.d) - new Date(a.d); });
 render();
 renderContributorStats();
 updateNoteCount();
-var _contributors = new Set(COMMITS.map(function(c) { return displayName(c.a); }));
+var _contributors = new Set(COMMITS.filter(function(c) { return !isBot(c.a); }).map(function(c) { return displayName(c.a); }));
 document.getElementById('totalContributors').textContent = _contributors.size;
 var _repos = new Set(COMMITS.map(function(c) { return c.r; }));
 document.getElementById('totalRepos').textContent = _repos.size;
