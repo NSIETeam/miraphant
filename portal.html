@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Miraphant Employee Portal</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -93,6 +94,7 @@
 <div style="padding:32px 0;text-align:center;color:rgba(255,255,255,.15);font-size:12px;border-top:1px solid rgba(255,255,255,.05)"><div class="container">&copy; 2026 Miraphant, Inc. / Employee Portal</div></div>
 
 <script>
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 var DB={get:function(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){localStorage.setItem(k,JSON.stringify(v))}};
 var cu={name:'Chen Xue',dept:'Design',role:'Design Director',id:'MF-004'};
 
@@ -188,7 +190,7 @@ l.forEach(function(x){items.push({dot:'yellow',title:x.reason,meta:'Leave / '+x.
 tr.forEach(function(x){items.push({dot:'yellow',title:x.destination+': '+x.purpose,meta:'Travel / '+x.startDate,action:'oa.html',actionLabel:'Review'})});
 var el=document.getElementById('todoList');
 if(items.length===0){el.innerHTML='<div class="empty">No pending items. You are all caught up.</div>';return}
-el.innerHTML=items.map(function(i){return'<div class="todo-item"><div class="todo-dot '+i.dot+'"></div><div class="todo-text"><div class="title">'+i.title+'</div><div class="meta">'+i.meta+'</div></div><a href="'+i.action+'" class="todo-action">'+i.actionLabel+'</a></div>'}).join('');
+el.innerHTML=items.map(function(i){return'<div class="todo-item"><div class="todo-dot '+i.dot+'"></div><div class="todo-text"><div class="title">'+esc(i.title)+'</div><div class="meta">'+esc(i.meta)+'</div></div><a href="'+i.action+'" class="todo-action">'+i.actionLabel+'</a></div>'}).join('');
 }
 
 function renderProjects(){
@@ -196,7 +198,7 @@ var fu=getFollowupLatestPerRepo();
 var statusMap={on:{cls:'ps-on',label:'Active'},done:{cls:'ps-done',label:'Done'},hold:{cls:'ps-hold',label:'On Hold'},plan:{cls:'ps-plan',label:'Planned'},risk:{cls:'ps-risk',label:'At Risk'}};
 var el=document.getElementById('projList');
 if(fu.length===0){el.innerHTML='<div class="empty">No project updates yet. <a href="followup.html" style="color:#fff">Add one</a>.</div>';return}
-el.innerHTML=fu.map(function(p){var s=statusMap[p.status]||statusMap.plan;return'<div class="proj-item"><span class="proj-badge pb-'+p.repo.toLowerCase()+'">'+p.repoName+'</span><div class="proj-text"><div class="title">'+p.title+'</div><div class="meta">'+(p.next||'\u2014')+'</div></div><span class="proj-status '+s.cls+'">'+s.label+'</span></div>'}).join('');
+el.innerHTML=fu.map(function(p){var s=statusMap[p.status]||statusMap.plan;return'<div class="proj-item"><span class="proj-badge pb-'+p.repo.toLowerCase()+'">'+esc(p.repoName)+'</span><div class="proj-text"><div class="title">'+p.title+'</div><div class="meta">'+esc(p.next||'\u2014')+'</div></div><span class="proj-status '+s.cls+'">'+s.label+'</span></div>'}).join('');
 }
 
 

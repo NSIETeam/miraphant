@@ -1,3 +1,4 @@
+"use strict";
 var repos=[
 {id:'otto',name:'Otto',badge:'rb-otto',color:'#00E5FF'},
 {id:'circle',name:'Circle',badge:'rb-circle',color:'#2E7D32'},
@@ -8,6 +9,8 @@ var repos=[
 var curRepo='otto';
 var liveTimestampInterval=null;
 var DB={get:function(k,d){try{var v=localStorage.getItem('fu-'+k);return v?JSON.parse(v):d}catch(e){return d}},set:function(k,v){localStorage.setItem('fu-'+k,JSON.stringify(v))}};
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')};
+
 var cu={name:'Chen Xue',dept:'Design',role:'Design Director',id:'MF-004'};
 function nowTS(){var d=new Date();function p(n){return String(n).padStart(2,'0')}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
 function todayDate(){return new Date().toISOString().slice(0,10)}
@@ -65,7 +68,7 @@ byAuthor[e.author].count++;
 if(e.ts>byAuthor[e.author].last)byAuthor[e.author].last=e.ts;
 });
 var names=Object.keys(byAuthor).sort(function(a,b){return byAuthor[b].last.localeCompare(byAuthor[a].last)});
-return'<div class="collab-row">'+names.map(function(n){var d=byAuthor[n];return'<div class="collab-chip"><span class="collab-avatar">'+collabInitials(n)+'</span><div><div class="collab-name">'+n+'</div><div class="collab-count">'+d.count+' update'+(d.count>1?'s':'')+' <span class="collab-last">&middot; last '+d.last+'</span></div></div></div>'}).join('')+'</div>'
+return'<div class="collab-row">'+names.map(function(n){var d=byAuthor[n];return'<div class="collab-chip"><span class="collab-avatar">'+collabInitials(n)+'</span><div><div class="collab-name">'+esc(n)+'</div><div class="collab-count">'+d.count+' update'+(d.count>1?'s':'')+' <span class="collab-last">&middot; last '+d.last+'</span></div></div></div>'}).join('')+'</div>'
 }
 function renderProject(){
 var r=repos.find(function(x){return x.id===curRepo});
@@ -97,8 +100,8 @@ html+='<tr>'+
 '<td class="mono-ts">'+e.ts+'</td>'+
 '<td style="font-size:12px">'+e.author+'</td>'+
 '<td>'+sBg(e.status)+'</td>'+
-'<td style="max-width:300px">'+e.content+'</td>'+
-'<td style="max-width:200px;color:var(--g500);font-size:12px">'+(e.next||'—')+'</td>'+
+'<td style="max-width:300px">'+esc(e.content)+'</td>'+
+'<td style="max-width:200px;color:var(--g500);font-size:12px">'+esc(e.next||'—')+'</td>'+
 '</tr>';
 });
 }

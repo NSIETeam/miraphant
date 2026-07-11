@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Miraphant — Code Contribution Log</title>
 <link rel="icon" href="https://nsieteam.github.io/miraphant/favicon.svg" type="image/svg+xml">
@@ -114,7 +115,6 @@
     .commit-body::before{left:-4px}
   }
 </style>
-<link rel="stylesheet" href="js/portal.css">
 </head>
 <body>
 
@@ -251,7 +251,7 @@ const FALLBACK_COMMITS = [
   {d:"2026-07-07T04:28:04Z",a:"krx521920",m:"fix: 选址页三个快捷入口图标大小统一对齐",r:"circle"},
   {d:"2026-07-07T04:27:59Z",a:"krx521920",m:"Merge branch \'internal\' of https://github.com/Felix201209/otto into internal",r:"otto"},
   {d:"2026-07-07T04:26:56Z",a:"krx521920",m:"feat: add AutoSkillGenerator - auto-create personal skills from work logs",r:"otto"},
-  {d:"2026-07-07T04:20:35Z",a:"krx521920",m:"fix: 删除选址页emoji表情（💰💡📋）",r:"circle"},
+  {d:"2026-07-07T04:20:35Z",a:"krx521920",m:"fix: 删除选址页emoji表情（）",r:"circle"},
   {d:"2026-07-07T04:20:26Z",a:"krx521920",m:"feat: add WorkLog - automatic work activity logging + daily/weekly reports",r:"otto"},
   {d:"2026-07-07T04:18:15Z",a:"krx521920",m:"feat(changelog): contributor detail modal with daily activity summary",r:"miraphant"},
   {d:"2026-07-07T04:16:46Z",a:"krx521920",m:"fix: employee portal button visible on white footer background",r:"miraphant"},
@@ -546,8 +546,8 @@ const FALLBACK_COMMITS = [
   {d:"2026-06-15T10:18:56Z",a:"Felix201209",m:"fix(feishu): strip inline-code backticks for lark_md (was showing raw ` symbols)",r:"otto"},
   {d:"2026-06-15T04:45:16Z",a:"Felix201209",m:"chore: add one-command install.sh + QUICKSTART for onboarding",r:"otto"},
   {d:"2026-06-15T01:08:05Z",a:"Felix201209",m:"feat: Otto product baseline (independent fork from EasyCode)",r:"otto"},
-  {d:"2026-04-28T13:24:00Z",a:"NIETeam",m:"✨ 开箱即用体验增强：记忆系统、会话管理、沙箱卡片、首次引导",r:"EasyHermes"},
-  {d:"2026-04-28T11:08:11Z",a:"NIETeam",m:"🎉 EasyHermes v1.0.0 — 初始版本",r:"EasyHermes"}
+  {d:"2026-04-28T13:24:00Z",a:"NIETeam",m:" 开箱即用体验增强：记忆系统、会话管理、沙箱卡片、首次引导",r:"EasyHermes"},
+  {d:"2026-04-28T11:08:11Z",a:"NIETeam",m:" EasyHermes v1.0.0 — 初始版本",r:"EasyHermes"}
 ];
 let COMMITS = [...FALLBACK_COMMITS];
 let DATA_LOADED = false;

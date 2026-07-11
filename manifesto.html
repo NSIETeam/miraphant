@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Miraphant Manifesto — Our positions on AI safety, scaling, and application-layer value.">
 <title>Our Manifesto — Miraphant</title>
@@ -27,7 +28,7 @@
 
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
+    background: rgba(0,0,0,0.85); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--gray-200);
   }
   .nav-inner {
