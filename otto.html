@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com; img-src 'self' data: https://avatars.githubusercontent.com">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Otto — Your AI digital colleague by Miraphant. Desktop, CLI, Enterprise. Orchestrate, Trust, Transform, Output.">
 <title>Otto — Miraphant</title>
@@ -324,8 +324,8 @@
           <li data-i18n="editions.desktop.l4">Voice interaction ready</li>
         </ul>
         <div id="downloads">
-          <a href="https://github.com/NSIETeam/miraphant/releases/latest/download/Otto-Desktop-1.2.0-mac-arm64.zip" class="btn-download" data-i18n="editions.desktop.dl">⬇ Download for macOS (ARM)</a>
-          <div class="download-info" data-i18n="editions.desktop.info">Version 1.2.0 · Apple Silicon (M1+) · 139 MB</div>
+          <a id="otto-dl-btn" href="https://github.com/Felix201209/otto-releases/releases/latest" class="btn-download" data-i18n="editions.desktop.dl">⬇ Download for macOS (ARM)</a>
+          <div class="download-info" id="otto-dl-info" data-i18n="editions.desktop.info">Detecting your platform…</div>
         </div>
       </div>
       <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
@@ -503,7 +503,7 @@ const i18n = {
     'editions.desktop.l3': 'Workflow learning and suggestions',
     'editions.desktop.l4': 'Voice interaction ready',
     'editions.desktop.dl': '⬇ Download for macOS (ARM)',
-    'editions.desktop.info': 'Version 1.2.0 · Apple Silicon (M1+) · 139 MB',
+    'editions.desktop.info': 'Detecting your platform…',
     'editions.code.badge': 'CLI + Feishu Bot',
     'editions.code.title': 'Otto Code',
     'editions.code.desc': 'A terminal-native AI agent and Feishu digital colleague. Code generation, debugging, MCP context management, and deep Feishu integration.',
@@ -594,7 +594,7 @@ const i18n = {
     'editions.desktop.l3': '工作流学习与建议',
     'editions.desktop.l4': '语音交互就绪',
     'editions.desktop.dl': '⬇ 下载 macOS (ARM) 版',
-    'editions.desktop.info': '版本 1.2.0 · Apple Silicon (M1+) · 139 MB',
+    'editions.desktop.info': '正在检测你的平台…',
     'editions.code.badge': 'CLI + 飞书机器人',
     'editions.code.title': 'Otto Code',
     'editions.code.desc': '终端原生的 AI 代理和飞书数字同事。代码生成、调试、MCP 上下文管理，深度飞书集成。',
@@ -646,6 +646,93 @@ const observer = new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
 },{threshold:0.1});
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+/* ===== Smart Download: detect device + fetch latest from GitHub ===== */
+(async function(){
+  const btn = document.getElementById('otto-dl-btn');
+  const info = document.getElementById('otto-dl-info');
+  if (!btn || !info) return;
+
+  // Detect platform
+  const ua = navigator.userAgent || '';
+  const plat = navigator.platform || '';
+  let platform = 'unknown';
+  if (/Windows|Win64|Win32/.test(plat) || /Windows/.test(ua)) {
+    platform = 'win-x64';
+  } else if (/Mac/.test(plat) || /Macintosh/.test(ua)) {
+    // Check if Apple Silicon or Intel
+    // Apple Silicon Macs report 'MacIntel' for platform, but we can check UA
+    // or use a heuristic: modern Safari/Firefox on arm64 often has this
+    // For simplicity, default to arm64 for Mac since Intel Macs are older
+    platform = 'arm64';
+    // Try to detect Apple Silicon via devicePixelRatio + screen or UA hints
+    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+      try {
+        const hints = await navigator.userAgentData.getHighEntropyValues(['architecture']);
+        if (hints.architecture && hints.architecture.includes('64')) {
+          platform = 'arm64'; // most modern Macs
+        }
+      } catch(e) {}
+    }
+    // Fallback: check if navigator.maxTouchPoints >= 2 (iOS/Mac touch)
+  } else if (/Linux/.test(plat) || /Linux/.test(ua)) {
+    platform = 'linux';
+  }
+
+  // Fetch latest release from otto-releases
+  try {
+    const resp = await fetch('https://api.github.com/repos/Felix201209/otto-releases/releases/latest');
+    if (!resp.ok) throw new Error('API error');
+    const release = await resp.json();
+    const version = release.tag_name.replace(/^v/, '');
+    const assets = release.assets || [];
+
+    // Map platform to asset patterns (ordered by priority)
+    const patterns = {
+      'win-x64': [/Setup-.*-win-x64\.exe$/i],
+      'arm64':  [/arm64\.dmg$/i, /mac-arm64\.zip$/i, /x64\.dmg$/i],
+      'x64':    [/x64\.dmg$/i, /arm64\.dmg$/i, /mac-arm64\.zip$/i],
+      'linux':  [/AppImage$/i, /linux.*\.deb$/i, /\.tar\.gz$/i]
+    };
+
+    const platformPatterns = patterns[platform] || [];
+    let asset = null;
+    for (const pattern of platformPatterns) {
+      asset = assets.find(a => pattern.test(a.name));
+      if (asset) break;
+    }
+    // Fallback: first non-json, non-blockmap asset
+    if (!asset) {
+      asset = assets.find(a => !a.name.endsWith('.json') && !a.name.endsWith('.blockmap'));
+    }
+
+    if (asset) {
+      btn.href = asset.browser_download_url;
+      const sizeMB = (asset.size / (1024*1024)).toFixed(0);
+      const platformNames = {
+        'win-x64': 'Windows x64',
+        'arm64': 'macOS (Apple Silicon)',
+        'x64': 'macOS (Intel)'
+      };
+      const platformName = platformNames[platform] || 'Desktop';
+
+      // Update button text
+      const dlText = {en: '⬇ Download for ' + platformName, zh: '⬇ 下载 ' + platformName + ' 版'};
+      // Use current language
+      const lang = currentLang || 'en';
+      btn.textContent = dlText[lang] || dlText['en'];
+      info.textContent = (lang === 'zh' ? '版本 ' : 'Version ') + version + ' · ' + platformName + ' · ' + sizeMB + ' MB';
+    } else {
+      btn.href = 'https://github.com/Felix201209/otto-releases/releases/latest';
+      info.textContent = (currentLang === 'zh' ? '请前往 GitHub Releases 页面下载' : 'Please visit GitHub Releases to download');
+    }
+  } catch(e) {
+    // Fallback: keep default link to releases page
+    btn.href = 'https://github.com/Felix201209/otto-releases/releases/latest';
+    info.textContent = (currentLang === 'zh' ? '点击前往 GitHub 下载页面' : 'Click to visit download page');
+    console.warn('Otto release fetch failed:', e);
+  }
+})();
 </script>
 </body>
 </html>
