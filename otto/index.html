@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com; img-src 'self' data: https://avatars.githubusercontent.com">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Otto — Your AI digital colleague by Miraphant. Desktop, CLI, Enterprise. Orchestrate, Trust, Transform, Output.">
+<link rel="canonical" href="https://nsieteam.github.io/miraphant/otto/">
+<title>Otto — Miraphant</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #FFFFFF; --black: #000000;
+    --gray-50: #F9F9F9; --gray-100: #F0F0F0; --gray-200: #E5E5E5;
+    --gray-300: #CCCCCC; --gray-400: #999999; --gray-500: #666666;
+    --gray-600: #444444; --gray-700: #333333; --gray-800: #222222;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--white); color: var(--black);
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(0,0,0,0.85); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; color: var(--white); font-weight: 700; font-size: 16px;
+  }
+  .nav-logo-mark { width: 32px; height: 24px; }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-back { text-decoration: none; color: var(--gray-500); font-size: 12px; font-weight: 500; transition: color 0.2s; white-space: nowrap; }
+  .nav-back:hover { color: var(--black); }
+  .lang-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--gray-500);
+    padding: 4px 8px; border-radius: 4px; font-family: inherit; transition: all 0.2s;
+  }
+  .lang-btn:hover { color: var(--white); background: rgba(255,255,255,0.1); }
+  .lang-btn.active { color: var(--white); background: rgba(255,255,255,0.15); }
+
+  .product-hero { padding: 120px 0 60px; border-bottom: 1px solid var(--gray-100); }
+  .product-hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+  .product-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 100px; border: 1px solid var(--gray-200);
+    font-size: 11px; font-weight: 500; color: var(--gray-500); margin-bottom: 24px;
+  }
+  .product-hero h1 {
+    font-size: clamp(36px, 5vw, 56px); font-weight: 900;
+    letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px;
+  }
+  .product-hero .sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; margin-bottom: 32px; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 100px;
+    background: var(--black); color: var(--white);
+    font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-primary:hover { background: var(--gray-800); transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 100px;
+    border: 1px solid var(--gray-200); color: var(--black);
+    font-weight: 500; font-size: 14px; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--black); transform: translateY(-1px); }
+  .btn-download {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 32px; border-radius: 100px;
+    background: var(--black); color: var(--white);
+    font-weight: 600; font-size: 14px; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-download:hover { background: var(--gray-800); transform: translateY(-1px); }
+
+  .section { padding: 80px 0; }
+  .section.border-b { border-bottom: 1px solid var(--gray-100); }
+  .section .label {
+    font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-400); margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: clamp(24px, 3vw, 36px); font-weight: 800;
+    letter-spacing: -0.025em; line-height: 1.1; margin-bottom: 16px;
+  }
+  .section-sub { font-size: 16px; color: var(--gray-500); line-height: 1.7; }
+
+  /* Otto Four Pillars */
+  .otto-pillars {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--gray-200);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .otto-pillar {
+    background: var(--white); padding: 36px 28px;
+  }
+  .otto-pillar .keyword {
+    font-size: 22px; font-weight: 900; letter-spacing: -0.02em;
+    margin-bottom: 12px; text-transform: uppercase;
+  }
+  .otto-pillar p {
+    font-size: 13px; color: var(--gray-500); line-height: 1.7;
+  }
+
+  .edition-card {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: center;
+    padding: 48px; border-radius: 20px;
+    border: 1px solid var(--gray-200); margin-bottom: 20px;
+  }
+  .edition-card.highlight { border-color: var(--black); border-width: 2px; background: var(--gray-50); }
+  .ed-card-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 100px;
+    border: 1px solid var(--gray-200); font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--gray-500); margin-bottom: 12px;
+  }
+  .edition-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .edition-card .desc { font-size: 14px; color: var(--gray-500); line-height: 1.7; margin-bottom: 16px; }
+  .edition-card ul { list-style: none; padding: 0; margin-bottom: 20px; }
+  .edition-card li {
+    padding: 4px 0; font-size: 13px; color: var(--gray-600);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .edition-card li::before { content: "-"; color: var(--gray-300); font-weight: 700; margin-right: 4px; }
+  .download-info { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+
+
+  .memory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 36px; }
+  .memory-card { border: 1px solid var(--gray-200); border-radius: 14px; padding: 24px; background: var(--white); }
+  .memory-card h3 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+  .memory-card p { font-size: 13px; color: var(--gray-500); line-height: 1.7; }
+  .memory-flow { margin-top: 24px; padding: 24px; border-radius: 16px; background: var(--gray-50); border: 1px solid var(--gray-200); font-size: 13px; color: var(--gray-600); line-height: 1.8; }
+
+  .tech-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tech-tag {
+    padding: 6px 14px; border-radius: 6px;
+    background: var(--gray-50); border: 1px solid var(--gray-200);
+    font-size: 12px; color: var(--gray-600);
+  }
+
+  .cta-section { background: var(--black); color: var(--white); padding: 80px 0; text-align: center; }
+  .cta-section .label { color: var(--gray-500); }
+  .cta-section .section-title { color: var(--white); }
+  .cta-section .sub { color: var(--gray-400); font-size: 16px; line-height: 1.7; margin-bottom: 32px; }
+  .cta-section .btn-primary { background: var(--white); color: var(--black); }
+  .cta-section .btn-primary:hover { background: var(--gray-200); }
+  .cta-section .btn-secondary { border-color: var(--gray-700); color: var(--white); }
+
+  footer { padding: 40px 0 24px; border-top: 1px solid var(--gray-100); }
+  .footer-inner { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray-400); }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .rd1 { transition-delay: 0.08s; } .rd2 { transition-delay: 0.16s; }
+  .rd3 { transition-delay: 0.24s; } .rd4 { transition-delay: 0.32s; }
+
+  @media (max-width: 900px) {
+    .product-hero-inner, .edition-card { grid-template-columns: 1fr; }
+    .memory-grid { grid-template-columns: 1fr; }
+    .otto-pillars { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .otto-pillars { grid-template-columns: 1fr; }
+    .edition-card { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container nav-inner">
+    <a href="/miraphant/" class="nav-logo">
+      <img src="../logo.png" alt="Miraphant" class="nav-logo-mark" style="width:32px;height:32px">
+      Miraphant
+    </a>
+    <div class="nav-right">
+      <a href="/miraphant/" class="nav-back" data-i18n="nav.back">← Back</a>
+      <div style="display:flex;gap:4px;padding-left:12px;border-left:1px solid rgba(255,255,255,0.15)">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="zh">中</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<section class="product-hero">
+  <div class="container product-hero-inner">
+    <div>
+      <div class="reveal"><div class="product-badge" data-i18n="hero.badge">Miraphant Product</div></div>
+      <div class="reveal rd1">
+        <h1>Otto</h1>
+        <p class="sub" style="font-size:18px;font-weight:600;color:var(--gray-700)" data-i18n="hero.tagline">Your AI digital colleague</p>
+        <p class="sub" data-i18n="hero.sub">Otto lives in your terminal, your desktop, and your organization — bringing AI intelligence to every corner of your work.</p>
+      </div>
+      <div class="reveal rd2" style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="#downloads" class="btn-download" data-i18n="hero.dl">⬇ Download Desktop</a>
+        <a href="#editions" class="btn-secondary" data-i18n="hero.editions">Editions →</a>
+      </div>
+    </div>
+    <div class="reveal rd3" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--gray-300)">
+      <svg width="80" height="80" viewBox="0 0 28 28" fill="none">
+        <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#999"/>
+        <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#999"/>
+        <polygon points="8,12 11,12 10,16 7,16" fill="#999"/>
+        <polygon points="17,12 20,12 21,16 18,16" fill="#999"/>
+        <polygon points="11,4 17,4 14,8" fill="#F9F9F9"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- Otto Four Pillars -->
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="pillars.label">Otto's DNA</div>
+      <h2 class="section-title" data-i18n="pillars.title">Four principles that define Otto</h2>
+    </div>
+    <div class="otto-pillars" style="margin-top:24px">
+      <div class="otto-pillar reveal rd1">
+        <div class="keyword" style="color:var(--black)">ORCHESTRATE</div>
+        <p data-i18n="pillars.p1">Otto orchestrates models, tools, and APIs into seamless workflows. From code generation to Feishu integration, every capability is composed, not bolted on.</p>
+      </div>
+      <div class="otto-pillar reveal rd2">
+        <div class="keyword" style="color:var(--gray-500)">TRUST</div>
+        <p data-i18n="pillars.p2">Your data stays yours. Otto Enterprise deploys on your LAN with zero data leaving your network. Open-source core, transparent operations, no vendor lock-in.</p>
+      </div>
+      <div class="otto-pillar reveal rd3">
+        <div class="keyword" style="color:var(--black)">TRANSFORM</div>
+        <p data-i18n="pillars.p3">Otto transforms how teams work — replacing fragmented toolchains with a single AI colleague. One assistant for developers, operators, and executives alike.</p>
+      </div>
+      <div class="otto-pillar reveal rd4">
+        <div class="keyword" style="color:var(--gray-500)">OUTPUT</div>
+        <p data-i18n="pillars.p4">Every feature is measured by what it ships. Code deployed, documents generated, tasks automated. Otto optimizes for results, not potential.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:680px">
+      <div class="label" data-i18n="memory.label">Organizational Memory</div>
+      <h2 class="section-title" data-i18n="memory.title">An AI colleague that remembers how your company works</h2>
+      <p class="section-sub" data-i18n="memory.sub">Otto helps employees reuse the right knowledge, helps managers understand what is working, and helps leaders control access, cost, and outcomes.</p>
+    </div>
+    <div class="memory-grid">
+      <div class="memory-card reveal rd1"><h3 data-i18n="memory.c1.t">Employee work profile</h3><p data-i18n="memory.c1.d">Each employee gets a private work profile: responsibilities, preferences, common tasks, and the best ways Otto should help them.</p></div>
+      <div class="memory-card reveal rd2"><h3 data-i18n="memory.c2.t">Project continuity</h3><p data-i18n="memory.c2.d">Every campaign, client delivery, report, hiring plan, contract review, or internal initiative can keep its own shared memory.</p></div>
+      <div class="memory-card reveal rd3"><h3 data-i18n="memory.c3.t">Department playbook library</h3><p data-i18n="memory.c3.d">Teams can reuse approved ways of working: report templates, meeting summaries, sales follow-ups, research flows, and document production.</p></div>
+      <div class="memory-card reveal rd1"><h3 data-i18n="memory.c4.t">Controlled access</h3><p data-i18n="memory.c4.d">Leaders decide who can use which knowledge, which playbooks, which models, and how much budget each team or project receives.</p></div>
+      <div class="memory-card reveal rd2"><h3 data-i18n="memory.c5.t">Project knowledge base</h3><p data-i18n="memory.c5.d">Project knowledge stays available after meetings end: decisions, files, outputs, risks, next steps, and reusable lessons.</p></div>
+      <div class="memory-card reveal rd3"><h3 data-i18n="memory.c6.t">Management visibility</h3><p data-i18n="memory.c6.d">Managers see team usage, project progress, cost distribution, repeated work, and which playbooks should be standardized.</p></div>
+    </div>
+    <div class="memory-flow reveal rd4" data-i18n="memory.flow">For employees: less repeated explanation. For managers: clearer project and team visibility. For leaders: controlled rollout, measurable usage, and reusable company capability. Typical outcomes include faster onboarding, more consistent documents, better project handover, reusable department workflows, and clearer AI spending.</div>
+    <div class="memory-grid" style="margin-top:24px">
+      <div class="memory-card reveal rd1"><h3 data-i18n="memory.r1.t">For employees</h3><p data-i18n="memory.r1.d">Otto remembers project background, preferred formats, previous files, and common tasks, so employees can ask for a report, proposal, follow-up message, meeting summary, or data table without explaining everything again.</p></div>
+      <div class="memory-card reveal rd2"><h3 data-i18n="memory.r2.t">For department leads</h3><p data-i18n="memory.r2.d">Leads can see which projects are active, where time and AI budget are going, which work is repeated often, and which team methods should become approved templates.</p></div>
+      <div class="memory-card reveal rd3"><h3 data-i18n="memory.r3.t">For company owners</h3><p data-i18n="memory.r3.d">Owners can roll out AI safely: assign licenses, control who can use company knowledge, monitor spending, and turn proven team workflows into company-wide capability.</p></div>
+    </div>
+    <div class="memory-flow reveal rd4" data-i18n="memory.examples">Example uses: onboarding a new hire with department knowledge, preparing weekly reports from previous formats, keeping client delivery context across weeks, standardizing event review documents, reusing approved sales follow-up flows, and seeing which teams produce the best AI-assisted outcomes.</div>
+    <div class="memory-flow reveal rd4">
+      <strong data-i18n="memory.update.t">Latest small update</strong><br>
+      <span data-i18n="memory.update.d">This update clarifies Otto Enterprise for customers and adds stronger document intelligence: employee work profiles, project continuity, department playbook libraries, controlled access, management visibility, practical usage scenarios, high-efficiency PDF content parsing with OpenDataLoader, and a new PDF parsing expert.</span>
+    </div>
+
+
+  </div>
+</section>
+
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:720px">
+      <div class="label" data-i18n="release.label">Minor Update</div>
+      <h2 class="section-title" data-i18n="release.title">Better knowledge reuse, stronger document understanding</h2>
+      <p class="section-sub" data-i18n="release.sub">This small update focuses on practical enterprise work: helping teams remember project context, reuse department methods, and process PDF-heavy documents faster.</p>
+    </div>
+    <div class="memory-grid">
+      <div class="memory-card reveal rd1"><h3 data-i18n="release.c1.t">PDF parsing expert</h3><p data-i18n="release.c1.d">A new expert helps employees read contracts, reports, research papers, manuals, and scanned business documents, then turn them into summaries, tables, checklists, or drafts.</p></div>
+      <div class="memory-card reveal rd2"><h3 data-i18n="release.c2.t">Faster document intake</h3><p data-i18n="release.c2.d">Large PDF files can be parsed more efficiently, so teams spend less time copying content and more time reviewing decisions, risks, numbers, and next actions.</p></div>
+      <div class="memory-card reveal rd3"><h3 data-i18n="release.c3.t">Project memory upgrade</h3><p data-i18n="release.c3.d">Important project files, decisions, outputs, and reusable lessons can stay connected to the project instead of disappearing in chat history.</p></div>
+      <div class="memory-card reveal rd1"><h3 data-i18n="release.c4.t">Department playbooks</h3><p data-i18n="release.c4.d">Repeated team work can become approved playbooks, making reports, reviews, follow-ups, and document creation more consistent across the department.</p></div>
+      <div class="memory-card reveal rd2"><h3 data-i18n="release.c5.t">Manager visibility</h3><p data-i18n="release.c5.d">Managers get clearer signals on which tasks are repeated, where AI budget is going, and which work methods are worth standardizing.</p></div>
+      <div class="memory-card reveal rd3"><h3 data-i18n="release.c6.t">Controlled rollout</h3><p data-i18n="release.c6.d">Leaders can assign usage rights by person, department, or project, keeping company knowledge and AI spending under control.</p></div>
+    </div>
+    <div class="memory-flow reveal rd4" data-i18n="release.examples">Typical uses: summarize supplier contracts, compare tender documents, extract tables from reports, prepare meeting briefs, build due-diligence notes, review policy documents, and preserve the final output as project knowledge.</div>
+  </div>
+</section>
+
+<section id="editions" class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="editions.label">Editions</div>
+      <h2 class="section-title" data-i18n="editions.title">One AI, three forms</h2>
+    </div>
+    <div class="edition-card reveal rd1" style="margin-top:24px">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.desktop.badge">Desktop App</div>
+        <h3 data-i18n="editions.desktop.title">Otto Desktop</h3>
+        <div class="desc" data-i18n="editions.desktop.desc">AI-native desktop experience for macOS. Otto lives in your menubar, learns your workflows, and automates your routines. Bring intelligence to every application you use.</div>
+        <ul>
+          <li data-i18n="editions.desktop.l1">Native macOS app (Apple Silicon)</li>
+          <li data-i18n="editions.desktop.l2">AI-powered desktop automation</li>
+          <li data-i18n="editions.desktop.l3">Workflow learning and suggestions</li>
+          <li data-i18n="editions.desktop.l4">Voice interaction ready</li>
+        </ul>
+        <div id="downloads">
+          <a id="otto-dl-btn" href="https://github.com/Felix201209/otto-releases/releases/latest" class="btn-download" data-i18n="editions.desktop.dl">⬇ Download for macOS (ARM)</a>
+          <div class="download-info" id="otto-dl-info" data-i18n="editions.desktop.info">Detecting your platform…</div>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="4" width="28" height="20" rx="3" stroke="#999" stroke-width="1.5" fill="none"/>
+          <rect x="6" y="7" width="20" height="12" rx="1" fill="#EEE"/>
+          <rect x="8" y="9" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="8" y="13" width="10" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="8" y="17" width="8" height="2" rx="0.5" fill="#CCC"/>
+          <path d="M 10 26 L 22 26 M 16 24 L 16 26" stroke="#999" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="edition-card reveal rd2">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.code.badge">CLI + Feishu Bot</div>
+        <h3 data-i18n="editions.code.title">Otto Code</h3>
+        <div class="desc" data-i18n="editions.code.desc">A terminal-native AI agent and Feishu digital colleague. Code generation, debugging, MCP context management, and deep integration with 18+ Feishu business domains.</div>
+        <ul>
+          <li data-i18n="editions.code.l1">CLI agent with full terminal control</li>
+          <li data-i18n="editions.code.l2">Feishu bot — calendar, docs, sheets, tasks, OKRs, wiki</li>
+          <li data-i18n="editions.code.l3">Multi-model: CodeX, DeepSeek, Claude, GLM</li>
+          <li data-i18n="editions.code.l4">MCP protocol and tool ecosystem</li>
+        </ul>
+        <div>
+          <a href="https://github.com/NSIETeam/otto" class="btn-secondary" data-i18n="editions.code.gh" style="margin-right:8px">View on GitHub →</a>
+          <span class="download-info">npm i -g otto-ai</span>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <code style="font-size:11px;color:var(--gray-400);text-align:left;padding:20px;line-height:1.8">$ otto chat<br>$ otto code --refactor<br>$ otto deploy</code>
+      </div>
+    </div>
+    <div class="edition-card highlight reveal rd3">
+      <div>
+        <div class="ed-card-badge" data-i18n="editions.enterprise.badge">Enterprise</div>
+        <h3 data-i18n="editions.enterprise.title">Otto Enterprise</h3>
+        <div class="desc" data-i18n="editions.enterprise.desc">LAN-deployed enterprise AI agent for the entire organization. Server-client architecture with zero data leaving your network. Designed for non-technical employees.</div>
+        <ul>
+          <li data-i18n="editions.enterprise.l1">LAN server-client architecture</li>
+          <li data-i18n="editions.enterprise.l2">9 core tools: automation, conversion, document generation</li>
+          <li data-i18n="editions.enterprise.l3">Zero data leaves your network</li>
+          <li data-i18n="editions.enterprise.l4">Admin dashboard with local SQLite</li>
+          <li data-i18n="editions.enterprise.l5">Desktop automation (17 actions), 50+ format conversions</li>
+        </ul>
+        <div>
+          <a href="mailto:NSIETeam@outlook.com?subject=Otto%20Enterprise" class="btn-primary" data-i18n="editions.enterprise.cta">Contact for Enterprise →</a>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:12px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid var(--gray-100)">
+        <svg width="64" height="64" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="10" width="12" height="16" rx="2" stroke="#999" stroke-width="1.5" fill="none"/>
+          <rect x="5" y="13" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="5" y="17" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="18" y="10" width="12" height="16" rx="2" stroke="#999" stroke-width="1.5" fill="none"/>
+          <rect x="21" y="13" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <rect x="21" y="17" width="6" height="2" rx="0.5" fill="#CCC"/>
+          <path d="M 14 18 L 18 18" stroke="#999" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M 14 12 L 18 12" stroke="#999" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section border-b">
+  <div class="container">
+    <div class="reveal" style="max-width:600px">
+      <div class="label" data-i18n="tech.label">Technology</div>
+      <h2 class="section-title" data-i18n="tech.title">Built on modern AI infrastructure</h2>
+    </div>
+    <div class="reveal rd1" style="margin-top:32px">
+      <div class="tech-list">
+        <span class="tech-tag">TypeScript 5.x</span>
+        <span class="tech-tag">Node.js 20+</span>
+        <span class="tech-tag">React + Ink</span>
+        <span class="tech-tag">Electron</span>
+        <span class="tech-tag">esbuild</span>
+        <span class="tech-tag">npm Workspaces</span>
+        <span class="tech-tag">CodeX</span>
+        <span class="tech-tag">Claude API</span>
+        <span class="tech-tag">DeepSeek</span>
+        <span class="tech-tag">MCP Protocol</span>
+        <span class="tech-tag">Feishu API</span>
+        <span class="tech-tag">WebSocket Gateway</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="cta-section">
+  <div class="container">
+    <div class="reveal">
+      <div class="label" data-i18n="cta.label">Get Started</div>
+      <h2 class="section-title" data-i18n="cta.title">Give everyone an AI colleague</h2>
+      <p class="sub" data-i18n="cta.sub">Download Otto Desktop, try Otto Code, or bring Otto Enterprise to your organization.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="#downloads" class="btn-primary" data-i18n="cta.dl">⬇ Download Now</a>
+        <a href="mailto:NSIETeam@outlook.com" class="btn-secondary" data-i18n="cta.enterprise" style="border-color:var(--gray-700);color:var(--white)">Enterprise Inquiries</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container footer-inner">
+    <span>© 2026 Miraphant, Inc.</span>
+    <span data-i18n="footer.product">Otto — A Miraphant Product</span>
+  </div>
+</footer>
+
+<script>
+const i18n = {
+  en: {
+    'nav.back': '← Back',
+    'hero.badge': 'Miraphant Product',
+    'hero.tagline': 'Your AI digital colleague',
+    'hero.sub': 'Otto lives in your terminal, your desktop, and your organization — bringing AI intelligence to every corner of your work.',
+    'hero.dl': '⬇ Download Desktop',
+    'hero.editions': 'Editions →',
+    'pillars.label': "Otto's DNA",
+    'pillars.title': 'Four principles that define Otto',
+    'pillars.p1': 'Otto orchestrates models, tools, and APIs into seamless workflows. From code generation to Feishu integration, every capability is composed, not bolted on.',
+    'pillars.p2': 'Your data stays yours. Otto Enterprise deploys on your LAN with zero data leaving your network. Open-source core, transparent operations, no vendor lock-in.',
+    'pillars.p3': 'Otto transforms how teams work — replacing fragmented toolchains with a single AI colleague. One assistant for developers, operators, and executives alike.',
+    'pillars.p4': 'Every feature is measured by what it ships. Code deployed, documents generated, tasks automated. Otto optimizes for results, not potential.',
+    'memory.label': 'Organizational Memory',
+    'memory.title': 'An AI colleague that remembers how your company works',
+    'memory.sub': 'Otto helps employees reuse the right knowledge, helps managers understand what is working, and helps leaders control access, cost, and outcomes.',
+    'memory.c1.t': 'Employee work profile',
+    'memory.c1.d': 'Each employee gets a private work profile: responsibilities, preferences, common tasks, and the best ways Otto should help them.',
+    'memory.c2.t': 'Project continuity',
+    'memory.c2.d': 'Every campaign, client delivery, report, hiring plan, contract review, or internal initiative can keep its own shared memory.',
+    'memory.c3.t': 'Department playbook library',
+    'memory.c3.d': 'Teams can reuse approved ways of working: report templates, meeting summaries, sales follow-ups, research flows, and document production.',
+    'memory.c4.t': 'Controlled access',
+    'memory.c4.d': 'Leaders decide who can use which knowledge, which playbooks, which models, and how much budget each team or project receives.',
+    'memory.c5.t': 'Project knowledge base',
+    'memory.c5.d': 'Project knowledge stays available after meetings end: decisions, files, outputs, risks, next steps, and reusable lessons.',
+    'memory.c6.t': 'Management visibility',
+    'memory.c6.d': 'Managers see team usage, project progress, cost distribution, repeated work, and which playbooks should be standardized.',
+    'memory.flow': 'For employees: less repeated explanation. For managers: clearer project and team visibility. For leaders: controlled rollout, measurable usage, and reusable company capability. Typical outcomes include faster onboarding, more consistent documents, better project handover, reusable department workflows, and clearer AI spending.',
+    'memory.r1.t': 'For employees',
+    'memory.r1.d': 'Otto remembers project background, preferred formats, previous files, and common tasks, so employees can ask for a report, proposal, follow-up message, meeting summary, or data table without explaining everything again.',
+    'memory.r2.t': 'For department leads',
+    'memory.r2.d': 'Leads can see which projects are active, where time and AI budget are going, which work is repeated often, and which team methods should become approved templates.',
+    'memory.r3.t': 'For company owners',
+    'memory.r3.d': 'Owners can roll out AI safely: assign licenses, control who can use company knowledge, monitor spending, and turn proven team workflows into company-wide capability.',
+    'memory.examples': 'Example uses: onboarding a new hire with department knowledge, preparing weekly reports from previous formats, keeping client delivery context across weeks, standardizing event review documents, reusing approved sales follow-up flows, and seeing which teams produce the best AI-assisted outcomes.',
+    'memory.update.t': 'Latest small update',
+    'memory.update.d': 'This update clarifies Otto Enterprise for customers and adds stronger document intelligence: employee work profiles, project continuity, department playbook libraries, controlled access, management visibility, practical usage scenarios, high-efficiency PDF content parsing with OpenDataLoader, and a new PDF parsing expert.',
+    'release.label': 'Minor Update',
+    'release.title': 'Better knowledge reuse, stronger document understanding',
+    'release.sub': 'This small update focuses on practical enterprise work: helping teams remember project context, reuse department methods, and process PDF-heavy documents faster.',
+    'release.c1.t': 'PDF parsing expert',
+    'release.c1.d': 'A new expert helps employees read contracts, reports, research papers, manuals, and scanned business documents, then turn them into summaries, tables, checklists, or drafts.',
+    'release.c2.t': 'Faster document intake',
+    'release.c2.d': 'Large PDF files can be parsed more efficiently, so teams spend less time copying content and more time reviewing decisions, risks, numbers, and next actions.',
+    'release.c3.t': 'Project memory upgrade',
+    'release.c3.d': 'Important project files, decisions, outputs, and reusable lessons can stay connected to the project instead of disappearing in chat history.',
+    'release.c4.t': 'Department playbooks',
+    'release.c4.d': 'Repeated team work can become approved playbooks, making reports, reviews, follow-ups, and document creation more consistent across the department.',
+    'release.c5.t': 'Manager visibility',
+    'release.c5.d': 'Managers get clearer signals on which tasks are repeated, where AI budget is going, and which work methods are worth standardizing.',
+    'release.c6.t': 'Controlled rollout',
+    'release.c6.d': 'Leaders can assign usage rights by person, department, or project, keeping company knowledge and AI spending under control.',
+    'release.examples': 'Typical uses: summarize supplier contracts, compare tender documents, extract tables from reports, prepare meeting briefs, build due-diligence notes, review policy documents, and preserve the final output as project knowledge.',
+    'editions.label': 'Editions',
+    'editions.title': 'One AI, three forms',
+    'editions.desktop.badge': 'Desktop App',
+    'editions.desktop.title': 'Otto Desktop',
+    'editions.desktop.desc': 'AI-native desktop experience for macOS. Otto lives in your menubar, learns your workflows, and automates your routines.',
+    'editions.desktop.l1': 'Native macOS app (Apple Silicon)',
+    'editions.desktop.l2': 'AI-powered desktop automation',
+    'editions.desktop.l3': 'Workflow learning and suggestions',
+    'editions.desktop.l4': 'Voice interaction ready',
+    'editions.desktop.dl': '⬇ Download for macOS (ARM)',
+    'editions.desktop.info': 'Detecting your platform…',
+    'editions.code.badge': 'CLI + Feishu Bot',
+    'editions.code.title': 'Otto Code',
+    'editions.code.desc': 'A terminal-native AI agent and Feishu digital colleague. Code generation, debugging, MCP context management, and deep Feishu integration.',
+    'editions.code.l1': 'CLI agent with full terminal control',
+    'editions.code.l2': 'Feishu bot — calendar, docs, sheets, tasks, OKRs, wiki',
+    'editions.code.l3': 'Multi-model: CodeX, DeepSeek, Claude, GLM',
+    'editions.code.l4': 'MCP protocol and tool ecosystem',
+    'editions.code.gh': 'View on GitHub →',
+    'editions.enterprise.badge': 'Enterprise',
+    'editions.enterprise.title': 'Otto Enterprise',
+    'editions.enterprise.desc': 'LAN-deployed enterprise AI agent. Server-client architecture with zero data leaving your network.',
+    'editions.enterprise.l1': 'LAN server-client architecture',
+    'editions.enterprise.l2': '9 core tools: automation, conversion, document generation',
+    'editions.enterprise.l3': 'Zero data leaves your network',
+    'editions.enterprise.l4': 'Admin dashboard with local SQLite',
+    'editions.enterprise.l5': 'Desktop automation (17 actions), 50+ format conversions',
+    'editions.enterprise.cta': 'Contact for Enterprise →',
+    'tech.label': 'Technology',
+    'tech.title': 'Built on modern AI infrastructure',
+    'cta.label': 'Get Started',
+    'cta.title': 'Give everyone an AI colleague',
+    'cta.sub': 'Download Otto Desktop, try Otto Code, or bring Otto Enterprise to your organization.',
+    'cta.dl': '⬇ Download Now',
+    'cta.enterprise': 'Enterprise Inquiries',
+    'footer.product': 'Otto — A Miraphant Product',
+  },
+  zh: {
+    'nav.back': '← 返回',
+    'hero.badge': 'Miraphant 产品',
+    'hero.tagline': '你的 AI 数字同事',
+    'hero.sub': 'Otto 住在你的终端、你的桌面和你的组织中——将 AI 智能带到你工作的每个角落。',
+    'hero.dl': '⬇ 下载桌面版',
+    'hero.editions': '版本 →',
+    'pillars.label': 'Otto 的 DNA',
+    'pillars.title': '定义 Otto 的四大原则',
+    'pillars.p1': 'Otto 将模型、工具和 API 编排成无缝工作流。从代码生成到飞书集成，每个能力都是组合的，而非拼接的。',
+    'pillars.p2': '你的数据永远属于你。Otto Enterprise 部署在你的局域网中，零数据离开你的网络。开源核心、透明操作、无供应商锁定。',
+    'pillars.p3': 'Otto 转变团队的工作方式——用单一的 AI 同事取代碎片化的工具链。一个助手，适用于开发者、运营人员和高管。',
+    'pillars.p4': '每个功能都用它交付了什么来衡量。代码部署、文档生成、任务自动化。Otto 为结果优化，而非潜力。',
+    'memory.label': '组织记忆',
+    'memory.title': '一个真正懂公司如何运转的 AI 同事',
+    'memory.sub': 'Otto 帮员工复用正确知识，帮负责人看清团队工作成效，也帮老板控制权限、成本和产出。',
+    'memory.c1.t': '员工工作画像',
+    'memory.c1.d': '每个员工都有自己的工作画像：岗位职责、偏好、常做任务，以及 Otto 应该如何更好地协助他。',
+    'memory.c2.t': '项目持续记忆',
+    'memory.c2.d': '一次活动、一次客户交付、一份汇报、一次招聘、一次合同审核或一个内部计划，都可以拥有自己的项目记忆。',
+    'memory.c3.t': '部门工作方法库',
+    'memory.c3.d': '部门可以复用经过验证的工作方法：汇报模板、会议纪要、销售跟进、调研流程、文档创作等。',
+    'memory.c4.t': '权限可控',
+    'memory.c4.d': '老板和部门负责人可以决定谁能用哪些知识、哪些工作方法、哪些模型，以及每个团队或项目的预算。',
+    'memory.c5.t': '项目知识库',
+    'memory.c5.d': '会议结束后，项目知识不会消失：决策、文件、产出、风险、下一步和可复用经验都会被保留下来。',
+    'memory.c6.t': '管理可视化',
+    'memory.c6.d': '负责人能看到团队使用情况、项目进展、成本分布、重复工作，以及哪些方法值得标准化。',
+    'memory.flow': '对员工：不用反复解释背景。对负责人：更清楚项目和团队情况。对老板：可控推广、可衡量使用、可沉淀公司能力。典型结果包括新人更快上手、文档更一致、项目交接更顺畅、部门流程可复用、AI 花费更清楚。',
+    'memory.r1.t': '给员工',
+    'memory.r1.d': 'Otto 会记住项目背景、常用格式、历史文件和常见任务。员工要写汇报、方案、客户跟进、会议纪要或数据表时，不用每次重新解释。',
+    'memory.r2.t': '给部门负责人',
+    'memory.r2.d': '负责人能看到哪些项目正在推进、时间和 AI 预算花在哪里、哪些工作被反复执行，以及哪些团队方法值得沉淀成标准模板。',
+    'memory.r3.t': '给老板',
+    'memory.r3.d': '老板可以安全推广 AI：分发许可证，控制谁能使用公司知识，查看花费，并把被验证过的团队流程变成公司能力。',
+    'memory.examples': '典型场景：新人快速继承部门知识；周报沿用历史格式；客户交付跨周保持上下文；活动复盘文档标准化；销售跟进流程复用；老板看清哪些团队真正产出 AI 效率。',
+    'memory.update.t': '本次小版本更新',
+    'memory.update.d': '本次更新重点补充 Otto Enterprise 的客户价值说明，并增强文档智能：员工工作画像、项目持续记忆、部门工作方法库、权限可控、管理可视化、具体业务使用场景，同时使用 OpenDataLoader 进行高效 PDF 内容解析，并新增 PDF 解析专家。',
+    'release.label': '小版本更新',
+    'release.title': '更好的知识复用，更强的文档理解',
+    'release.sub': '这个小版本面向真实企业工作：帮助团队记住项目背景、复用部门方法，并更快处理大量 PDF 文档。',
+    'release.c1.t': 'PDF 解析专家',
+    'release.c1.d': '新的专家可以帮助员工阅读合同、报告、论文、手册和业务文档，并转成摘要、表格、清单或初稿。',
+    'release.c2.t': '更快的文档接收',
+    'release.c2.d': '大体量 PDF 可以被更高效地解析，团队不用反复复制内容，而是专注于判断、风险、数字和下一步。',
+    'release.c3.t': '项目记忆升级',
+    'release.c3.d': '重要项目文件、决策、产出和可复用经验可以跟项目保持关联，不再消失在聊天记录里。',
+    'release.c4.t': '部门工作方法库',
+    'release.c4.d': '重复出现的团队工作可以沉淀为经过确认的方法，让汇报、复盘、跟进和文档创作更加一致。',
+    'release.c5.t': '负责人可视化',
+    'release.c5.d': '负责人可以更清楚地看到哪些任务反复出现、AI预算花在哪里、哪些工作方法值得标准化。',
+    'release.c6.t': '可控推广',
+    'release.c6.d': '老板可以按人、部门或项目分配使用权，让公司知识和 AI 花费保持可控。',
+    'release.examples': '典型用途：总结供应商合同、对比招标文件、提取报告表格、准备会议简报、生成尽调笔记、审核制度文件，并将最终产出保存在项目知识中。',
+    'editions.label': '版本',
+    'editions.title': '一个 AI，三种形态',
+    'editions.desktop.badge': '桌面应用',
+    'editions.desktop.title': 'Otto Desktop',
+    'editions.desktop.desc': 'macOS 的 AI 原生桌面体验。Otto 驻留在你的菜单栏中，学习你的工作流，自动化你的日常操作。',
+    'editions.desktop.l1': '原生 macOS 应用 (Apple Silicon)',
+    'editions.desktop.l2': 'AI 驱动的桌面自动化',
+    'editions.desktop.l3': '工作流学习与建议',
+    'editions.desktop.l4': '语音交互就绪',
+    'editions.desktop.dl': '⬇ 下载 macOS (ARM) 版',
+    'editions.desktop.info': '正在检测你的平台…',
+    'editions.code.badge': 'CLI + 飞书机器人',
+    'editions.code.title': 'Otto Code',
+    'editions.code.desc': '终端原生的 AI 代理和飞书数字同事。代码生成、调试、MCP 上下文管理，深度飞书集成。',
+    'editions.code.l1': '完全终端控制的 CLI 代理',
+    'editions.code.l2': '飞书机器人 — 日历、文档、表格、任务、OKR、知识库',
+    'editions.code.l3': '多模型：CodeX、DeepSeek、Claude、GLM',
+    'editions.code.l4': 'MCP 协议与工具生态',
+    'editions.code.gh': '在 GitHub 上查看 →',
+    'editions.enterprise.badge': '企业版',
+    'editions.enterprise.title': 'Otto Enterprise',
+    'editions.enterprise.desc': '局域网部署的企业级 AI 代理。服务器-客户端架构，零数据离开你的网络。',
+    'editions.enterprise.l1': '局域网服务端-客户端架构',
+    'editions.enterprise.l2': '9 个核心工具：自动化、转换、文档生成',
+    'editions.enterprise.l3': '零数据离开你的网络',
+    'editions.enterprise.l4': '本地 SQLite 管理后台',
+    'editions.enterprise.l5': '桌面自动化（17 种操作），50+ 格式转换',
+    'editions.enterprise.cta': '联系企业版 →',
+    'tech.label': '技术栈',
+    'tech.title': '构建在现代 AI 基础设施之上',
+    'cta.label': '开始使用',
+    'cta.title': '让每个人都拥有 AI 同事',
+    'cta.sub': '下载 Otto Desktop，试用 Otto Code，或将 Otto Enterprise 带到你的组织。',
+    'cta.dl': '⬇ 立即下载',
+    'cta.enterprise': '企业咨询',
+    'footer.product': 'Otto — Miraphant 产品',
+  }
+};
+
+let currentLang = 'en';
+function setLang(lang) {
+  currentLang = lang;
+  const s = i18n[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (s[el.getAttribute('data-i18n')]) el.textContent = s[el.getAttribute('data-i18n')];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+  });
+  document.documentElement.lang = lang;
+  localStorage.setItem('otto-lang', lang);
+}
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
+});
+const saved = localStorage.getItem('otto-lang');
+if (saved && i18n[saved]) setLang(saved);
+
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+/* ===== Smart Download: detect device + fetch latest from GitHub ===== */
+(async function(){
+  const btn = document.getElementById('otto-dl-btn');
+  const info = document.getElementById('otto-dl-info');
+  if (!btn || !info) return;
+
+  // Detect platform
+  const ua = navigator.userAgent || '';
+  const plat = navigator.platform || '';
+  let platform = 'unknown';
+  if (/Windows|Win64|Win32/.test(plat) || /Windows/.test(ua)) {
+    platform = 'win-x64';
+  } else if (/Mac/.test(plat) || /Macintosh/.test(ua)) {
+    // Check if Apple Silicon or Intel
+    // Apple Silicon Macs report 'MacIntel' for platform, but we can check UA
+    // or use a heuristic: modern Safari/Firefox on arm64 often has this
+    // For simplicity, default to arm64 for Mac since Intel Macs are older
+    platform = 'arm64';
+    // Try to detect Apple Silicon via devicePixelRatio + screen or UA hints
+    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+      try {
+        const hints = await navigator.userAgentData.getHighEntropyValues(['architecture']);
+        if (hints.architecture && hints.architecture.includes('64')) {
+          platform = 'arm64'; // most modern Macs
+        }
+      } catch(e) {}
+    }
+    // Fallback: check if navigator.maxTouchPoints >= 2 (iOS/Mac touch)
+  } else if (/Linux/.test(plat) || /Linux/.test(ua)) {
+    platform = 'linux';
+  }
+
+  // Fetch latest release from otto-releases
+  try {
+    const resp = await fetch('https://api.github.com/repos/Felix201209/otto-releases/releases/latest');
+    if (!resp.ok) throw new Error('API error');
+    const release = await resp.json();
+    const version = release.tag_name.replace(/^v/, '');
+    const assets = release.assets || [];
+
+    // Map platform to asset patterns (ordered by priority)
+    const patterns = {
+      'win-x64': [/Setup-.*-win-x64\.exe$/i],
+      'arm64':  [/arm64\.dmg$/i, /mac-arm64\.zip$/i, /x64\.dmg$/i],
+      'x64':    [/x64\.dmg$/i, /arm64\.dmg$/i, /mac-arm64\.zip$/i],
+      'linux':  [/AppImage$/i, /linux.*\.deb$/i, /\.tar\.gz$/i]
+    };
+
+    const platformPatterns = patterns[platform] || [];
+    let asset = null;
+    for (const pattern of platformPatterns) {
+      asset = assets.find(a => pattern.test(a.name));
+      if (asset) break;
+    }
+    // Fallback: first non-json, non-blockmap asset
+    if (!asset) {
+      asset = assets.find(a => !a.name.endsWith('.json') && !a.name.endsWith('.blockmap'));
+    }
+
+    if (asset) {
+      btn.href = asset.browser_download_url;
+      const sizeMB = (asset.size / (1024*1024)).toFixed(0);
+      const platformNames = {
+        'win-x64': 'Windows x64',
+        'arm64': 'macOS (Apple Silicon)',
+        'x64': 'macOS (Intel)'
+      };
+      const platformName = platformNames[platform] || 'Desktop';
+
+      // Update button text
+      const dlText = {en: '⬇ Download for ' + platformName, zh: '⬇ 下载 ' + platformName + ' 版'};
+      // Use current language
+      const lang = currentLang || 'en';
+      btn.textContent = dlText[lang] || dlText['en'];
+      info.textContent = (lang === 'zh' ? '版本 ' : 'Version ') + version + ' · ' + platformName + ' · ' + sizeMB + ' MB';
+    } else {
+      btn.href = 'https://github.com/Felix201209/otto-releases/releases/latest';
+      info.textContent = (currentLang === 'zh' ? '请前往 GitHub Releases 页面下载' : 'Please visit GitHub Releases to download');
+    }
+  } catch(e) {
+    // Fallback: keep default link to releases page
+    btn.href = 'https://github.com/Felix201209/otto-releases/releases/latest';
+    info.textContent = (currentLang === 'zh' ? '点击前往 GitHub 下载页面' : 'Click to visit download page');
+    console.warn('Otto release fetch failed:', e);
+  }
+})();
+</script>
+</body>
+</html>

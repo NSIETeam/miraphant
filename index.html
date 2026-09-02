@@ -338,10 +338,10 @@
     </a>
     <div class="nav-right">
       <ul class="nav-links" id="navLinks">
-        <li><a href="about.html" data-i18n="nav.about">About</a></li>
+        <li><a href="/miraphant/about/" data-i18n="nav.about">About</a></li>
         <li><a href="#products" data-i18n="nav.products">Products</a></li>
-        <li><a href="manifesto.html" data-i18n="nav.manifesto">Manifesto</a></li>
-        <li><a href="#club" data-i18n="nav.club">AI Club</a></li>
+        <li><a href="/miraphant/manifesto/" data-i18n="nav.manifesto">Manifesto</a></li>
+        <li><a href="/miraphant/ai-club/" data-i18n="nav.club">AI Club</a></li>
       </ul>
       <div style="display:flex;gap:4px;padding-left:16px;border-left:1px solid rgba(255,255,255,0.15)">
         <button class="lang-btn active" data-lang="en">EN</button>
@@ -380,7 +380,7 @@
       <div class="reveal rd3">
         <div class="hero-buttons">
           <a href="#products" class="btn-primary" data-i18n="hero.cta1">Explore Products →</a>
-          <a href="about.html" class="btn-secondary" data-i18n="hero.cta2">Our Superpower</a>
+          <a href="/miraphant/about/" class="btn-secondary" data-i18n="hero.cta2">Our Superpower</a>
         </div>
       </div>
       <div class="hero-logo-wrap reveal rd4">
@@ -438,7 +438,7 @@
       <p class="section-sub" data-i18n="products.sub">From desktop to platform — products that bring intelligence to real workflows.</p>
     </div>
     <div class="products-grid" style="margin-top:24px">
-      <a href="otto.html" class="product-card reveal rd1">
+      <a href="/miraphant/otto/" class="product-card reveal rd1">
         <h3>Otto</h3>
         <p data-i18n="products.otto.desc">Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.</p>
         <div class="product-tags">
@@ -447,7 +447,7 @@
           <span data-i18n="products.otto.t3">Enterprise</span>
         </div>
       </a>
-      <a href="circle.html" class="product-card reveal rd2">
+      <a href="/miraphant/circle/" class="product-card reveal rd2">
         <h3>Circle</h3>
         <p data-i18n="products.circle.desc">A vibrant enterprise service ecosystem. AI-driven industrial property investment matching and B2B services platform.</p>
         <div class="product-tags">
@@ -456,7 +456,7 @@
           <span data-i18n="products.circle.t3">B2B Platform</span>
         </div>
       </a>
-      <a href="olivewolf.html" class="product-card reveal rd3">
+      <a href="/miraphant/olivewolf/" class="product-card reveal rd3">
         <h3>OliveWolf</h3>
         <p data-i18n="products.olive.desc">Open-source 3D digital human engine. Real-time audio-driven conversation, dual render backends, and enterprise deployment.</p>
         <div class="product-tags">
@@ -465,7 +465,7 @@
           <span data-i18n="products.olive.t3">Real-time</span>
         </div>
       </a>
-      <a href="ai-club.html" class="product-card reveal rd4">
+      <a href="/miraphant/ai-club/" class="product-card reveal rd4">
         <h3>Miraphant AI Club</h3>
         <p data-i18n="products.club.desc">Enterprise AI Native training product. One-day executive bootcamp plus hands-on Otto practice, scenario selection, playbook building, and rollout planning.</p>
         <div class="product-tags">
@@ -521,7 +521,7 @@
       <p class="section-sub" data-i18n="cta.sub">Whether you want a product built, your organization transformed, or your team AI-trained — we're here.</p>
       <div style="margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
         <a href="mailto:NSIETeam@outlook.com" class="btn-primary" data-i18n="cta.email">NSIETeam@outlook.com</a>
-        <a href="#" class="btn-secondary" data-i18n="cta.club">Join AI Club →</a>
+        <a href="/miraphant/ai-club/" class="btn-secondary" data-i18n="cta.club">Join AI Club →</a>
       </div>
     </div>
   </div>
@@ -536,15 +536,15 @@
       </div>
       <div class="footer-col">
         <h4 data-i18n="footer.products">Products</h4>
-        <a href="otto.html">Otto</a>
-        <a href="circle.html">Circle</a>
-        <a href="olivewolf.html">OliveWolf</a>
-        <a href="ai-club.html" data-i18n="footer.club">AI Club</a>
+        <a href="/miraphant/otto/">Otto</a>
+        <a href="/miraphant/circle/">Circle</a>
+        <a href="/miraphant/olivewolf/">OliveWolf</a>
+        <a href="/miraphant/ai-club/" data-i18n="footer.club">AI Club</a>
       </div>
       <div class="footer-col">
         <h4 data-i18n="footer.company">Company</h4>
-        <a href="about.html" data-i18n="footer.about">About</a>
-        <a href="manifesto.html" data-i18n="footer.manifesto">Manifesto</a>
+        <a href="/miraphant/about/" data-i18n="footer.about">About</a>
+        <a href="/miraphant/manifesto/" data-i18n="footer.manifesto">Manifesto</a>
       </div>
     </div>
     <div class="footer-bottom">
@@ -687,7 +687,7 @@ window.addEventListener('scroll', () => {
   navLinks.forEach(a => {
     const href = a.getAttribute('href');
     if (href === '#' + current) { a.classList.add('active'); }
-    else if (href !== '#' && !href.includes('.html')) { a.classList.remove('active'); }
+    else if (href !== '#') { a.classList.remove('active'); }
   });
 
   // Back to top
@@ -711,10 +711,10 @@ document.getElementById('back-to-top').addEventListener('click', () => {
 // Employee Portal
 function handleEmployeePortal() {
   if (window.checkAuth()) {
-    window.location.href = 'portal.html';
+    window.location.href = '/miraphant/portal/';
   } else {
     window.showLoginModal(function() {
-      window.location.href = 'portal.html';
+      window.location.href = '/miraphant/portal/';
     });
   }
 }
@@ -722,11 +722,11 @@ if (window.location.hash === '#employee-portal') {
   if (!window.checkAuth()) {
     setTimeout(function() {
       window.showLoginModal(function() {
-        window.location.href = 'portal.html';
+        window.location.href = '/miraphant/portal/';
       });
     }, 500);
   } else {
-    window.location.href = 'portal.html';
+    window.location.href = '/miraphant/portal/';
   }
 }
 
@@ -737,7 +737,7 @@ const observer = new IntersectionObserver((entries)=>{
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 
 // Page transition for internal links
-document.querySelectorAll('a[href$=".html"]').forEach(a => {
+document.querySelectorAll('a[href^="/miraphant/"]').forEach(a => {
   a.addEventListener('click', (e) => {
     const href = a.getAttribute('href');
     if (href && !href.startsWith('http') && !href.startsWith('mailto')) {
