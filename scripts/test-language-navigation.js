@@ -127,13 +127,17 @@ async function run() {
     }
 
     await navigate('');
+    const homeControls = await evaluate(`({nav:document.querySelectorAll('nav .language-menu, nav .lang-btn').length,footer:document.querySelectorAll('footer .language-menu').length,options:document.querySelectorAll('footer .language-popover .lang-btn').length})`);
+    if (homeControls.nav !== 0 || homeControls.footer !== 1 || homeControls.options !== 2) {
+      throw new Error(`language placement: expected 0 nav controls and one 2-option footer menu, received nav=${homeControls.nav}/footer=${homeControls.footer}/options=${homeControls.options}`);
+    }
     await evaluate(`document.querySelector('[data-lang="zh"]').click()`);
 
     for (const route of publicRoutes) {
       await navigate(`${route}/`);
-      const state = await evaluate(`({lang:document.documentElement.lang,stored:localStorage.getItem('miraphant-lang'),pending:document.documentElement.classList.contains('miraphant-language-pending')})`);
-      if (!state.lang.startsWith('zh') || state.stored !== 'zh' || state.pending) {
-        throw new Error(`${route}: expected visible zh/zh, received ${state.lang}/${state.stored}/pending=${state.pending}`);
+      const state = await evaluate(`({lang:document.documentElement.lang,stored:localStorage.getItem('miraphant-lang'),pending:document.documentElement.classList.contains('miraphant-language-pending'),nav:document.querySelector('[data-nav="about"]')?.textContent.trim()})`);
+      if (!state.lang.startsWith('zh') || state.stored !== 'zh' || state.pending || state.nav !== '关于我们') {
+        throw new Error(`${route}: expected visible zh/zh/关于我们, received ${state.lang}/${state.stored}/${state.nav}/pending=${state.pending}`);
       }
     }
 
@@ -158,9 +162,9 @@ async function run() {
 
     await evaluate(`document.querySelector('[data-lang="en"]').click()`);
     await navigate('about/');
-    const english = await evaluate(`({lang:document.documentElement.lang,stored:localStorage.getItem('miraphant-lang')})`);
-    if (english.lang !== 'en' || english.stored !== 'en') {
-      throw new Error(`English propagation: expected en/en, received ${english.lang}/${english.stored}`);
+    const english = await evaluate(`({lang:document.documentElement.lang,stored:localStorage.getItem('miraphant-lang'),nav:document.querySelector('[data-nav="about"]')?.textContent.trim()})`);
+    if (english.lang !== 'en' || english.stored !== 'en' || english.nav !== 'About') {
+      throw new Error(`English propagation: expected en/en/About, received ${english.lang}/${english.stored}/${english.nav}`);
     }
 
     await evaluate(`localStorage.removeItem('miraphant-lang');localStorage.setItem('about-lang','zh')`);
@@ -170,7 +174,7 @@ async function run() {
       throw new Error(`legacy migration: expected zh/zh/null, received ${migrated.lang}/${migrated.stored}/${migrated.legacy}`);
     }
 
-    console.log(`PASS: language persisted across ${publicRoutes.length} routes, refresh, history, reverse switch, and legacy migration`);
+    console.log(`PASS: footer language menu and persistence across ${publicRoutes.length} routes, refresh, history, reverse switch, and legacy migration`);
   } finally {
     cdp?.close();
     server.close();

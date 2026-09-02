@@ -11,34 +11,33 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'Inter', -apple-system, sans-serif;
-    background: #f2df88; color: #171715;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #fff; color: #0a0a0a;
     display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; padding: 64px 24px; text-align: left;
+    min-height: 100vh; padding: 64px 24px; text-align: center;
     -webkit-font-smoothing: antialiased;
   }
-  .container { position: relative; width: min(100%, 900px); padding: 64px; border: 1px solid rgba(23,23,21,.18); border-radius: 28px; background: rgba(255,255,255,.25); overflow: hidden; }
-  .container::after { content: ""; position: absolute; right: -90px; bottom: -150px; width: 390px; height: 390px; border: 1px solid rgba(23,23,21,.18); border-radius: 50%; box-shadow: 0 0 0 48px rgba(255,255,255,.1), 0 0 0 96px rgba(255,255,255,.08); }
+  .container { width: min(100%, 640px); }
   .code {
-    position: relative; z-index: 1; font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
-    font-size: clamp(112px, 22vw, 260px); font-weight: 400;
-    letter-spacing: -0.08em; line-height: .7;
-    margin: 32px 0 44px; color: #171715;
+    font-size: clamp(64px, 14vw, 96px); font-weight: 550;
+    letter-spacing: -0.05em; line-height: 1;
+    margin: 30px 0 22px; color: #0a0a0a;
   }
   .message {
-    position: relative; z-index: 1; max-width: 420px; font-size: 18px; color: #5d5945; line-height: 1.6;
-    margin-bottom: 32px;
+    max-width: 420px; margin: 0 auto 30px;
+    font-size: 17px; color: #7d8187; line-height: 27px;
   }
   .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 28px; border-radius: 100px;
-    position: relative; z-index: 1; background: #171715; color: #FFF;
-    font-weight: 600; font-size: 14px;
-    text-decoration: none; transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 24px; border-radius: 999px;
+    background: #0a0a0a; color: #fff;
+    font-weight: 550; font-size: 14px;
+    text-decoration: none; transition: opacity 150ms;
   }
-  .btn:hover { background: #222; transform: translateY(-2px); }
-  .logo-mark { position: relative; z-index: 1; width: 36px; height: 28px; }
-  @media (max-width: 640px) { .container { padding: 38px 28px; } .container::after { right: -230px; } }
+  .btn:hover { opacity: .84; }
+  .btn:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; }
+  .logo-mark { width: 30px; height: 30px; filter: invert(1); }
+  @media (prefers-reduced-motion: reduce) { .btn { transition-duration: .01ms; } }
 </style>
 </head>
 <body>

@@ -7,7 +7,22 @@
     circle: 'circle-lang',
     olivewolf: 'olivewolf-lang'
   };
+  var NAV_LABELS = {
+    en: { about: 'About', products: 'Products', manifesto: 'Manifesto', club: 'AI Club' },
+    zh: { about: '关于我们', products: '产品', manifesto: '我们的主张', club: 'AI Club' }
+  };
   var pendingTimer;
+
+  function syncNavigation(root, lang) {
+    var labels = NAV_LABELS[lang] || NAV_LABELS.en;
+    var scope = root && root.querySelectorAll ? root : document;
+    var links = Array.prototype.slice.call(scope.querySelectorAll('[data-nav]'));
+    if (scope.matches && scope.matches('[data-nav]')) links.unshift(scope);
+    links.forEach(function (link) {
+      var label = labels[link.getAttribute('data-nav')];
+      if (label && link.textContent !== label) link.textContent = label;
+    });
+  }
 
   function normalize(lang) {
     return lang === 'zh' || lang === 'zh-CN' ? 'zh' : 'en';
@@ -69,9 +84,25 @@
   if (initialLanguage === 'zh') {
     var style = document.createElement('style');
     style.id = 'miraphant-language-pending-style';
-    style.textContent = 'html.miraphant-language-pending body{visibility:hidden}';
+    style.textContent = 'html.miraphant-language-pending body > :not(nav){visibility:hidden}';
     document.head.appendChild(style);
     document.documentElement.classList.add('miraphant-language-pending');
+
+    syncNavigation(document, initialLanguage);
+    var navigationObserver = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        record.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1) syncNavigation(node, initialLanguage);
+          if (node.nodeType === 3 && node.parentElement) syncNavigation(node.parentElement, initialLanguage);
+        });
+      });
+    });
+    navigationObserver.observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', function () {
+      syncNavigation(document, initialLanguage);
+      navigationObserver.disconnect();
+    }, { once: true });
+
     pendingTimer = setTimeout(reveal, 1500);
   }
 
