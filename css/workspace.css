@@ -173,3 +173,25 @@ body.mf-workspace select:focus-visible { outline: 2px solid var(--ws-orange); ou
     transition-duration: .01ms !important;
   }
 }
+
+/* Workspace navigation follows the same quiet, edge-to-edge shell. */
+body.mf-workspace .portal-nav {
+  top: 0;
+  right: 0;
+  left: 0;
+  max-width: none;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  border-radius: 0;
+  box-shadow: none;
+}
+body.mf-workspace .portal-nav-inner { max-width: 1180px; min-height: 64px; margin-inline: auto; }
+body.mf-workspace .portal-nav-links { background: transparent; }
+body.mf-workspace .portal-nav-links a { border-radius: 4px; }
+body.mf-workspace .stat-box:first-child,
+body.mf-workspace .stat-box:nth-child(2) { border-color: var(--ws-line); background: rgba(255,255,255,.72); }
+@media (max-width: 768px) {
+  body.mf-workspace .portal-nav { top: 0; right: 0; left: 0; }
+  body.mf-workspace .portal-nav-links.open { border-radius: 0; }
+}
