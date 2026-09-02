@@ -37,6 +37,49 @@
     document.body.style.overflow = isOpen ? 'hidden' : '';
   }
 
+  // SOURCE: Bloome RevealObserver.tsx:13-26. Homepage-only adaptation;
+  // navigation, hero, footer and every subroute deliberately remain static.
+  function setupHomepageScrollReveal() {
+    if (!document.body.classList.contains('page-home')) return;
+
+    const elements = Array.from(document.querySelectorAll('[data-scroll-reveal]'));
+    if (!elements.length) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion || !('IntersectionObserver' in window)) {
+      elements.forEach(function showWithoutMotion(element) {
+        element.classList.add('visible');
+      });
+      return;
+    }
+
+    const pending = [];
+    const initialVisibleBoundary = window.innerHeight * 0.9;
+
+    elements.forEach(function prepareReveal(element) {
+      const rect = element.getBoundingClientRect();
+      if (rect.bottom <= 0 || rect.top <= initialVisibleBoundary) {
+        element.classList.add('visible');
+      } else {
+        pending.push(element);
+      }
+    });
+
+    document.body.classList.add('motion-ready');
+
+    const observer = new IntersectionObserver(function revealOnEntry(entries) {
+      entries.forEach(function revealElement(entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -10%', threshold: 0.08 });
+
+    pending.forEach(function observeReveal(element) {
+      observer.observe(element);
+    });
+  }
+
   if (toggle && links) {
     toggle.setAttribute('aria-expanded', 'false');
 
@@ -138,6 +181,7 @@
   });
 
   syncNavLanguage();
+  setupHomepageScrollReveal();
 
   document.querySelectorAll('nav a').forEach(function markCurrentRoute(link) {
     try {

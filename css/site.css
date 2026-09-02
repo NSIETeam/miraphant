@@ -66,13 +66,49 @@ body.mf-site .border-b { border-bottom-color: var(--mf-border); }
 body.mf-site #progress-bar,
 body.mf-site #back-to-top { display: none !important; }
 
-/* Motion is intentionally limited to short color/opacity feedback. */
+/* Subroutes remain static; homepage scroll motion is explicitly opted in below. */
 body.mf-site .reveal,
 body.mf-site .reveal.visible {
   opacity: 1;
   transform: none;
   transition: none;
 }
+
+/*
+ * Homepage scroll reveal
+ * SOURCES:
+ * - Bloome RevealObserver.tsx:13-26 for one-shot intersection behavior.
+ * - Typeless globals.css:153-156 for the restrained 14px fade-up distance.
+ * - Bloome Features.tsx:45-52 for the 120ms sibling rhythm.
+ * The page is fully visible by default. JavaScript adds .motion-ready only
+ * after above-the-fold and restored-scroll content has been made visible.
+ */
+body.page-home.motion-ready [data-scroll-reveal] {
+  --reveal-delay: 0ms;
+  opacity: 0;
+  translate: 0 14px;
+  transition:
+    opacity 700ms cubic-bezier(.23, 1, .32, 1) var(--reveal-delay),
+    translate 700ms cubic-bezier(.23, 1, .32, 1) var(--reveal-delay);
+}
+
+body.page-home.motion-ready [data-scroll-reveal].visible {
+  opacity: 1;
+  translate: 0 0;
+}
+
+body.page-home.motion-ready [data-scroll-reveal].rd1,
+body.page-home.motion-ready [data-scroll-reveal].rd3,
+body.page-home.motion-ready [data-scroll-reveal].rd4 { --reveal-delay: 0ms; }
+
+body.page-home.motion-ready [data-scroll-reveal].rd2,
+body.page-home.motion-ready [data-scroll-reveal].rd5 { --reveal-delay: 120ms; }
+
+body.page-home.motion-ready [data-scroll-reveal].rd6 { --reveal-delay: 240ms; }
+
+body.page-home.motion-ready .club-card.rd3 { --reveal-delay: 240ms; }
+
+body.page-home.motion-ready .product-card.rd4 { --reveal-delay: 120ms; }
 
 /*
  * Navigation
@@ -1222,6 +1258,11 @@ body.page-home .language-popover .lang-btn:focus-visible {
 /* SOURCE: Typeless globals.css:239-247 */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  body.page-home.motion-ready [data-scroll-reveal] {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
   body.mf-site *,
   body.mf-site *::before,
   body.mf-site *::after {

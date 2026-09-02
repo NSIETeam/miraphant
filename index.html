@@ -292,12 +292,6 @@
   #back-to-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
   #back-to-top:hover { background: var(--gray-800); transform: translateY(-3px); }
 
-  /* Reveal */
-  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); }
-  .reveal.visible { opacity: 1; transform: translateY(0); }
-  .rd1 { transition-delay: 0.08s; } .rd2 { transition-delay: 0.16s; }
-  .rd3 { transition-delay: 0.24s; } .rd4 { transition-delay: 0.32s; }
-
   /* Page transition */
   a[href]:not([href^="#"]):not([href^="mailto"]):not([href^="http"]) {
     transition: opacity 0.15s;
@@ -386,19 +380,19 @@
 
 <section id="about" class="section">
   <div class="container about-layout">
-    <header class="about-heading reveal">
+    <header class="about-heading reveal" data-scroll-reveal>
       <div class="label" data-i18n="about.label">Who We Are</div>
       <h2 class="section-title" data-i18n="about.title">
         We make your ideas real<br>and your organization AI-native
       </h2>
     </header>
     <div class="about-copy">
-      <div class="about-text reveal rd1" data-i18n="about.p1">
+      <div class="about-text reveal rd1" data-scroll-reveal data-i18n="about.p1">
           Miraphant is an application-layer AI company. We don't train models — we ship products.
           Our platform turns concepts into working software in days, compressing timelines
           that other approaches measure in months.
       </div>
-      <div class="about-text reveal rd2" data-i18n="about.p2">
+      <div class="about-text reveal rd2" data-scroll-reveal data-i18n="about.p2">
           We also transform entire organizations into AI-native operations. From deploying
           AI colleagues across every department to building foundational AI literacy through
           Miraphant AI Club — we make intelligence a company-wide capability.
@@ -409,20 +403,20 @@
 
 <section class="section collaboration-paths" aria-labelledby="collaboration-title">
   <div class="container collaboration-layout">
-    <header class="collaboration-intro reveal">
+    <header class="collaboration-intro reveal" data-scroll-reveal>
       <div class="label" data-i18n="creator.label">Work with us</div>
       <h2 class="section-title" id="collaboration-title" data-i18n="creator.title">Two ways to build with Miraphant</h2>
       <p class="section-sub" data-i18n="creator.sub">From a product idea to organization-wide AI transformation.</p>
     </header>
     <div class="collaboration-list">
-      <a class="collaboration-card reveal rd1" href="mailto:NSIETeam@outlook.com?subject=Product%20co-building">
+      <a class="collaboration-card reveal rd1" data-scroll-reveal href="mailto:NSIETeam@outlook.com?subject=Product%20co-building">
         <span class="collaboration-card-copy">
           <strong data-i18n="creator.path1">Build a product</strong>
           <span data-i18n="creator.p1">If you are experienced in your field and want to bring an idea to life, Miraphant can help you.</span>
         </span>
         <span class="collaboration-card-arrow" aria-hidden="true">↗</span>
       </a>
-      <a class="collaboration-card reveal rd2" href="mailto:NSIETeam@outlook.com?subject=Organization%20transformation">
+      <a class="collaboration-card reveal rd2" data-scroll-reveal href="mailto:NSIETeam@outlook.com?subject=Organization%20transformation">
         <span class="collaboration-card-copy">
           <strong data-i18n="creator.path2">Transform an organization</strong>
           <span data-i18n="creator.p2">If you seek enterprise transformation and want a partner to drive it, Miraphant is here.</span>
@@ -435,13 +429,13 @@
 
 <section id="products" class="section border-b">
   <div class="container">
-    <div class="reveal" style="max-width:600px">
+    <div class="reveal" data-scroll-reveal style="max-width:600px">
       <div class="label" data-i18n="products.label">Our Products</div>
       <h2 class="section-title" data-i18n="products.title">AI that ships</h2>
       <p class="section-sub" data-i18n="products.sub">From desktop to platform — products that bring intelligence to real workflows.</p>
     </div>
     <div class="products-grid" style="margin-top:24px">
-      <a href="/miraphant/otto/" class="product-card reveal rd1">
+      <a href="/miraphant/otto/" class="product-card reveal rd1" data-scroll-reveal>
         <h3>Otto</h3>
         <p data-i18n="products.otto.desc">Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.</p>
         <div class="product-tags">
@@ -450,7 +444,7 @@
           <span data-i18n="products.otto.t3">Enterprise</span>
         </div>
       </a>
-      <a href="/miraphant/circle/" class="product-card reveal rd2">
+      <a href="/miraphant/circle/" class="product-card reveal rd2" data-scroll-reveal>
         <h3>Circle</h3>
         <p data-i18n="products.circle.desc">A vibrant enterprise service ecosystem. AI-driven industrial property investment matching and B2B services platform.</p>
         <div class="product-tags">
@@ -459,7 +453,7 @@
           <span data-i18n="products.circle.t3">B2B Platform</span>
         </div>
       </a>
-      <a href="/miraphant/olivewolf/" class="product-card reveal rd3">
+      <a href="/miraphant/olivewolf/" class="product-card reveal rd3" data-scroll-reveal>
         <h3>OliveWolf</h3>
         <p data-i18n="products.olive.desc">Open-source 3D digital human engine. Real-time audio-driven conversation, dual render backends, and enterprise deployment.</p>
         <div class="product-tags">
@@ -468,7 +462,7 @@
           <span data-i18n="products.olive.t3">Real-time</span>
         </div>
       </a>
-      <a href="/miraphant/ai-club/" class="product-card reveal rd4">
+      <a href="/miraphant/ai-club/" class="product-card reveal rd4" data-scroll-reveal>
         <h3>Miraphant AI Club</h3>
         <p data-i18n="products.club.desc">Enterprise AI Native training product. One-day executive bootcamp plus hands-on Otto practice, scenario selection, playbook building, and rollout planning.</p>
         <div class="product-tags">
@@ -483,33 +477,33 @@
 
 <section id="club" class="section" aria-labelledby="club-title">
   <div class="container">
-    <header class="club-heading reveal">
+    <header class="club-heading reveal" data-scroll-reveal>
       <div class="label" data-i18n="club.label">Miraphant AI Club</div>
       <h2 class="section-title" id="club-title" data-i18n="club.title">让效率可以留存</h2>
       <p class="section-sub" data-i18n="club.sub">不是来听课的，是来完成一个真实任务的。从认知到动手的一天，让AI长成你的组织。</p>
     </header>
     <div class="club-grid">
-      <article class="club-card reveal rd1">
+      <article class="club-card reveal rd1" data-scroll-reveal>
         <h3 data-i18n="club.c1.title">AI认知扫盲</h3>
         <p data-i18n="club.c1.desc">AI不是聊天，是自主完成任务。Agent=手脚、Skill=经验、你=指挥官。AI已在专业考试中超越人类，90%律师考、95%数学奥赛、87%博士级推理。</p>
       </article>
-      <article class="club-card reveal rd2">
+      <article class="club-card reveal rd2" data-scroll-reveal>
         <h3 data-i18n="club.c2.title">Otto实战场</h3>
         <p data-i18n="club.c2.desc">从会说话到会做事。选场景→@Otto发任务→观察思考过程→拿结果验收。全程透明可见，不是黑箱操作。会说话，就会用。</p>
       </article>
-      <article class="club-card reveal rd3">
+      <article class="club-card reveal rd3" data-scroll-reveal>
         <h3 data-i18n="club.c3.title">Skill沉淀机制</h3>
         <p data-i18n="club.c3.desc">入职5问继承团队经验，同类任务3次自动沉淀SOP，离职时经验自动合并。经验不再因人员流动而消失。</p>
       </article>
-      <article class="club-card reveal rd4">
+      <article class="club-card reveal rd4" data-scroll-reveal>
         <h3 data-i18n="club.c4.title">ROI真实数据</h3>
         <p data-i18n="club.c4.desc">6个真实验证任务：平均单任务节省4小时，投入产出比551倍，单次Token成本仅¥0.36。</p>
       </article>
-      <article class="club-card reveal rd5">
+      <article class="club-card reveal rd5" data-scroll-reveal>
         <h3 data-i18n="club.c5.title">消除顾虑专场</h3>
         <p data-i18n="club.c5.desc">不是AI取代人，是掌握AI的人取代不掌握AI的人。本地部署零云端零第三方，数据始终在企业边界内。省下的时间，是你的。</p>
       </article>
-      <article class="club-card reveal rd6">
+      <article class="club-card reveal rd6" data-scroll-reveal>
         <h3 data-i18n="club.c6.title">组织落地计划</h3>
         <p data-i18n="club.c6.desc">Day 1管理层上手→Week 1选3-5人试点→Month 1全员跑通3个场景。别家让你用AI，我们让AI长成你的组织。</p>
       </article>
@@ -519,7 +513,7 @@
 
 <section class="section home-contact" aria-labelledby="home-contact-title">
   <div class="container">
-    <div class="home-contact-inner reveal">
+    <div class="home-contact-inner reveal" data-scroll-reveal>
       <div class="label" data-i18n="cta.label">Get in Touch</div>
       <h2 class="section-title" id="home-contact-title" data-i18n="cta.title">Ready to build<br>with Miraphant?</h2>
       <p class="section-sub" data-i18n="cta.sub">Whether you want a product built, your organization transformed, or your team AI-trained — we're here.</p>
@@ -749,12 +743,6 @@ if (window.location.hash === '#employee-portal') {
     window.location.href = '/miraphant/portal/';
   }
 }
-
-// Reveal animation
-const observer = new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
-},{threshold:0.1});
-document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 
 </script>
 <script src="js/site.js"></script>

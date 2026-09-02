@@ -131,6 +131,42 @@ async function run() {
     if (homeControls.nav !== 0 || homeControls.footer !== 1 || homeControls.options !== 2) {
       throw new Error(`language placement: expected 0 nav controls and one 2-option footer menu, received nav=${homeControls.nav}/footer=${homeControls.footer}/options=${homeControls.options}`);
     }
+
+    const initialMotion = await evaluate(`(() => {
+      const elements = [...document.querySelectorAll('[data-scroll-reveal]')];
+      const hidden = elements.filter((element) => getComputedStyle(element).opacity === '0');
+      return {
+        ready: document.body.classList.contains('motion-ready'),
+        total: elements.length,
+        hidden: hidden.length,
+        heroOptIns: document.querySelectorAll('#hero [data-scroll-reveal]').length,
+        hiddenTranslate: hidden[0] ? getComputedStyle(hidden[0]).translate : 'none'
+      };
+    })()`);
+    if (!initialMotion.ready || initialMotion.total !== 19 || initialMotion.hidden === 0 || initialMotion.heroOptIns !== 0 || initialMotion.hiddenTranslate === 'none') {
+      throw new Error(`homepage motion initialization: expected ready/19/pending/no-hero/translated, received ${JSON.stringify(initialMotion)}`);
+    }
+
+    const scrollHeight = await evaluate(`document.documentElement.scrollHeight`);
+    await evaluate(`document.documentElement.style.scrollBehavior = 'auto'`);
+    for (let scrollTop = 0; scrollTop <= scrollHeight; scrollTop += 240) {
+      await evaluate(`window.scrollTo(0, ${scrollTop})`);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await evaluate(`window.scrollTo(0, document.documentElement.scrollHeight)`);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const revealedAfterScroll = await evaluate(`document.querySelectorAll('[data-scroll-reveal].visible').length`);
+    if (revealedAfterScroll !== initialMotion.total) {
+      throw new Error(`homepage motion completion: expected ${initialMotion.total} one-shot reveals, received ${revealedAfterScroll}`);
+    }
+
+    await evaluate(`window.scrollTo(0, 0)`);
+    const retainedAfterReturn = await evaluate(`document.querySelectorAll('[data-scroll-reveal].visible').length`);
+    if (retainedAfterReturn !== initialMotion.total) {
+      throw new Error(`homepage motion replay: expected all reveals to remain complete, received ${retainedAfterReturn}`);
+    }
+
     await evaluate(`document.querySelector('[data-lang="zh"]').click()`);
 
     for (const route of publicRoutes) {
@@ -138,6 +174,9 @@ async function run() {
       const state = await evaluate(`({lang:document.documentElement.lang,stored:localStorage.getItem('miraphant-lang'),pending:document.documentElement.classList.contains('miraphant-language-pending'),nav:document.querySelector('[data-nav="about"]')?.textContent.trim()})`);
       if (!state.lang.startsWith('zh') || state.stored !== 'zh' || state.pending || state.nav !== '关于我们') {
         throw new Error(`${route}: expected visible zh/zh/关于我们, received ${state.lang}/${state.stored}/${state.nav}/pending=${state.pending}`);
+      }
+      if (await evaluate(`document.body.classList.contains('motion-ready')`)) {
+        throw new Error(`${route}: homepage scroll motion must not initialize on subroutes`);
       }
     }
 
@@ -174,7 +213,25 @@ async function run() {
       throw new Error(`legacy migration: expected zh/zh/null, received ${migrated.lang}/${migrated.stored}/${migrated.legacy}`);
     }
 
-    console.log(`PASS: footer language menu and persistence across ${publicRoutes.length} routes, refresh, history, reverse switch, and legacy migration`);
+    await cdp.send('Emulation.setEmulatedMedia', {
+      media: 'screen',
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]
+    });
+    await navigate('');
+    const reducedMotion = await evaluate(`(() => {
+      const elements = [...document.querySelectorAll('[data-scroll-reveal]')];
+      return {
+        ready: document.body.classList.contains('motion-ready'),
+        visible: elements.filter((element) => getComputedStyle(element).opacity === '1' && getComputedStyle(element).translate === 'none').length,
+        total: elements.length
+      };
+    })()`);
+    if (reducedMotion.ready || reducedMotion.visible !== reducedMotion.total || reducedMotion.total !== 19) {
+      throw new Error(`reduced motion: expected a fully static 19-element page, received ${JSON.stringify(reducedMotion)}`);
+    }
+    await cdp.send('Emulation.setEmulatedMedia', { media: 'screen', features: [] });
+
+    console.log(`PASS: homepage one-shot and reduced scroll motion plus footer language persistence across ${publicRoutes.length} routes, refresh, history, reverse switch, and legacy migration`);
   } finally {
     cdp?.close();
     server.close();

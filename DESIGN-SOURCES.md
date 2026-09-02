@@ -42,6 +42,7 @@ below or preserve an existing functional requirement.
 | Product feature rhythm | `web-clone/typeless-clone/src/components/FeatureRow.tsx:22-40` | Copy and proof areas use stable two-column-to-one-column responsive structure |
 | Editorial reading measure | `web-clone/otty-clone/src/app/page.tsx:17-47` | Narrow reading column, left-aligned copy, restrained vertical rhythm |
 | Home final content section | `web-clone/minimaxi-clone/src/components/HeroCarousel.tsx:180-214` | Independent white page section with centered copy and 42px-high, 32px-radius actions; it is not grouped with Footer |
+| Home scroll reveal | `web-clone/bloome-clone/src/components/RevealObserver.tsx:13-26`; `web-clone/bloome-clone/src/app/globals.css:101-112`; `web-clone/typeless-clone/src/app/globals.css:153-156`; `web-clone/bloome-clone/src/components/Features.tsx:45-52` | Homepage sections below the hero reveal once at an 8% threshold with a -10% bottom root margin. Motion uses Typeless's restrained 14px fade-up and Bloome's 120ms sibling rhythm. Navigation, hero, footer and all subroutes remain static |
 | Home footer | `web-clone/minimaxi-clone/src/components/SiteFooter.tsx:97-171` | Footer alone owns the black surface, `#323232` dividers, 16/14px navigation hierarchy and quiet legal row |
 | Final CTA on subroutes | `web-clone/xai-bot-clone/src/app/globals.css:51-69` | Black/white inversion only; no additional accent color |
 | 404 route | `web-clone/otty-clone/src/app/page.tsx:17-47` and `web-clone/xai-bot-clone/src/app/globals.css:51-80,149-152` | Narrow centered message, monochrome palette and standard primary button |
@@ -50,6 +51,6 @@ below or preserve an existing functional requirement.
 
 - No gradients, colored blobs, pastel product coding, conic patterns or CSS illustrations.
 - No floating or morphing navigation shell.
-- No card lift outside the sourced xAI AI Club-card response; no arrow rotation, parallax or delayed reveal.
+- No card lift outside the sourced xAI AI Club-card response; no arrow rotation, parallax or scroll-scrubbed motion. The only delayed reveal is the sourced, one-shot homepage sequence documented above.
 - No visual token outside the sourced monochrome palette.
 - Existing product SVG marks and product copy are content, not newly generated decoration.
