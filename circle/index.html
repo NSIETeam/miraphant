@@ -186,8 +186,9 @@
     .features-grid, .roles-grid { grid-template-columns: 1fr; }
   }
 </style>
+<link rel="stylesheet" href="../css/site.css">
 </head>
-<body>
+<body class="mf-site page-product page-circle">
 
 <nav>
   <div class="container nav-inner">
@@ -219,7 +220,7 @@
         <a href="#features" class="btn-secondary" data-i18n="hero.learn">Learn More</a>
       </div>
     </div>
-    <div class="reveal rd3" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center">
+    <div class="reveal rd3 product-stage" aria-hidden="true" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center">
       <svg width="80" height="80" viewBox="0 0 40 40" fill="none">
         <circle cx="20" cy="20" r="16" stroke="#CCC" stroke-width="1.5" fill="none"/>
         <circle cx="20" cy="20" r="8" stroke="#CCC" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/>
@@ -487,5 +488,6 @@ const observer = new IntersectionObserver((entries)=>{
 },{threshold:0.1});
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 </script>
+<script src="../js/site.js"></script>
 </body>
 </html>

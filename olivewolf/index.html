@@ -110,8 +110,9 @@
   @media (max-width: 900px) { .product-hero-inner, .edition-card { grid-template-columns: 1fr; } .cap-grid { grid-template-columns: 1fr; } .ow-pillars { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 640px) { .ow-pillars { grid-template-columns: 1fr; } .edition-card { padding: 24px; } .pipeline-step { min-width: 100px; } }
 </style>
+<link rel="stylesheet" href="../css/site.css">
 </head>
-<body>
+<body class="mf-site page-product page-olivewolf">
 
 <nav>
   <div class="container nav-inner">
@@ -510,5 +511,6 @@ const observer = new IntersectionObserver((entries)=>{
 },{threshold:0.1});
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 </script>
+<script src="../js/site.js"></script>
 </body>
 </html>

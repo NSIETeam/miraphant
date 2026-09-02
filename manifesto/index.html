@@ -142,8 +142,9 @@
     .compare-block { grid-template-columns: 1fr; }
   }
 </style>
+<link rel="stylesheet" href="../css/site.css">
 </head>
-<body>
+<body class="mf-site page-editorial page-manifesto">
 
 <nav>
   <div class="container nav-inner" style="max-width:1100px">
@@ -433,5 +434,6 @@ const observer = new IntersectionObserver((entries)=>{
 },{threshold:0.1});
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 </script>
+<script src="../js/site.js"></script>
 </body>
 </html>

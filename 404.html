@@ -12,30 +12,33 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Inter', -apple-system, sans-serif;
-    background: #FFFFFF; color: #000000;
+    background: #f2df88; color: #171715;
     display: flex; align-items: center; justify-content: center;
-    min-height: auto; padding-top: 120px; text-align: center;
+    min-height: 100vh; padding: 64px 24px; text-align: left;
     -webkit-font-smoothing: antialiased;
   }
-  .container { max-width: 500px; padding: 0 24px; }
+  .container { position: relative; width: min(100%, 900px); padding: 64px; border: 1px solid rgba(23,23,21,.18); border-radius: 28px; background: rgba(255,255,255,.25); overflow: hidden; }
+  .container::after { content: ""; position: absolute; right: -90px; bottom: -150px; width: 390px; height: 390px; border: 1px solid rgba(23,23,21,.18); border-radius: 50%; box-shadow: 0 0 0 48px rgba(255,255,255,.1), 0 0 0 96px rgba(255,255,255,.08); }
   .code {
-    font-size: 120px; font-weight: 900;
-    letter-spacing: -0.05em; line-height: 1;
-    margin-bottom: 16px; color: #000000;
+    position: relative; z-index: 1; font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+    font-size: clamp(112px, 22vw, 260px); font-weight: 400;
+    letter-spacing: -0.08em; line-height: .7;
+    margin: 32px 0 44px; color: #171715;
   }
   .message {
-    font-size: 18px; color: #666; line-height: 1.6;
+    position: relative; z-index: 1; max-width: 420px; font-size: 18px; color: #5d5945; line-height: 1.6;
     margin-bottom: 32px;
   }
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 13px 28px; border-radius: 100px;
-    background: #000; color: #FFF;
+    position: relative; z-index: 1; background: #171715; color: #FFF;
     font-weight: 600; font-size: 14px;
     text-decoration: none; transition: all 0.2s;
   }
   .btn:hover { background: #222; transform: translateY(-2px); }
-  .logo-mark { width: 36px; height: 28px; margin-bottom: 32px; }
+  .logo-mark { position: relative; z-index: 1; width: 36px; height: 28px; }
+  @media (max-width: 640px) { .container { padding: 38px 28px; } .container::after { right: -230px; } }
 </style>
 </head>
 <body>

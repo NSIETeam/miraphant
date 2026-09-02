@@ -183,8 +183,9 @@
     .edition-card { padding: 24px; }
   }
 </style>
+<link rel="stylesheet" href="../css/site.css">
 </head>
-<body>
+<body class="mf-site page-product page-otto">
 
 <nav>
   <div class="container nav-inner">
@@ -216,7 +217,7 @@
         <a href="#editions" class="btn-secondary" data-i18n="hero.editions">Editions →</a>
       </div>
     </div>
-    <div class="reveal rd3" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--gray-300)">
+    <div class="reveal rd3 product-stage" aria-hidden="true" style="background:var(--gray-50);border-radius:20px;border:1px solid var(--gray-200);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--gray-300)">
       <svg width="80" height="80" viewBox="0 0 28 28" fill="none">
         <path d="M 8 4 L 11 4 L 10 12 L 7 12 Z" fill="#999"/>
         <path d="M 17 4 L 20 4 L 21 12 L 18 12 Z" fill="#999"/>
@@ -735,5 +736,6 @@ document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
   }
 })();
 </script>
+<script src="../js/site.js"></script>
 </body>
 </html>
