@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
+<script src="js/language.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Miraphant — Application Layer Superintelligence. AI-powered products & enterprise AI-native transformation.">
 <meta name="keywords" content="Miraphant, AI, Application Layer, Otto, Circle, AI Native, enterprise AI, digital colleague">
@@ -648,6 +649,7 @@ const i18n = {
 
 let currentLang = 'en';
 function setLang(lang) {
+  lang = window.MiraphantLanguage.set(lang);
   currentLang = lang;
   const s = i18n[lang];
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -656,14 +658,12 @@ function setLang(lang) {
   document.querySelectorAll('.lang-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-lang') === lang);
   });
-  document.documentElement.lang = lang;
-  localStorage.setItem('miraphant-lang', lang);
+  window.MiraphantLanguage.reveal();
 }
 document.querySelectorAll('.lang-btn').forEach(b => {
   b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
 });
-const saved = localStorage.getItem('miraphant-lang');
-if (saved && i18n[saved]) setLang(saved);
+setLang(window.MiraphantLanguage.get());
 
 // Nav scroll + active highlight
 const nav = document.getElementById('nav');

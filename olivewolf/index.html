@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
+<script src="../js/language.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="OliveWolf — Open-source 3D digital human engine by Miraphant. Real-time audio-driven conversation, dual render backends, enterprise deployment.">
 <link rel="canonical" href="https://nsieteam.github.io/miraphant/olivewolf/">
@@ -488,6 +489,7 @@ const i18n = {
 
 let currentLang = 'en';
 function setLang(lang) {
+  lang = window.MiraphantLanguage.set(lang);
   currentLang = lang;
   const s = i18n[lang];
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -496,14 +498,12 @@ function setLang(lang) {
   document.querySelectorAll('.lang-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-lang') === lang);
   });
-  document.documentElement.lang = lang;
-  localStorage.setItem('olivewolf-lang', lang);
+  window.MiraphantLanguage.reveal();
 }
 document.querySelectorAll('.lang-btn').forEach(b => {
   b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
 });
-const saved = localStorage.getItem('olivewolf-lang');
-if (saved && i18n[saved]) setLang(saved);
+setLang(window.MiraphantLanguage.get());
 
 const observer = new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
