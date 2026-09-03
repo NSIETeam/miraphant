@@ -311,16 +311,96 @@ body.mf-site .sub { max-width: 680px; color: var(--mf-muted); font-size: 17px; l
 
 /* Homepage */
 body.page-home #hero {
+  position: relative;
+  isolation: isolate;
   min-height: 640px;
   padding: 128px 0 110px;
-  overflow: visible;
+  overflow: hidden;
   background: var(--mf-background);
 }
 
 body.page-home #hero::after,
 body.page-home .hero-logo-wrap { display: none; }
 
-body.page-home .hero-content { max-width: 880px; margin-inline: auto; text-align: center; }
+body.page-home .hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 880px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+/*
+ * SOURCE: Bloome Hero.tsx:43-54 and Hero.module.css:65-118,204-212.
+ * This layer directly reuses Bloome's six avatar assets, asymmetric placement,
+ * blue drop shadow, seven-second loop and eight-pixel movement.
+ */
+body.page-home .hero-avatar-canvas {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  z-index: 1;
+  width: min(100%, 1440px);
+  aspect-ratio: 1440 / 520;
+  transform: translateX(-50%);
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+body.page-home .hero-avatar {
+  position: absolute;
+  z-index: 1;
+  border-radius: 50%;
+  filter: drop-shadow(0 14px 30px rgba(37, 86, 182, .18));
+  animation: mf-hero-avatar-float 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+body.page-home .hero-avatar--top-left {
+  top: 17%;
+  left: calc(50% - 420px);
+  width: clamp(70px, 7.2cqw, 104px);
+}
+
+body.page-home .hero-avatar--middle-left {
+  top: 48%;
+  left: calc(50% - 548px);
+  width: clamp(100px, 10.6cqw, 153px);
+  animation-delay: -2.2s;
+}
+
+body.page-home .hero-avatar--bottom-left {
+  top: 80%;
+  left: calc(50% - 470px);
+  width: clamp(78px, 8cqw, 115px);
+  animation-delay: -4.1s;
+}
+
+body.page-home .hero-avatar--top-right {
+  top: 28%;
+  left: calc(50% + 500px);
+  width: clamp(70px, 7.2cqw, 104px);
+  animation-delay: -3.2s;
+}
+
+body.page-home .hero-avatar--middle-right {
+  top: 58%;
+  left: calc(50% + 548px);
+  width: clamp(100px, 10.6cqw, 153px);
+  animation-delay: -1.1s;
+}
+
+body.page-home .hero-avatar--bottom-right {
+  top: 84%;
+  left: calc(50% + 470px);
+  width: clamp(70px, 7.2cqw, 104px);
+  animation-delay: -5s;
+}
+
+@keyframes mf-hero-avatar-float {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-8px); }
+}
 
 body.page-home .hero-title {
   max-width: 880px;
@@ -350,6 +430,10 @@ body.page-home .hero-sub {
 }
 
 body.page-home .hero-buttons { justify-content: center; gap: 8px; }
+
+@media (max-width: 899px) {
+  body.page-home .hero-avatar-canvas { display: none; }
+}
 
 body.page-home #about,
 body.page-home .collaboration-paths,
@@ -470,6 +554,8 @@ body.page-home .collaboration-card-arrow {
  * Product cards
  * SOURCES:
  * - xAI HeroSection.tsx:166-168: white surface, 1px #e7e7e5 frame, 24px radius.
+ * - xAI UseCasesSection.tsx:5-96: restrained active-state blue, teal, violet
+ *   and amber surfaces distinguish the four products without new decoration.
  * - MiniMax ModelHighlights.tsx:44-126: 300ms #f7f8fa background hover and
  *   whole-card focus treatment. No lift, shadow, or decorative motion is added.
  */
@@ -482,7 +568,7 @@ body.page-home .product-card:nth-child(n) {
   padding: 32px;
   border: 1px solid #e7e7e5;
   border-radius: 24px;
-  background: #fff;
+  background: var(--product-card-tone, #fff);
   color: var(--mf-foreground);
   box-shadow: none;
   outline: none;
@@ -493,7 +579,16 @@ body.page-home .product-card:nth-child(n) {
 body.page-home .product-card::before,
 body.page-home .product-card::after { display: none; content: none; }
 
-body.page-home .product-card:hover { border-color: #e7e7e5; background: #f7f8fa; transform: none; }
+body.page-home .product-card:hover {
+  border-color: #e7e7e5;
+  background: color-mix(in srgb, var(--product-card-tone, #fff) 72%, #f7f8fa);
+  transform: none;
+}
+
+body.page-home .product-card:nth-child(1) { --product-card-tone: #eef4fb; }
+body.page-home .product-card:nth-child(2) { --product-card-tone: #eef9f8; }
+body.page-home .product-card:nth-child(3) { --product-card-tone: #f3f0fb; }
+body.page-home .product-card:nth-child(4) { --product-card-tone: #fcf6e9; }
 
 body.page-home .product-card:focus-visible {
   outline: none;
@@ -529,6 +624,8 @@ body.page-home .product-tags span { border: 1px solid var(--mf-border); backgrou
  * SOURCE: Bloome Collaboration.module.css:1-107 and Collaboration.tsx:36-63.
  * The reference's static three-column information cards are repeated for the
  * six existing items. Decorative icons are omitted rather than fabricated.
+ * COLOR SOURCE: xAI UseCasesSection.tsx:5-96. Its six restrained active-state
+ * surfaces add hierarchy while preserving the existing card structure.
  */
 body.page-home #club {
   padding-block: 112px;
@@ -566,14 +663,21 @@ body.page-home .club-card.reveal.visible {
   gap: 16px;
   border: 0;
   border-radius: 32px;
-  background: var(--mf-background);
+  background: var(--club-card-tone, var(--mf-background));
   transition: transform 200ms ease-out;
 }
 
 body.page-home .club-card:hover {
-  background: var(--mf-background);
+  background: var(--club-card-tone, var(--mf-background));
   transform: translateY(-4px);
 }
+
+body.page-home .club-card:nth-child(1) { --club-card-tone: #eef9f8; }
+body.page-home .club-card:nth-child(2) { --club-card-tone: #f3f0fb; }
+body.page-home .club-card:nth-child(3) { --club-card-tone: #eef4fb; }
+body.page-home .club-card:nth-child(4) { --club-card-tone: #fcf6e9; }
+body.page-home .club-card:nth-child(5) { --club-card-tone: #eef8f1; }
+body.page-home .club-card:nth-child(6) { --club-card-tone: #fbf0f3; }
 
 body.page-home .club-card h3 {
   margin: 0;
@@ -1258,6 +1362,7 @@ body.page-home .language-popover .lang-btn:focus-visible {
 /* SOURCE: Typeless globals.css:239-247 */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  body.page-home .hero-avatar { animation: none !important; }
   body.page-home.motion-ready [data-scroll-reveal] {
     opacity: 1;
     translate: none;
