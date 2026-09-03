@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
+<script src="js/language.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Miraphant — Application Layer Superintelligence. AI-powered products & enterprise AI-native transformation.">
 <meta name="keywords" content="Miraphant, AI, Application Layer, Otto, Circle, AI Native, enterprise AI, digital colleague">
@@ -75,10 +76,6 @@
     background: var(--black); width: 0; z-index: 200;
     transition: width 0.1s linear;
   }
-
-  /* Page fade-in */
-  body { animation: fadeIn 0.4s var(--ease-out); }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   /* Nav */
   nav {
@@ -295,12 +292,6 @@
   #back-to-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
   #back-to-top:hover { background: var(--gray-800); transform: translateY(-3px); }
 
-  /* Reveal */
-  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); }
-  .reveal.visible { opacity: 1; transform: translateY(0); }
-  .rd1 { transition-delay: 0.08s; } .rd2 { transition-delay: 0.16s; }
-  .rd3 { transition-delay: 0.24s; } .rd4 { transition-delay: 0.32s; }
-
   /* Page transition */
   a[href]:not([href^="#"]):not([href^="mailto"]):not([href^="http"]) {
     transition: opacity 0.15s;
@@ -325,28 +316,25 @@
     #back-to-top { bottom: 20px; right: 20px; }
   }
 </style>
+<link rel="stylesheet" href="css/site.css">
 </head>
-<body>
+<body class="mf-site page-home">
 
 <div id="progress-bar"></div>
 
-<nav id="nav">
+<nav id="nav" aria-label="Primary">
   <div class="container nav-inner">
-    <a href="#" class="nav-logo">
+    <a href="/miraphant/" class="nav-logo">
       <img src="logo.png" alt="Miraphant" class="nav-logo-mark" style="width:32px;height:32px">
       Miraphant
     </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="/miraphant/about/" data-i18n="nav.about" data-nav="about">About</a></li>
+      <li><a href="#products" data-i18n="nav.products" data-nav="products">Products</a></li>
+      <li><a href="/miraphant/manifesto/" data-i18n="nav.manifesto" data-nav="manifesto">Manifesto</a></li>
+      <li><a href="/miraphant/ai-club/" data-i18n="nav.club" data-nav="club">AI Club</a></li>
+    </ul>
     <div class="nav-right">
-      <ul class="nav-links" id="navLinks">
-        <li><a href="about.html" data-i18n="nav.about">About</a></li>
-        <li><a href="#products" data-i18n="nav.products">Products</a></li>
-        <li><a href="manifesto.html" data-i18n="nav.manifesto">Manifesto</a></li>
-        <li><a href="#club" data-i18n="nav.club">AI Club</a></li>
-      </ul>
-      <div style="display:flex;gap:4px;padding-left:16px;border-left:1px solid rgba(255,255,255,0.15)">
-        <button class="lang-btn active" data-lang="en">EN</button>
-        <button class="lang-btn" data-lang="zh">中</button>
-      </div>
       <button class="nav-toggle" id="navToggle" aria-label="Menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18M3 6h18M3 18h18"/>
@@ -357,6 +345,14 @@
 </nav>
 
 <section id="hero">
+  <div class="hero-avatar-canvas" aria-hidden="true">
+    <img class="hero-avatar hero-avatar--top-left" src="images/hero-avatars/portrait-01.png" alt="">
+    <img class="hero-avatar hero-avatar--middle-left" src="images/hero-avatars/vibe-01.png" alt="">
+    <img class="hero-avatar hero-avatar--bottom-left" src="images/hero-avatars/portrait-03.png" alt="">
+    <img class="hero-avatar hero-avatar--top-right" src="images/hero-avatars/portrait-02.png" alt="">
+    <img class="hero-avatar hero-avatar--middle-right" src="images/hero-avatars/vibe-02.png" alt="">
+    <img class="hero-avatar hero-avatar--bottom-right" src="images/hero-avatars/portrait-04.png" alt="">
+  </div>
   <div class="container" style="width:100%">
     <div class="hero-content">
       <div class="reveal">
@@ -380,7 +376,7 @@
       <div class="reveal rd3">
         <div class="hero-buttons">
           <a href="#products" class="btn-primary" data-i18n="hero.cta1">Explore Products →</a>
-          <a href="about.html" class="btn-secondary" data-i18n="hero.cta2">Our Superpower</a>
+          <a href="/miraphant/about/" class="btn-secondary" data-i18n="hero.cta2">Our Superpower</a>
         </div>
       </div>
       <div class="hero-logo-wrap reveal rd4">
@@ -390,55 +386,64 @@
   </div>
 </section>
 
-<section id="about" class="section border-b">
-  <div class="container">
-    <div class="reveal" style="max-width:600px">
+<section id="about" class="section">
+  <div class="container about-layout">
+    <header class="about-heading reveal" data-scroll-reveal>
       <div class="label" data-i18n="about.label">Who We Are</div>
       <h2 class="section-title" data-i18n="about.title">
         We make your ideas real<br>and your organization AI-native
       </h2>
-    </div>
-    <div class="about-grid" style="margin-top:24px">
-      <div class="reveal rd1">
-        <div class="about-text" data-i18n="about.p1">
+    </header>
+    <div class="about-copy">
+      <div class="about-text reveal rd1" data-scroll-reveal data-i18n="about.p1">
           Miraphant is an application-layer AI company. We don't train models — we ship products.
           Our platform turns concepts into working software in days, compressing timelines
           that other approaches measure in months.
-        </div>
       </div>
-      <div class="reveal rd2">
-        <div class="about-text" data-i18n="about.p2">
+      <div class="about-text reveal rd2" data-scroll-reveal data-i18n="about.p2">
           We also transform entire organizations into AI-native operations. From deploying
           AI colleagues across every department to building foundational AI literacy through
           Miraphant AI Club — we make intelligence a company-wide capability.
-        </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section border-b" style="background:var(--gray-50)">
-  <div class="container">
-    <div class="reveal" style="max-width:700px;margin:0 auto;text-align:center">
-      <p style="font-size:clamp(18px,2.5vw,26px);font-weight:600;line-height:1.6;color:var(--gray-800);margin-bottom:20px" data-i18n="creator.p1">
-        If you are experienced in your field and want to bring an idea to life, Miraphant can help you.
-      </p>
-      <p style="font-size:clamp(18px,2.5vw,26px);font-weight:600;line-height:1.6;color:var(--gray-800)" data-i18n="creator.p2">
-        If you seek enterprise transformation and want a partner to drive it, Miraphant is here.
-      </p>
+<section class="section collaboration-paths" aria-labelledby="collaboration-title">
+  <div class="container collaboration-layout">
+    <header class="collaboration-intro reveal" data-scroll-reveal>
+      <div class="label" data-i18n="creator.label">Work with us</div>
+      <h2 class="section-title" id="collaboration-title" data-i18n="creator.title">Two ways to build with Miraphant</h2>
+      <p class="section-sub" data-i18n="creator.sub">From a product idea to organization-wide AI transformation.</p>
+    </header>
+    <div class="collaboration-list">
+      <a class="collaboration-card reveal rd1" data-scroll-reveal href="mailto:NSIETeam@outlook.com?subject=Product%20co-building">
+        <span class="collaboration-card-copy">
+          <strong data-i18n="creator.path1">Build a product</strong>
+          <span data-i18n="creator.p1">If you are experienced in your field and want to bring an idea to life, Miraphant can help you.</span>
+        </span>
+        <span class="collaboration-card-arrow" aria-hidden="true">↗</span>
+      </a>
+      <a class="collaboration-card reveal rd2" data-scroll-reveal href="mailto:NSIETeam@outlook.com?subject=Organization%20transformation">
+        <span class="collaboration-card-copy">
+          <strong data-i18n="creator.path2">Transform an organization</strong>
+          <span data-i18n="creator.p2">If you seek enterprise transformation and want a partner to drive it, Miraphant is here.</span>
+        </span>
+        <span class="collaboration-card-arrow" aria-hidden="true">↗</span>
+      </a>
     </div>
   </div>
 </section>
 
 <section id="products" class="section border-b">
   <div class="container">
-    <div class="reveal" style="max-width:600px">
+    <div class="reveal" data-scroll-reveal style="max-width:600px">
       <div class="label" data-i18n="products.label">Our Products</div>
       <h2 class="section-title" data-i18n="products.title">AI that ships</h2>
       <p class="section-sub" data-i18n="products.sub">From desktop to platform — products that bring intelligence to real workflows.</p>
     </div>
     <div class="products-grid" style="margin-top:24px">
-      <a href="otto.html" class="product-card reveal rd1">
+      <a href="/miraphant/otto/" class="product-card reveal rd1" data-scroll-reveal>
         <h3>Otto</h3>
         <p data-i18n="products.otto.desc">Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.</p>
         <div class="product-tags">
@@ -447,7 +452,7 @@
           <span data-i18n="products.otto.t3">Enterprise</span>
         </div>
       </a>
-      <a href="circle.html" class="product-card reveal rd2">
+      <a href="/miraphant/circle/" class="product-card reveal rd2" data-scroll-reveal>
         <h3>Circle</h3>
         <p data-i18n="products.circle.desc">A vibrant enterprise service ecosystem. AI-driven industrial property investment matching and B2B services platform.</p>
         <div class="product-tags">
@@ -456,7 +461,7 @@
           <span data-i18n="products.circle.t3">B2B Platform</span>
         </div>
       </a>
-      <a href="olivewolf.html" class="product-card reveal rd3">
+      <a href="/miraphant/olivewolf/" class="product-card reveal rd3" data-scroll-reveal>
         <h3>OliveWolf</h3>
         <p data-i18n="products.olive.desc">Open-source 3D digital human engine. Real-time audio-driven conversation, dual render backends, and enterprise deployment.</p>
         <div class="product-tags">
@@ -465,7 +470,7 @@
           <span data-i18n="products.olive.t3">Real-time</span>
         </div>
       </a>
-      <a href="ai-club.html" class="product-card reveal rd4">
+      <a href="/miraphant/ai-club/" class="product-card reveal rd4" data-scroll-reveal>
         <h3>Miraphant AI Club</h3>
         <p data-i18n="products.club.desc">Enterprise AI Native training product. One-day executive bootcamp plus hands-on Otto practice, scenario selection, playbook building, and rollout planning.</p>
         <div class="product-tags">
@@ -478,78 +483,94 @@
   </div>
 </section>
 
-<section id="club" class="section border-b">
+<section id="club" class="section" aria-labelledby="club-title">
   <div class="container">
-    <div class="reveal" style="max-width:650px">
+    <header class="club-heading reveal" data-scroll-reveal>
       <div class="label" data-i18n="club.label">Miraphant AI Club</div>
-      <h2 class="section-title" data-i18n="club.title">让效率可以留存<br><span style="font-weight:300">AI原生组织实战营</span></h2>
+      <h2 class="section-title" id="club-title" data-i18n="club.title">让效率可以留存</h2>
       <p class="section-sub" data-i18n="club.sub">不是来听课的，是来完成一个真实任务的。从认知到动手的一天，让AI长成你的组织。</p>
-    </div>
-    <div class="club-grid" style="margin-top:24px">
-      <div class="club-card reveal rd1">
+    </header>
+    <div class="club-grid">
+      <article class="club-card reveal rd1" data-scroll-reveal>
         <h3 data-i18n="club.c1.title">AI认知扫盲</h3>
         <p data-i18n="club.c1.desc">AI不是聊天，是自主完成任务。Agent=手脚、Skill=经验、你=指挥官。AI已在专业考试中超越人类，90%律师考、95%数学奥赛、87%博士级推理。</p>
-      </div>
-      <div class="club-card reveal rd2">
+      </article>
+      <article class="club-card reveal rd2" data-scroll-reveal>
         <h3 data-i18n="club.c2.title">Otto实战场</h3>
         <p data-i18n="club.c2.desc">从会说话到会做事。选场景→@Otto发任务→观察思考过程→拿结果验收。全程透明可见，不是黑箱操作。会说话，就会用。</p>
-      </div>
-      <div class="club-card reveal rd3">
+      </article>
+      <article class="club-card reveal rd3" data-scroll-reveal>
         <h3 data-i18n="club.c3.title">Skill沉淀机制</h3>
         <p data-i18n="club.c3.desc">入职5问继承团队经验，同类任务3次自动沉淀SOP，离职时经验自动合并。经验不再因人员流动而消失。</p>
-      </div>
-      <div class="club-card reveal rd4">
+      </article>
+      <article class="club-card reveal rd4" data-scroll-reveal>
         <h3 data-i18n="club.c4.title">ROI真实数据</h3>
         <p data-i18n="club.c4.desc">6个真实验证任务：平均单任务节省4小时，投入产出比551倍，单次Token成本仅¥0.36。</p>
-      </div>
-      <div class="club-card reveal rd5">
+      </article>
+      <article class="club-card reveal rd5" data-scroll-reveal>
         <h3 data-i18n="club.c5.title">消除顾虑专场</h3>
         <p data-i18n="club.c5.desc">不是AI取代人，是掌握AI的人取代不掌握AI的人。本地部署零云端零第三方，数据始终在企业边界内。省下的时间，是你的。</p>
-      </div>
-      <div class="club-card reveal rd6">
+      </article>
+      <article class="club-card reveal rd6" data-scroll-reveal>
         <h3 data-i18n="club.c6.title">组织落地计划</h3>
         <p data-i18n="club.c6.desc">Day 1管理层上手→Week 1选3-5人试点→Month 1全员跑通3个场景。别家让你用AI，我们让AI长成你的组织。</p>
-      </div>
+      </article>
     </div>
+  </div>
 </section>
 
-<section class="cta-dark section">
+<section class="section home-contact" aria-labelledby="home-contact-title">
   <div class="container">
-    <div class="reveal" style="max-width:600px;margin:0 auto">
+    <div class="home-contact-inner reveal" data-scroll-reveal>
       <div class="label" data-i18n="cta.label">Get in Touch</div>
-      <h2 class="section-title" data-i18n="cta.title">Ready to build<br>with Miraphant?</h2>
+      <h2 class="section-title" id="home-contact-title" data-i18n="cta.title">Ready to build<br>with Miraphant?</h2>
       <p class="section-sub" data-i18n="cta.sub">Whether you want a product built, your organization transformed, or your team AI-trained — we're here.</p>
-      <div style="margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <div class="home-contact-actions">
         <a href="mailto:NSIETeam@outlook.com" class="btn-primary" data-i18n="cta.email">NSIETeam@outlook.com</a>
-        <a href="#" class="btn-secondary" data-i18n="cta.club">Join AI Club →</a>
+        <a href="/miraphant/ai-club/" class="btn-secondary" data-i18n="cta.club">Join AI Club →</a>
       </div>
     </div>
   </div>
 </section>
 
-<footer>
+<footer class="site-footer">
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand">
         <div class="footer-brand-text">Miraphant</div>
         <div class="footer-brand-desc" data-i18n="footer.desc">Application Layer Superintelligence. AI-powered products and organizational transformation.</div>
       </div>
-      <div class="footer-col">
-        <h4 data-i18n="footer.products">Products</h4>
-        <a href="otto.html">Otto</a>
-        <a href="circle.html">Circle</a>
-        <a href="olivewolf.html">OliveWolf</a>
-        <a href="ai-club.html" data-i18n="footer.club">AI Club</a>
-      </div>
-      <div class="footer-col">
-        <h4 data-i18n="footer.company">Company</h4>
-        <a href="about.html" data-i18n="footer.about">About</a>
-        <a href="manifesto.html" data-i18n="footer.manifesto">Manifesto</a>
+      <div class="footer-links" aria-label="Footer navigation">
+        <div class="footer-col">
+          <h4 data-i18n="footer.products">Products</h4>
+          <a href="/miraphant/otto/">Otto</a>
+          <a href="/miraphant/circle/">Circle</a>
+          <a href="/miraphant/olivewolf/">OliveWolf</a>
+          <a href="/miraphant/ai-club/" data-i18n="footer.club">AI Club</a>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="footer.company">Company</h4>
+          <a href="/miraphant/about/" data-i18n="footer.about">About</a>
+          <a href="/miraphant/manifesto/" data-i18n="footer.manifesto">Manifesto</a>
+        </div>
       </div>
     </div>
     <div class="footer-bottom">
       <span data-i18n="footer.copy">© 2026 Miraphant, Inc.</span>
-      <button class="portal-employee-link" onclick="handleEmployeePortal()" style="color:#999;border-color:#E5E5E5;background:#fff;font-family:inherit;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:8px 20px;border-radius:100px;transition:all .3s;" onmouseover="this.style.color='#000';this.style.borderColor='#000'" onmouseout="this.style.color='#999';this.style.borderColor='#E5E5E5'">Employee Portal</button>
+      <div class="footer-meta-actions">
+        <div class="language-menu">
+          <button class="language-trigger" type="button" aria-label="Language" aria-haspopup="menu" aria-expanded="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+            <span class="language-current">English</span>
+            <svg class="language-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="language-popover" role="menu" aria-label="Language">
+            <button class="lang-btn active" type="button" role="menuitemradio" aria-checked="true" data-lang="en"><span>English</span><svg class="language-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+            <button class="lang-btn" type="button" role="menuitemradio" aria-checked="false" data-lang="zh"><span>中文</span><svg class="language-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+          </div>
+        </div>
+        <button class="portal-employee-link" onclick="handleEmployeePortal()">Employee Portal</button>
+      </div>
     </div>
   </div>
 </footer>
@@ -572,6 +593,11 @@ const i18n = {
     'about.title': 'We make your ideas real and your organization AI-native',
     'about.p1': 'Miraphant is an application-layer AI company. We don\'t train models — we ship products. Our platform turns concepts into working software in days, compressing timelines that other approaches measure in months.',
     'about.p2': 'We also transform entire organizations into AI-native operations. From deploying AI colleagues across every department to building foundational AI literacy through Miraphant AI Club — we make intelligence a company-wide capability.',
+    'creator.label': 'Work with us',
+    'creator.title': 'Two ways to build with Miraphant',
+    'creator.sub': 'From a product idea to organization-wide AI transformation.',
+    'creator.path1': 'Build a product',
+    'creator.path2': 'Transform an organization',
     'creator.p1': 'If you are experienced in your field and want to bring an idea to life, Miraphant can help you.',
     'creator.p2': 'If you seek enterprise transformation and want a partner to drive it, Miraphant is here.',
     'products.label': 'Our Products',
@@ -614,6 +640,11 @@ const i18n = {
     'about.title': '把你的想法变成现实，让你的组织 AI Native',
     'about.p1': 'Miraphant 是一家应用层 AI 公司。我们不训练模型——我们交付产品。我们的平台在数天内将概念转化为可工作的软件，压缩了其他方法需要数月才能完成的周期。',
     'about.p2': '我们还将整个组织转变为 AI Native 运营。从在每个部门部署 AI 同事，到通过 Miraphant AI Club 构建基础 AI 素养——我们让智能成为公司级的能力。',
+    'creator.label': '与我们合作',
+    'creator.title': '两种方式，和 Miraphant 一起构建',
+    'creator.sub': '从一个产品想法，到整个组织的 AI 转型。',
+    'creator.path1': '构建产品',
+    'creator.path2': '推动组织转型',
     'creator.p1': '如果您在自己的领域内经验丰富，想要实现一个想法，Miraphant 可以帮助您。',
     'creator.p2': '如果您力求企业改革，想要一个组织来推进，Miraphant 是您的伙伴。',
     'products.label': '我们的产品',
@@ -648,6 +679,7 @@ const i18n = {
 
 let currentLang = 'en';
 function setLang(lang) {
+  lang = window.MiraphantLanguage.set(lang);
   currentLang = lang;
   const s = i18n[lang];
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -656,14 +688,12 @@ function setLang(lang) {
   document.querySelectorAll('.lang-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-lang') === lang);
   });
-  document.documentElement.lang = lang;
-  localStorage.setItem('miraphant-lang', lang);
+  window.MiraphantLanguage.reveal();
 }
 document.querySelectorAll('.lang-btn').forEach(b => {
   b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
 });
-const saved = localStorage.getItem('miraphant-lang');
-if (saved && i18n[saved]) setLang(saved);
+setLang(window.MiraphantLanguage.get());
 
 // Nav scroll + active highlight
 const nav = document.getElementById('nav');
@@ -687,21 +717,13 @@ window.addEventListener('scroll', () => {
   navLinks.forEach(a => {
     const href = a.getAttribute('href');
     if (href === '#' + current) { a.classList.add('active'); }
-    else if (href !== '#' && !href.includes('.html')) { a.classList.remove('active'); }
+    else if (href !== '#') { a.classList.remove('active'); }
   });
 
   // Back to top
   const btn = document.getElementById('back-to-top');
   if (btn) btn.classList.toggle('visible', window.scrollY > 600);
 }, { passive: true });
-
-// Nav toggle
-const toggle = document.getElementById('navToggle');
-const links = document.getElementById('navLinks');
-toggle.addEventListener('click', () => links.classList.toggle('open'));
-document.querySelectorAll('.nav-links a').forEach(a => {
-  a.addEventListener('click', () => links.classList.remove('open'));
-});
 
 // Back to top
 document.getElementById('back-to-top').addEventListener('click', () => {
@@ -711,10 +733,10 @@ document.getElementById('back-to-top').addEventListener('click', () => {
 // Employee Portal
 function handleEmployeePortal() {
   if (window.checkAuth()) {
-    window.location.href = 'portal.html';
+    window.location.href = '/miraphant/portal/';
   } else {
     window.showLoginModal(function() {
-      window.location.href = 'portal.html';
+      window.location.href = '/miraphant/portal/';
     });
   }
 }
@@ -722,32 +744,15 @@ if (window.location.hash === '#employee-portal') {
   if (!window.checkAuth()) {
     setTimeout(function() {
       window.showLoginModal(function() {
-        window.location.href = 'portal.html';
+        window.location.href = '/miraphant/portal/';
       });
     }, 500);
   } else {
-    window.location.href = 'portal.html';
+    window.location.href = '/miraphant/portal/';
   }
 }
 
-// Reveal animation
-const observer = new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})
-},{threshold:0.1});
-document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
-
-// Page transition for internal links
-document.querySelectorAll('a[href$=".html"]').forEach(a => {
-  a.addEventListener('click', (e) => {
-    const href = a.getAttribute('href');
-    if (href && !href.startsWith('http') && !href.startsWith('mailto')) {
-      e.preventDefault();
-      document.body.style.opacity = '0';
-      document.body.style.transition = 'opacity 0.15s';
-      setTimeout(() => { window.location.href = href; }, 150);
-    }
-  });
-});
 </script>
+<script src="js/site.js"></script>
 </body>
 </html>
