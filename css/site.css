@@ -183,7 +183,7 @@ body.mf-site .nav-logo {
 body.mf-site .nav-logo-mark {
   width: 42px !important;
   height: 42px !important;
-  filter: none;
+  filter: none !important;
   object-fit: contain;
 }
 

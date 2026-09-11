@@ -73,7 +73,7 @@ body.mf-workspace .portal-nav-logo {
 body.mf-workspace .portal-nav-logo img {
   width: 42px !important;
   height: 42px !important;
-  filter: none;
+  filter: none !important;
   object-fit: contain;
 }
 
