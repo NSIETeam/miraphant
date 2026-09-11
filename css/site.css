@@ -181,9 +181,10 @@ body.mf-site .nav-logo {
 }
 
 body.mf-site .nav-logo-mark {
-  width: 30px !important;
-  height: 30px !important;
-  filter: invert(1);
+  width: 42px !important;
+  height: 42px !important;
+  filter: none;
+  object-fit: contain;
 }
 
 body.mf-site .nav-logo:hover .nav-logo-mark { transform: none; }
