@@ -1,0 +1,134 @@
+{
+  "products": [
+    {
+      "id": "clawmaster",
+      "name": "ClawMaster",
+      "en": "A desktop AI workbench for agent tasks, project memory, reusable skills and business workflows.",
+      "zh": "将 Agent 任务、项目记忆、可复用技能与业务操作集中到桌面的 AI 工作台。",
+      "category": "agents",
+      "url": "https://nsieteam.github.io/ClawMaster/",
+      "status": "Desktop · Beta",
+      "zhStatus": "桌面软件 · Beta"
+    },
+    {
+      "id": "mira",
+      "name": "Mira",
+      "en": "A self-hosted AI agent execution kernel with tools, persistent memory, automations and an engineering console.",
+      "zh": "可自托管的 AI Agent 执行内核，提供工具调用、持久记忆、自动化任务与工程控制台。",
+      "category": "agents",
+      "url": "https://github.com/NSIETeam/Mira",
+      "status": "Open-source project",
+      "zhStatus": "开源项目"
+    },
+    {
+      "id": "kaopu",
+      "name": "靠谱",
+      "en": "Prepare product material, structure courses, review scripts and deliver live presentations from one self-hosted workspace. Real-model and payment acceptance are still pending.",
+      "zh": "在自托管工作台中整理商品资料、编排课程、审改讲稿并开展真人直播。真实模型与支付能力仍待验收。",
+      "category": "content",
+      "url": "https://github.com/NSIETeam/merchant-live-studio",
+      "status": "Content & live studio · MVP",
+      "zhStatus": "内容与直播工作台 · MVP"
+    },
+    {
+      "id": "easywiki",
+      "name": "EasyWiki",
+      "en": "An agent-assisted organizational knowledge base for reviewed notes, reusable decisions, semantic search and MCP integration.",
+      "zh": "面向组织的 Agent 知识库，支持知识审阅、决策沉淀、语义检索与 MCP 集成。",
+      "category": "content",
+      "url": "https://github.com/NSIETeam/easywiki",
+      "status": "Open-source project",
+      "zhStatus": "开源项目"
+    },
+    {
+      "id": "zhifang",
+      "name": "鸿雁知访",
+      "en": "A field-service workspace for organizing customer visits and field-team work.",
+      "zh": "面向客户拜访与外勤团队的业务工作台。",
+      "category": "business",
+      "url": "mailto:NSIETeam@outlook.com?subject=%E9%B8%BF%E9%9B%81%E7%9F%A5%E8%AE%BF%20%E4%BA%A7%E5%93%81%E5%92%A8%E8%AF%A2",
+      "status": "Business platform · Contact us",
+      "zhStatus": "业务平台 · 咨询接入"
+    },
+    {
+      "id": "pangolin",
+      "name": "穿山甲",
+      "en": "A traceability workspace for product codes and supply-chain tracing.",
+      "zh": "面向商品编码与流通追踪的溯源业务平台。",
+      "category": "business",
+      "url": "mailto:NSIETeam@outlook.com?subject=%E7%A9%BF%E5%B1%B1%E7%94%B2%20%E4%BA%A7%E5%93%81%E5%92%A8%E8%AF%A2",
+      "status": "Business platform · Contact us",
+      "zhStatus": "业务平台 · 咨询接入"
+    },
+    {
+      "id": "cicada",
+      "name": "知了猴",
+      "en": "An e-commerce operations workspace for day-to-day merchant workflows.",
+      "zh": "面向商家日常经营的电商业务工作台。",
+      "category": "business",
+      "url": "mailto:NSIETeam@outlook.com?subject=%E7%9F%A5%E4%BA%86%E7%8C%B4%20%E4%BA%A7%E5%93%81%E5%92%A8%E8%AF%A2",
+      "status": "Business platform · Contact us",
+      "zhStatus": "业务平台 · 咨询接入"
+    },
+    {
+      "id": "pigeon",
+      "name": "智信鸽",
+      "en": "An AI customer-service workspace for organizing service conversations and team workflows.",
+      "zh": "面向客服对话与服务协作的 AI 客服工作台。",
+      "category": "business",
+      "url": "mailto:NSIETeam@outlook.com?subject=%E6%99%BA%E4%BF%A1%E9%B8%BD%20%E4%BA%A7%E5%93%81%E5%92%A8%E8%AF%A2",
+      "status": "Business platform · Contact us",
+      "zhStatus": "业务平台 · 咨询接入"
+    },
+    {
+      "id": "owl",
+      "name": "猫头鹰",
+      "en": "A channel price-control workspace for reviewing price observations and follow-up work.",
+      "zh": "面向渠道价格观察、异常复核与跟进的控价业务工作台。",
+      "category": "business",
+      "url": "mailto:NSIETeam@outlook.com?subject=%E7%8C%AB%E5%A4%B4%E9%B9%B0%20%E4%BA%A7%E5%93%81%E5%92%A8%E8%AF%A2",
+      "status": "Business platform · Contact us",
+      "zhStatus": "业务平台 · 咨询接入"
+    },
+    {
+      "id": "reliacode",
+      "name": "ReliaCode · 可靠码",
+      "en": "Serialized pack-to-carton traceability, logistics events and recall workflows, integrated with an external OpenEPCIS repository.",
+      "zh": "围绕单品与箱码建立追溯关系，记录物流与召回事件，对接独立的 OpenEPCIS 事件库。",
+      "category": "business",
+      "url": "https://github.com/NSIETeam/ReliaCode",
+      "status": "Open-source project",
+      "zhStatus": "开源项目"
+    },
+    {
+      "id": "priceguard",
+      "name": "Pet Price Guard",
+      "en": "Monitor public product prices, retain observation evidence and queue suspected low-price alerts for human review.",
+      "zh": "监测公开商品价格，留存观测证据，并将疑似低价告警交由人工复核。",
+      "category": "business",
+      "url": "https://github.com/NSIETeam/pet-price-guard",
+      "status": "Open-source project",
+      "zhStatus": "开源项目"
+    },
+    {
+      "id": "easycode",
+      "name": "Easy Code",
+      "en": "An AI coding assistant for code understanding, editing and developer tool workflows.",
+      "zh": "面向代码理解、编辑与开发工具协作的 AI 编程助手。",
+      "category": "tools",
+      "url": "https://github.com/NSIETeam/EasyCode",
+      "status": "Open-source project",
+      "zhStatus": "开源项目"
+    },
+    {
+      "id": "easygrowth",
+      "name": "EasyGrowth",
+      "en": "A B2B growth workspace connecting lead collection, scoring, review, CRM handoff and sales follow-up.",
+      "zh": "连接线索采集、评分、复核、CRM 同步与销售跟进的 B2B 增长工作台。",
+      "category": "tools",
+      "url": "https://github.com/NSIETeam/easygrowth",
+      "status": "Open-source project",
+      "zhStatus": "开源项目"
+    }
+  ]
+}
