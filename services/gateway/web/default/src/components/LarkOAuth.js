@@ -3,6 +3,7 @@ import { Dimmer, Loader, Segment } from 'semantic-ui-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API, showError, showSuccess } from '../helpers';
 import { UserContext } from '../context/User';
+import { safeLocalPath } from './utils';
 
 const LarkOAuth = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,13 +25,16 @@ const LarkOAuth = () => {
         userDispatch({ type: 'login', payload: data });
         localStorage.setItem('user', JSON.stringify(data));
         showSuccess('登录成功！');
-        navigate('/');
+        const savedPath = localStorage.getItem('oauth_return_path');
+        localStorage.removeItem('oauth_return_path');
+        const next = safeLocalPath(savedPath);
+        navigate(next, { replace: true });
       }
     } else {
       showError(message);
       if (count === 0) {
         setPrompt(`操作失败，重定向至登录界面中...`);
-        navigate('/setting'); // in case this is failed to bind lark
+        navigate('/console/profile/bindings');
         return;
       }
       count++;

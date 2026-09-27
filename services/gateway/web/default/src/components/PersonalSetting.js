@@ -4,9 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { API, copy, showError, showInfo, showNotice, showSuccess } from '../helpers';
 import Turnstile from 'react-turnstile';
 import { UserContext } from '../context/User';
-import { onGitHubOAuthClicked, onLarkOAuthClicked } from './utils';
+import { onGitHubOAuthClicked, onLarkOAuthClicked, onOidcOAuthClicked } from './utils';
 
-const PersonalSetting = () => {
+const PersonalSetting = ({ hideAccountDeletion = false }) => {
   const [userState, userDispatch] = useContext(UserContext);
   let navigate = useNavigate();
 
@@ -170,19 +170,19 @@ const PersonalSetting = () => {
   return (
     <div style={{ lineHeight: '40px' }}>
       <Header as='h3'>通用设置</Header>
-      <Message>
+      {!hideAccountDeletion && <Message>
         注意，此处生成的令牌用于系统管理，而非用于请求 OpenAI 相关的服务，请知悉。
-      </Message>
+      </Message>}
       <Button as={Link} to={`/user/edit/`}>
         更新个人信息
       </Button>
-      <Button onClick={generateAccessToken}>生成系统访问令牌</Button>
-      <Button onClick={getAffLink}>复制邀请链接</Button>
-      <Button onClick={() => {
+      {!hideAccountDeletion && <Button onClick={generateAccessToken}>生成系统访问令牌</Button>}
+      {!hideAccountDeletion && <Button onClick={getAffLink}>复制邀请链接</Button>}
+      {!hideAccountDeletion && <Button onClick={() => {
         setShowAccountDeleteModal(true);
-      }}>删除个人账户</Button>
+      }}>删除个人账户</Button>}
       
-      {systemToken && (
+      {!hideAccountDeletion && systemToken && (
         <Form.Input 
           fluid 
           readOnly 
@@ -191,7 +191,7 @@ const PersonalSetting = () => {
           style={{ marginTop: '10px' }}
         />
       )}
-      {affLink && (
+      {!hideAccountDeletion && affLink && (
         <Form.Input 
           fluid 
           readOnly 
@@ -244,14 +244,15 @@ const PersonalSetting = () => {
       </Modal>
       {
         status.github_oauth && (
-          <Button onClick={()=>{onGitHubOAuthClicked(status.github_client_id)}}>绑定 GitHub 账号</Button>
+          <Button onClick={()=>{onGitHubOAuthClicked(status.github_client_id, '/console/profile/bindings')}}>绑定 GitHub 账号</Button>
         )
       }
       {
         status.lark_client_id && (
-          <Button onClick={()=>{onLarkOAuthClicked(status.lark_client_id)}}>绑定飞书账号</Button>
+          <Button onClick={()=>{onLarkOAuthClicked(status.lark_client_id, '/console/profile/bindings')}}>绑定飞书账号</Button>
         )
       }
+      {status.oidc && <Button onClick={() => onOidcOAuthClicked(status, '/console/profile/bindings')}>绑定 OIDC 账号</Button>}
       <Button
         onClick={() => {
           setShowEmailBindModal(true);
@@ -322,7 +323,7 @@ const PersonalSetting = () => {
           </Modal.Description>
         </Modal.Content>
       </Modal>
-      <Modal
+      {!hideAccountDeletion && <Modal
         onClose={() => setShowAccountDeleteModal(false)}
         onOpen={() => setShowAccountDeleteModal(true)}
         open={showAccountDeleteModal}
@@ -373,7 +374,7 @@ const PersonalSetting = () => {
             </Form>
           </Modal.Description>
         </Modal.Content>
-      </Modal>
+      </Modal>}
     </div>
   );
 };

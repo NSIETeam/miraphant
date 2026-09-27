@@ -1,32 +1,28 @@
 import React, { lazy, Suspense, useContext, useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Loading from './components/Loading';
-import User from './pages/User';
-import { PrivateRoute } from './components/PrivateRoute';
 import RegisterForm from './components/RegisterForm';
 import LoginForm from './components/LoginForm';
-import NotFound from './pages/NotFound';
 import Setting from './pages/Setting';
 import EditUser from './pages/User/EditUser';
 import AddUser from './pages/User/AddUser';
-import { API, getLogo, getSystemName, showError, showNotice } from './helpers';
+import { API, showError, showNotice } from './helpers';
 import PasswordResetForm from './components/PasswordResetForm';
 import GitHubOAuth from './components/GitHubOAuth';
 import PasswordResetConfirm from './components/PasswordResetConfirm';
 import { UserContext } from './context/User';
 import { StatusContext } from './context/Status';
 import Channel from './pages/Channel';
-import Token from './pages/Token';
-import EditToken from './pages/Token/EditToken';
 import EditChannel from './pages/Channel/EditChannel';
-import Redemption from './pages/Redemption';
-import EditRedemption from './pages/Redemption/EditRedemption';
-import TopUp from './pages/TopUp';
-import Log from './pages/Log';
-import Chat from './pages/Chat';
 import LarkOAuth from './components/LarkOAuth';
+import PersonalSetting from './components/PersonalSetting';
+import {
+  AdminHome, AdminPendingPage, AdminPricingPage, AdminRoute, AdminUsersPage,
+  ConsolePage, CustomerRoute, HelpPage, KeysPage, LegacyRedirect, NotFoundPage,
+  PlatformHome, PricingPage, ProfilePage, UnavailableAdminPage, UsagePage,
+  WalletPage,
+} from './pages/Platform';
 
-const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
 
 function App() {
@@ -73,42 +69,55 @@ function App() {
   useEffect(() => {
     loadUser();
     loadStatus().then();
-    let systemName = getSystemName();
-    if (systemName) {
-      document.title = systemName;
-    }
-    let logo = getLogo();
-    if (logo) {
-      let linkElement = document.querySelector("link[rel~='icon']");
-      if (linkElement) {
-        linkElement.href = logo;
-      }
-    }
+    document.title = 'Miraphant 模型平台';
+    const linkElement = document.querySelector("link[rel~='icon']");
+    if (linkElement) linkElement.href = '/miraphant.svg';
   }, []);
 
   return (
     <Routes>
-      <Route
-        path='/'
-        element={
-          <Suspense fallback={<Loading></Loading>}>
-            <Home />
-          </Suspense>
-        }
-      />
+      <Route path='/' element={<PlatformHome />} />
+      <Route path='/pricing' element={<PricingPage />} />
+      <Route path='/help' element={<HelpPage />} />
+      <Route path='/console' element={<CustomerRoute><ConsolePage /></CustomerRoute>} />
+      <Route path='/console/wallet' element={<CustomerRoute><WalletPage /></CustomerRoute>} />
+      <Route path='/console/usage' element={<CustomerRoute><UsagePage /></CustomerRoute>} />
+      <Route path='/console/keys' element={<CustomerRoute><KeysPage /></CustomerRoute>} />
+      <Route path='/console/profile' element={<CustomerRoute><ProfilePage /></CustomerRoute>} />
+      <Route path='/console/profile/bindings' element={<CustomerRoute><div className='platform-page'><PersonalSetting hideAccountDeletion /></div></CustomerRoute>} />
+      <Route path='/checkout/:orderId' element={<CustomerRoute><UnavailableAdminPage title='充值订单暂不可用' detail='支付商户尚未开通，当前没有可查询的真实订单。' /></CustomerRoute>} />
+      <Route path='/console/orders' element={<CustomerRoute><UnavailableAdminPage title='充值订单暂不可用' detail='支付与订单服务尚未开通。' /></CustomerRoute>} />
+      <Route path='/console/orders/:orderId' element={<CustomerRoute><UnavailableAdminPage title='充值订单暂不可用' detail='支付与订单服务尚未开通。' /></CustomerRoute>} />
+      <Route path='/admin' element={<AdminRoute><AdminHome /></AdminRoute>} />
+      <Route path='/admin/pricing' element={<AdminRoute><AdminPricingPage /></AdminRoute>} />
+      <Route path='/admin/users' element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+      <Route path='/admin/pending' element={<AdminRoute><AdminPendingPage /></AdminRoute>} />
+      <Route path='/admin/channels' element={<AdminRoute><Channel /></AdminRoute>} />
+      <Route path='/admin/channels/edit/:id' element={<AdminRoute><EditChannel /></AdminRoute>} />
+      <Route path='/admin/channels/add' element={<AdminRoute><EditChannel /></AdminRoute>} />
+      <Route path='/admin/packages' element={<AdminRoute><UnavailableAdminPage title='充值套餐' /></AdminRoute>} />
+      <Route path='/admin/payments' element={<AdminRoute><UnavailableAdminPage title='支付设置' /></AdminRoute>} />
+      <Route path='/admin/orders' element={<AdminRoute><UnavailableAdminPage title='充值订单' /></AdminRoute>} />
+      <Route path='/admin/refunds' element={<AdminRoute><UnavailableAdminPage title='退款审核' /></AdminRoute>} />
+      <Route path='/admin/reconciliation' element={<AdminRoute><UnavailableAdminPage title='支付对账' /></AdminRoute>} />
+      <Route path='/admin/audit' element={<AdminRoute><UnavailableAdminPage title='操作审计' /></AdminRoute>} />
+      <Route path='/admin/brand' element={<AdminRoute><UnavailableAdminPage title='品牌设置' detail='平台名称与主题已统一为 Miraphant，客服联系方式可在支付与客服模块接通后配置。' /></AdminRoute>} />
+      <Route path='/admin/setting' element={<AdminRoute><Setting /></AdminRoute>} />
+      <Route path='/admin/users/edit/:id' element={<AdminRoute><EditUser /></AdminRoute>} />
+      <Route path='/admin/users/add' element={<AdminRoute><AddUser /></AdminRoute>} />
       <Route
         path='/channel'
         element={
-          <PrivateRoute>
+          <AdminRoute>
             <Channel />
-          </PrivateRoute>
+          </AdminRoute>
         }
       />
       <Route
         path='/channel/edit/:id'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditChannel />
+            <AdminRoute><EditChannel /></AdminRoute>
           </Suspense>
         }
       />
@@ -116,23 +125,21 @@ function App() {
         path='/channel/add'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditChannel />
+            <AdminRoute><EditChannel /></AdminRoute>
           </Suspense>
         }
       />
       <Route
         path='/token'
         element={
-          <PrivateRoute>
-            <Token />
-          </PrivateRoute>
+          <LegacyRedirect to='/console/keys' />
         }
       />
       <Route
         path='/token/edit/:id'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditToken />
+            <LegacyRedirect to='/console/keys' />
           </Suspense>
         }
       />
@@ -140,23 +147,21 @@ function App() {
         path='/token/add'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditToken />
+            <LegacyRedirect to='/console/keys' />
           </Suspense>
         }
       />
       <Route
         path='/redemption'
         element={
-          <PrivateRoute>
-            <Redemption />
-          </PrivateRoute>
+          <AdminRoute><UnavailableAdminPage title='兑换码管理' detail='旧版兑换入口尚未迁移到积分账本，当前已关闭。' /></AdminRoute>
         }
       />
       <Route
         path='/redemption/edit/:id'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditRedemption />
+            <AdminRoute><UnavailableAdminPage title='兑换码管理' detail='旧版兑换入口尚未迁移到积分账本，当前已关闭。' /></AdminRoute>
           </Suspense>
         }
       />
@@ -164,23 +169,21 @@ function App() {
         path='/redemption/add'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditRedemption />
+            <AdminRoute><UnavailableAdminPage title='兑换码管理' detail='旧版兑换入口尚未迁移到积分账本，当前已关闭。' /></AdminRoute>
           </Suspense>
         }
       />
       <Route
         path='/user'
         element={
-          <PrivateRoute>
-            <User />
-          </PrivateRoute>
+          <AdminRoute><AdminUsersPage /></AdminRoute>
         }
       />
       <Route
         path='/user/edit/:id'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditUser />
+            <AdminRoute><EditUser /></AdminRoute>
           </Suspense>
         }
       />
@@ -188,7 +191,7 @@ function App() {
         path='/user/edit'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <EditUser />
+            <LegacyRedirect to='/console/profile' />
           </Suspense>
         }
       />
@@ -196,7 +199,7 @@ function App() {
         path='/user/add'
         element={
           <Suspense fallback={<Loading></Loading>}>
-            <AddUser />
+            <AdminRoute><AddUser /></AdminRoute>
           </Suspense>
         }
       />
@@ -248,32 +251,27 @@ function App() {
           </Suspense>
         }
       />
+      <Route path='/oauth/oidc' element={<Suspense fallback={<Loading />}><GitHubOAuth provider='oidc' /></Suspense>} />
       <Route
         path='/setting'
         element={
-          <PrivateRoute>
+          <AdminRoute>
             <Suspense fallback={<Loading></Loading>}>
               <Setting />
             </Suspense>
-          </PrivateRoute>
+          </AdminRoute>
         }
       />
       <Route
         path='/topup'
         element={
-        <PrivateRoute>
-          <Suspense fallback={<Loading></Loading>}>
-            <TopUp />
-          </Suspense>
-        </PrivateRoute>
+        <LegacyRedirect to='/console/wallet' />
         }
       />
       <Route
         path='/log'
         element={
-          <PrivateRoute>
-            <Log />
-          </PrivateRoute>
+          <CustomerRoute><UsagePage /></CustomerRoute>
         }
       />
       <Route
@@ -287,14 +285,28 @@ function App() {
       <Route
         path='/chat'
         element={
-          <Suspense fallback={<Loading></Loading>}>
-            <Chat />
-          </Suspense>
+          <HelpPage />
         }
       />
-      <Route path='*' element={
-          <NotFound />
-      } />
+      <Route path='/token/*' element={<LegacyRedirect to='/console/keys' />} />
+      <Route path='/topup/*' element={<LegacyRedirect to='/console/wallet' />} />
+      <Route path='/log/*' element={<CustomerRoute><UsagePage /></CustomerRoute>} />
+      <Route path='/detail/*' element={<CustomerRoute><UsagePage /></CustomerRoute>} />
+      <Route path='/user/edit/*' element={<LegacyRedirect to='/console/profile' />} />
+      <Route path='/user/*' element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+      <Route path='/setting/*' element={<AdminRoute><Setting /></AdminRoute>} />
+      <Route path='/redemption/*' element={<AdminRoute><UnavailableAdminPage title='兑换码管理' detail='旧版兑换入口尚未迁移到积分账本，当前已关闭。' /></AdminRoute>} />
+      <Route path='/panel' element={<LegacyRedirect to={(user) => user && user.role >= 10 ? '/admin' : '/console'} />} />
+      <Route path='/panel/dashboard' element={<LegacyRedirect to={(user) => user && user.role >= 10 ? '/admin' : '/console'} />} />
+      <Route path='/panel/profile' element={<LegacyRedirect to='/console/profile' />} />
+      <Route path='/panel/topup' element={<LegacyRedirect to='/console/wallet' />} />
+      <Route path='/panel/log' element={<LegacyRedirect to='/console/usage' />} />
+      <Route path='/panel/token' element={<LegacyRedirect to='/console/keys' />} />
+      <Route path='/panel/channel' element={<LegacyRedirect to='/admin/channels' />} />
+      <Route path='/panel/user' element={<LegacyRedirect to='/admin/users' />} />
+      <Route path='/panel/setting' element={<LegacyRedirect to='/admin/setting' />} />
+      <Route path='/panel/*' element={<LegacyRedirect to={(user) => user && user.role >= 10 ? '/admin' : '/console'} />} />
+      <Route path='*' element={<NotFoundPage />} />
     </Routes>
   );
 }

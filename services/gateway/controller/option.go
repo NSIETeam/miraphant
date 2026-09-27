@@ -44,7 +44,7 @@ func UpdateOption(c *gin.Context) {
 	}
 	switch option.Key {
 	case "Theme":
-		if !config.ValidThemes[option.Value] {
+		if option.Value != "default" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无效的主题",

@@ -5,7 +5,22 @@ gateway_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repo_dir="$(cd "$gateway_dir/../.." && pwd)"
 go_bin="${GO_BIN:-go}"
 build_dir="${MIRAPHANT_GATEWAY_BUILD_DIR:-$repo_dir/../miraphant-gateway-build}"
-version="miraphant-v0.6.10+3915ce9"
+git_bin="${GIT_BIN:-git}"
+
+if ! command -v "$git_bin" >/dev/null 2>&1; then
+  printf 'Git executable not found: %s\n' "$git_bin" >&2
+  exit 2
+fi
+source_revision="$("$git_bin" -C "$repo_dir" rev-parse HEAD)"
+source_short_revision="${source_revision:0:12}"
+source_dirty=false
+if [[ -n $("$git_bin" -C "$repo_dir" status --porcelain --untracked-files=all) ]]; then
+  source_dirty=true
+fi
+version="miraphant+${source_short_revision}"
+if [[ "$source_dirty" == true ]]; then
+  version="${version}.dirty"
+fi
 
 if ! command -v "$go_bin" >/dev/null 2>&1; then
   printf 'Go executable not found: %s\n' "$go_bin" >&2
@@ -56,6 +71,9 @@ printf '\n== Compile gateway ==\n'
 test -s "$build_dir/one-api"
 {
   printf 'baseline=%s\n' 'songquanpeng/one-api@v0.6.10 (3915ce9814b8261a1ab13ed93adec58b463cd75c)'
+  printf 'source_revision=%s\n' "$source_revision"
+  printf 'source_dirty=%s\n' "$source_dirty"
+  printf 'source_dirty_status_entries=%s\n' "$("$git_bin" -C "$repo_dir" status --porcelain --untracked-files=all | wc -l | tr -d ' ')"
   printf 'go=%s\n' "$go_version"
   printf 'goos=%s\n' "$go_os"
   printf 'goarch=%s\n' "$go_arch"

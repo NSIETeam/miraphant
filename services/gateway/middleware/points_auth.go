@@ -87,3 +87,25 @@ func PointsBillingAvailable() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// PointsModeCSRF preserves legacy token write behavior while requiring the
+// points session token and same-origin check whenever the points ledger is on.
+func PointsModeCSRF() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !config.PointsBillingEnabled {
+			c.Next()
+			return
+		}
+		PointsCSRF()(c)
+	}
+}
+
+func BlockLegacyTokenReadInPointsMode() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if config.PointsBillingEnabled {
+			c.AbortWithStatusJSON(http.StatusGone, gin.H{"error": "use the points token console; legacy key reads are disabled"})
+			return
+		}
+		c.Next()
+	}
+}

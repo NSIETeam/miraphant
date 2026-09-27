@@ -51,15 +51,22 @@ func TestPointsHTTPRealRoutesAndCurrentAuthorization(t *testing.T) {
 	if err := db.Create(&users).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Create(&[]dbmodel.Token{{Id: 77, UserId: 41, Key: "customer-token", Status: dbmodel.TokenStatusEnabled}, {Id: 78, UserId: 42, Key: "other-token", Status: dbmodel.TokenStatusEnabled}}).Error; err != nil {
+	if err := db.Create(&[]dbmodel.Token{{Id: 77, UserId: 41, Key: "customer-token", Status: dbmodel.TokenStatusEnabled, RemainQuota: 1234}, {Id: 78, UserId: 42, Key: "other-token", Status: dbmodel.TokenStatusEnabled}}).Error; err != nil {
 		t.Fatal(err)
 	}
 	r := gin.New()
 	r.Use(sessions.Sessions("session", cookie.NewStore([]byte(config.SessionSecret))))
 	r.GET("/test-session/:id", func(c *gin.Context) {
 		id, _ := strconv.Atoi(c.Param("id"))
+		var user dbmodel.User
+		if err := db.Select("id", "username", "role", "status").First(&user, "id = ?", id).Error; err != nil {
+			t.Fatal(err)
+		}
 		s := sessions.Default(c)
-		s.Set("id", id)
+		s.Set("id", user.Id)
+		s.Set("username", user.Username)
+		s.Set("role", user.Role)
+		s.Set("status", user.Status)
 		if err := s.Save(); err != nil {
 			t.Fatal(err)
 		}
@@ -139,6 +146,63 @@ func TestPointsHTTPRealRoutesAndCurrentAuthorization(t *testing.T) {
 	}
 	if got := request(http.MethodPut, "/api/points/tokens/77/budget", login(42), `{"limit_points":"1"}`, 42).Code; got != http.StatusNotFound {
 		t.Fatalf("other user budget status=%d", got)
+	}
+	tokensRes := request(http.MethodGet, "/api/points/tokens", customerCookie, "", 0)
+	if tokensRes.Code != http.StatusOK || strings.Contains(tokensRes.Body.String(), "customer-token") || !strings.Contains(tokensRes.Body.String(), `"has_budget":true`) {
+		t.Fatalf("safe points token list status=%d body=%s", tokensRes.Code, tokensRes.Body.String())
+	}
+	if got := request(http.MethodGet, "/api/token/", customerCookie, "", 0).Code; got != http.StatusGone {
+		t.Fatalf("legacy token read should be disabled in points mode, got %d", got)
+	}
+	selfRes := request(http.MethodGet, "/api/user/self", adminCookie, "", 0)
+	if selfRes.Code != http.StatusOK || strings.Contains(selfRes.Body.String(), "admin-access-token") || strings.Contains(selfRes.Body.String(), `"access_token"`) {
+		t.Fatalf("points self response leaked system credential: status=%d body=%s", selfRes.Code, selfRes.Body.String())
+	}
+	settingsPath := "/api/points/tokens/77/settings"
+	if got := request(http.MethodPut, settingsPath, customerCookie, `{"expired_time":-1,"status":2}`, 0).Code; got != http.StatusForbidden {
+		t.Fatalf("token settings without csrf status=%d", got)
+	}
+	if got := request(http.MethodPut, settingsPath, login(42), `{"expired_time":-1,"status":2}`, 42).Code; got != http.StatusNotFound {
+		t.Fatalf("other user token settings status=%d", got)
+	}
+	if got := request(http.MethodPut, settingsPath, customerCookie, `{"expired_time":-1,"status":99}`, 41).Code; got != http.StatusBadRequest {
+		t.Fatalf("invalid token status setting status=%d", got)
+	}
+	if got := request(http.MethodPut, settingsPath, customerCookie, `{"expired_time":1,"status":1}`, 41).Code; got != http.StatusBadRequest {
+		t.Fatalf("past enabled token expiry status=%d", got)
+	}
+	var unchanged dbmodel.Token
+	if err := db.Select("status", "expired_time", "remain_quota").First(&unchanged, 77).Error; err != nil {
+		t.Fatal(err)
+	}
+	if unchanged.Status != dbmodel.TokenStatusEnabled || unchanged.ExpiredTime != -1 || unchanged.RemainQuota != 1234 {
+		t.Fatalf("invalid settings changed token or legacy quota: %+v", unchanged)
+	}
+	if got := request(http.MethodPut, settingsPath, customerCookie, `{"expired_time":1,"status":2}`, 41).Code; got != http.StatusOK {
+		t.Fatalf("disable expired token settings status=%d", got)
+	}
+	if got := request(http.MethodPut, settingsPath, customerCookie, `{"expired_time":-1,"status":1}`, 41).Code; got != http.StatusOK {
+		t.Fatalf("owner token settings status=%d", got)
+	}
+	if err := db.Select("status", "expired_time", "remain_quota").First(&unchanged, 77).Error; err != nil {
+		t.Fatal(err)
+	}
+	if unchanged.Status != dbmodel.TokenStatusEnabled || unchanged.ExpiredTime != -1 || unchanged.RemainQuota != 1234 {
+		t.Fatalf("token settings modified legacy quota: %+v", unchanged)
+	}
+	if err := db.Create(&dbmodel.PointHold{UserID: 41, TokenID: 77, LogicalRequestKey: "pending-view-request", BudgetMicro: 900000, State: "pending", PriceVersion: "fixture-v1"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	var hold dbmodel.PointHold
+	if err := db.Where("logical_request_key = ?", "pending-view-request").First(&hold).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&dbmodel.PointHoldAttempt{HoldID: hold.ID, AttemptKey: "attempt-1", LocalRequestID: "local-trace-1", State: "unknown", UsageSource: "missing_usage"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	pendingRes := request(http.MethodGet, "/api/admin/points/pending", adminCookie, "", 0)
+	if pendingRes.Code != http.StatusOK || !strings.Contains(pendingRes.Body.String(), `"logical_request_key":"pending-view-request"`) || !strings.Contains(pendingRes.Body.String(), `"local_request_id":"local-trace-1"`) {
+		t.Fatalf("pending evidence response status=%d body=%s", pendingRes.Code, pendingRes.Body.String())
 	}
 	if err := db.Model(&dbmodel.User{}).Where("id = ?", 42).Update("role", dbmodel.RoleCommonUser).Error; err != nil {
 		t.Fatal(err)

@@ -40,7 +40,9 @@ func SetApiRouter(router *gin.Engine) {
 			pointsRoute.GET("/wallet", controller.PointsWallet)
 			pointsRoute.POST("/estimate", middleware.CriticalRateLimit(), controller.PointsEstimate)
 			pointsRoute.GET("/usage", controller.PointsUsage)
+			pointsRoute.GET("/tokens", controller.PointsTokens)
 			pointsRoute.PUT("/tokens/:id/budget", middleware.PointsCSRF(), controller.SetPointsTokenBudget)
+			pointsRoute.PUT("/tokens/:id/settings", middleware.PointsCSRF(), controller.SetPointsTokenSettings)
 		}
 		pointsAdmin := apiRouter.Group("/admin/points")
 		pointsAdmin.Use(middleware.PointsBillingAvailable(), middleware.PointsAdminAuth())
@@ -107,12 +109,12 @@ func SetApiRouter(router *gin.Engine) {
 		tokenRoute := apiRouter.Group("/token")
 		tokenRoute.Use(middleware.UserAuth())
 		{
-			tokenRoute.GET("/", controller.GetAllTokens)
-			tokenRoute.GET("/search", controller.SearchTokens)
-			tokenRoute.GET("/:id", controller.GetToken)
-			tokenRoute.POST("/", controller.AddToken)
-			tokenRoute.PUT("/", controller.UpdateToken)
-			tokenRoute.DELETE("/:id", controller.DeleteToken)
+			tokenRoute.GET("/", middleware.BlockLegacyTokenReadInPointsMode(), controller.GetAllTokens)
+			tokenRoute.GET("/search", middleware.BlockLegacyTokenReadInPointsMode(), controller.SearchTokens)
+			tokenRoute.GET("/:id", middleware.BlockLegacyTokenReadInPointsMode(), controller.GetToken)
+			tokenRoute.POST("/", middleware.PointsModeCSRF(), controller.AddToken)
+			tokenRoute.PUT("/", middleware.PointsModeCSRF(), controller.UpdateToken)
+			tokenRoute.DELETE("/:id", middleware.PointsModeCSRF(), controller.DeleteToken)
 		}
 		redemptionRoute := apiRouter.Group("/redemption")
 		redemptionRoute.Use(middleware.AdminAuth())

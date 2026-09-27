@@ -1,223 +1,42 @@
 import React, { useContext, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/User';
+import { API, showError } from '../helpers';
 
-import { Button, Container, Dropdown, Icon, Menu, Segment } from 'semantic-ui-react';
-import { API, getLogo, getSystemName, isAdmin, isMobile, showSuccess } from '../helpers';
-import '../index.css';
-
-// Header Buttons
-let headerButtons = [
-  {
-    name: '首页',
-    to: '/',
-    icon: 'home'
-  },
-  {
-    name: '渠道',
-    to: '/channel',
-    icon: 'sitemap',
-    admin: true
-  },
-  {
-    name: '令牌',
-    to: '/token',
-    icon: 'key'
-  },
-  {
-    name: '兑换',
-    to: '/redemption',
-    icon: 'dollar sign',
-    admin: true
-  },
-  {
-    name: '充值',
-    to: '/topup',
-    icon: 'cart'
-  },
-  {
-    name: '用户',
-    to: '/user',
-    icon: 'user',
-    admin: true
-  },
-  {
-    name: '日志',
-    to: '/log',
-    icon: 'book'
-  },
-  {
-    name: '设置',
-    to: '/setting',
-    icon: 'setting'
-  },
-  {
-    name: '关于',
-    to: '/about',
-    icon: 'info circle'
-  }
+const publicLinks = [
+  { label: '首页', to: '/' },
+  { label: '模型价格', to: '/pricing' },
+  { label: '接入帮助', to: '/help' },
 ];
-
-if (localStorage.getItem('chat_link')) {
-  headerButtons.splice(1, 0, {
-    name: '聊天',
-    to: '/chat',
-    icon: 'comments'
-  });
-}
 
 const Header = () => {
   const [userState, userDispatch] = useContext(UserContext);
-  let navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const user = userState.user || (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
+  const links = user
+    ? [...publicLinks, { label: '控制台', to: '/console' }, { label: '积分与充值', to: '/console/wallet' }, { label: '访问密钥', to: '/console/keys' }, { label: '个人资料', to: '/console/profile' }, ...(user.role >= 10 ? [{ label: '管理', to: '/admin' }] : [])]
+    : publicLinks;
 
-  const [showSidebar, setShowSidebar] = useState(false);
-  const systemName = getSystemName();
-  const logo = getLogo();
-
-  async function logout() {
-    setShowSidebar(false);
-    await API.get('/api/user/logout');
-    showSuccess('注销成功!');
+  const logout = async () => {
+    try { await API.get('/api/user/logout'); } catch (_) { showError('注销请求失败，请稍后重试'); }
     userDispatch({ type: 'logout' });
     localStorage.removeItem('user');
-    navigate('/login');
-  }
-
-  const toggleSidebar = () => {
-    setShowSidebar(!showSidebar);
+    setMenuOpen(false);
+    navigate('/');
   };
 
-  const renderButtons = (isMobile) => {
-    return headerButtons.map((button) => {
-      if (button.admin && !isAdmin()) return <></>;
-      if (isMobile) {
-        return (
-          <Menu.Item
-            onClick={() => {
-              navigate(button.to);
-              setShowSidebar(false);
-            }}
-          >
-            {button.name}
-          </Menu.Item>
-        );
-      }
-      return (
-        <Menu.Item key={button.name} as={Link} to={button.to}>
-          <Icon name={button.icon} />
-          {button.name}
-        </Menu.Item>
-      );
-    });
-  };
-
-  if (isMobile()) {
-    return (
-      <>
-        <Menu
-          borderless
-          size='large'
-          style={
-            showSidebar
-              ? {
-                borderBottom: 'none',
-                marginBottom: '0',
-                borderTop: 'none',
-                height: '51px'
-              }
-              : { borderTop: 'none', height: '52px' }
-          }
-        >
-          <Container>
-            <Menu.Item as={Link} to='/'>
-              <img
-                src={logo}
-                alt='logo'
-                style={{ marginRight: '0.75em' }}
-              />
-              <div style={{ fontSize: '20px' }}>
-                <b>{systemName}</b>
-              </div>
-            </Menu.Item>
-            <Menu.Menu position='right'>
-              <Menu.Item onClick={toggleSidebar}>
-                <Icon name={showSidebar ? 'close' : 'sidebar'} />
-              </Menu.Item>
-            </Menu.Menu>
-          </Container>
-        </Menu>
-        {showSidebar ? (
-          <Segment style={{ marginTop: 0, borderTop: '0' }}>
-            <Menu secondary vertical style={{ width: '100%', margin: 0 }}>
-              {renderButtons(true)}
-              <Menu.Item>
-                {userState.user ? (
-                  <Button onClick={logout}>注销</Button>
-                ) : (
-                  <>
-                    <Button
-                      onClick={() => {
-                        setShowSidebar(false);
-                        navigate('/login');
-                      }}
-                    >
-                      登录
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setShowSidebar(false);
-                        navigate('/register');
-                      }}
-                    >
-                      注册
-                    </Button>
-                  </>
-                )}
-              </Menu.Item>
-            </Menu>
-          </Segment>
-        ) : (
-          <></>
-        )}
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Menu borderless style={{ borderTop: 'none' }}>
-        <Container>
-          <Menu.Item as={Link} to='/' className={'hide-on-mobile'}>
-            <img src={logo} alt='logo' style={{ marginRight: '0.75em' }} />
-            <div style={{ fontSize: '20px' }}>
-              <b>{systemName}</b>
-            </div>
-          </Menu.Item>
-          {renderButtons(false)}
-          <Menu.Menu position='right'>
-            {userState.user ? (
-              <Dropdown
-                text={userState.user.username}
-                pointing
-                className='link item'
-              >
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={logout}>注销</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            ) : (
-              <Menu.Item
-                name='登录'
-                as={Link}
-                to='/login'
-                className='btn btn-link'
-              />
-            )}
-          </Menu.Menu>
-        </Container>
-      </Menu>
-    </>
-  );
+  return <header className='platform-header'>
+    <div className='platform-header-inner'>
+      <Link className='brand-lockup' to='/' aria-label='Miraphant 首页'><img src='/miraphant.svg' alt='' /><span>Miraphant<small>模型平台</small></span></Link>
+      <button className='mobile-menu-toggle' aria-label={menuOpen ? '关闭导航' : '打开导航'} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? '×' : '☰'}</button>
+      <nav className={`platform-nav ${menuOpen ? 'is-open' : ''}`}>
+        {links.map((link) => <Link key={link.to} className={location.pathname === link.to || (link.to !== '/' && location.pathname.startsWith(`${link.to}/`)) ? 'active' : ''} to={link.to} onClick={() => setMenuOpen(false)}>{link.label}</Link>)}
+        {user ? <div className='platform-account'><Link className='account-profile-link' to='/console/profile' onClick={() => setMenuOpen(false)} aria-label='个人资料'><span className='account-dot'>{(user.display_name || user.username || 'M').slice(0, 1).toUpperCase()}</span><span className='account-name'>{user.display_name || user.username}</span></Link><button onClick={logout}>退出</button></div> : <div className='platform-account'><Link className='header-login' to='/login' onClick={() => setMenuOpen(false)}>登录</Link><Link className='header-register' to='/register' onClick={() => setMenuOpen(false)}>注册账户</Link></div>}
+      </nav>
+    </div>
+  </header>;
 };
 
 export default Header;

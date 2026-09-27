@@ -353,6 +353,11 @@ func GetSelf(c *gin.Context) {
 		})
 		return
 	}
+	if config.PointsBillingEnabled {
+		// The system access token is a management credential and is never needed
+		// by the points console's profile or role refresh flow.
+		user.AccessToken = ""
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

@@ -3,8 +3,9 @@ import { Dimmer, Loader, Segment } from 'semantic-ui-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API, showError, showSuccess } from '../helpers';
 import { UserContext } from '../context/User';
+import { safeLocalPath } from './utils';
 
-const GitHubOAuth = () => {
+const GitHubOAuth = ({ provider = 'github' }) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [userState, userDispatch] = useContext(UserContext);
@@ -14,23 +15,26 @@ const GitHubOAuth = () => {
   let navigate = useNavigate();
 
   const sendCode = async (code, state, count) => {
-    const res = await API.get(`/api/oauth/github?code=${code}&state=${state}`);
+    const res = await API.get(`/api/oauth/${provider}?code=${encodeURIComponent(code || '')}&state=${encodeURIComponent(state || '')}`);
     const { success, message, data } = res.data;
     if (success) {
       if (message === 'bind') {
         showSuccess('绑定成功！');
-        navigate('/setting');
+        navigate('/console/profile/bindings');
       } else {
         userDispatch({ type: 'login', payload: data });
         localStorage.setItem('user', JSON.stringify(data));
         showSuccess('登录成功！');
-        navigate('/');
+        const savedPath = localStorage.getItem('oauth_return_path');
+        localStorage.removeItem('oauth_return_path');
+        const next = safeLocalPath(savedPath);
+        navigate(next, { replace: true });
       }
     } else {
       showError(message);
       if (count === 0) {
         setPrompt(`操作失败，重定向至登录界面中...`);
-        navigate('/setting'); // in case this is failed to bind GitHub
+        navigate('/console/profile/bindings');
         return;
       }
       count++;

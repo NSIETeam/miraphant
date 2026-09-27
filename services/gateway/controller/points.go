@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -84,6 +85,15 @@ func PointsUsage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"usage": rows})
 }
 
+func PointsTokens(c *gin.Context) {
+	tokens, err := dbmodel.ListPointTokens(c.GetInt(ctxkey.Id))
+	if err != nil {
+		pointsError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"tokens": tokens})
+}
+
 func SetPointsTokenBudget(c *gin.Context) {
 	tokenID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -103,6 +113,31 @@ func SetPointsTokenBudget(c *gin.Context) {
 		return
 	}
 	if err = dbmodel.SetPointTokenBudget(c.GetInt(ctxkey.Id), tokenID, limit); err != nil {
+		pointsError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func SetPointsTokenSettings(c *gin.Context) {
+	tokenID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token id"})
+		return
+	}
+	var req struct {
+		ExpiredAt int64 `json:"expired_time"`
+		Status    int   `json:"status"`
+	}
+	if err = c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid token settings"})
+		return
+	}
+	if err = dbmodel.SetPointTokenSettings(c.GetInt(ctxkey.Id), tokenID, req.ExpiredAt, req.Status); err != nil {
+		if errors.Is(err, dbmodel.ErrPointsInvalidTokenSettings) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "enabled tokens need a future expiry or no expiry; status must be enabled or disabled"})
+			return
+		}
 		pointsError(c, err)
 		return
 	}
@@ -164,7 +199,7 @@ func AdminGrantPoints(c *gin.Context) {
 
 func AdminPointPending(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.Query("limit"))
-	holds, err := dbmodel.ListPointRecoveryHolds(limit)
+	holds, err := dbmodel.ListPointRecoveryHoldsWithAttempts(limit)
 	if err != nil {
 		pointsError(c, err)
 		return

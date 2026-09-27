@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Button, Divider, Form, Grid, Header, Image, Message, Modal, Segment } from 'semantic-ui-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserContext } from '../context/User';
 import { API, getLogo, showError, showSuccess, showWarning } from '../helpers';
-import { onGitHubOAuthClicked, onLarkOAuthClicked } from './utils';
+import { onGitHubOAuthClicked, onLarkOAuthClicked, onOidcOAuthClicked, safeLocalPath } from './utils';
 import larkIcon from '../images/lark.svg';
 
 const LoginForm = () => {
@@ -17,6 +17,7 @@ const LoginForm = () => {
   const { username, password } = inputs;
   const [userState, userDispatch] = useContext(UserContext);
   let navigate = useNavigate();
+  const location = useLocation();
   const [status, setStatus] = useState({});
   const logo = getLogo();
 
@@ -32,6 +33,9 @@ const LoginForm = () => {
   }, []);
 
   const [showWeChatLoginModal, setShowWeChatLoginModal] = useState(false);
+  const postLoginPath = () => {
+    return safeLocalPath(location.state?.from, '/console');
+  };
 
   const onWeChatLoginClicked = () => {
     setShowWeChatLoginModal(true);
@@ -45,7 +49,7 @@ const LoginForm = () => {
     if (success) {
       userDispatch({ type: 'login', payload: data });
       localStorage.setItem('user', JSON.stringify(data));
-      navigate('/');
+      navigate(postLoginPath(), { replace: true });
       showSuccess('登录成功！');
       setShowWeChatLoginModal(false);
     } else {
@@ -70,11 +74,11 @@ const LoginForm = () => {
         userDispatch({ type: 'login', payload: data });
         localStorage.setItem('user', JSON.stringify(data));
         if (username === 'root' && password === '123456') {
-          navigate('/user/edit');
+          navigate('/console/profile');
           showSuccess('登录成功！');
           showWarning('请立刻修改默认密码！');
         } else {
-          navigate('/token');
+          navigate(postLoginPath(), { replace: true });
           showSuccess('登录成功！');
         }
       } else {
@@ -125,7 +129,7 @@ const LoginForm = () => {
             点击注册
           </Link>
         </Message>
-        {status.github_oauth || status.wechat_login || status.lark_client_id ? (
+        {status.github_oauth || status.wechat_login || status.lark_client_id || status.oidc ? (
           <>
             <Divider horizontal>Or</Divider>
             <div style={{ display: "flex", justifyContent: "center" }}>
@@ -134,7 +138,7 @@ const LoginForm = () => {
                   circular
                   color='black'
                   icon='github'
-                  onClick={() => onGitHubOAuthClicked(status.github_client_id)}
+                  onClick={() => onGitHubOAuthClicked(status.github_client_id, postLoginPath())}
                 />
               ) : (
                 <></>
@@ -158,18 +162,19 @@ const LoginForm = () => {
                   display: "flex",
                   cursor: "pointer"
                 }}
-                  onClick={() => onLarkOAuthClicked(status.lark_client_id)}
+                  onClick={() => onLarkOAuthClicked(status.lark_client_id, postLoginPath())}
                 >
                   <Image
                     src={larkIcon}
                     avatar
                     style={{ width: "16px", height: "16px", cursor: "pointer", margin: "auto" }}
-                    onClick={() => onLarkOAuthClicked(status.lark_client_id)}
+                    onClick={() => onLarkOAuthClicked(status.lark_client_id, postLoginPath())}
                   />
                 </div>
               ) : (
                 <></>
               )}
+              {status.oidc ? <Button basic onClick={() => onOidcOAuthClicked(status, postLoginPath())}>OIDC</Button> : null}
             </div>
           </>
         ) : (

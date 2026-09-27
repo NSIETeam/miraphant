@@ -33,6 +33,7 @@ var ErrPointsInsufficient = errors.New("insufficient available points")
 var ErrPointsPending = errors.New("point hold requires usage review")
 var ErrPointsLegacyQuotaDisabled = errors.New("legacy quota changes are disabled while points billing is enabled")
 var ErrPointsUserDeletionDisabled = errors.New("user deletion is disabled while points billing is enabled; disable the account instead")
+var ErrPointsInvalidTokenSettings = errors.New("invalid points token settings")
 
 type PointAccount struct {
 	UserID         int   `gorm:"primaryKey"`
@@ -351,6 +352,106 @@ type PointUsageView struct {
 	Attempts          []PointHoldAttempt `json:"attempts"`
 }
 
+// PointTokenView contains only session-safe token metadata. The API key itself
+// must never be returned by the points console after its one-time creation.
+type PointTokenView struct {
+	ID          int     `json:"id"`
+	Name        string  `json:"name"`
+	Status      int     `json:"status"`
+	ExpiredTime int64   `json:"expired_time"`
+	CreatedTime int64   `json:"created_time"`
+	Models      *string `json:"models"`
+	HasBudget   bool    `json:"has_budget"`
+	Unlimited   bool    `json:"unlimited"`
+	LimitMicro  int64   `json:"limit_micro"`
+	HeldMicro   int64   `json:"held_micro"`
+	SpentMicro  int64   `json:"spent_micro"`
+}
+
+func ListPointTokens(userID int) ([]PointTokenView, error) {
+	if userID <= 0 {
+		return nil, errors.New("valid user is required")
+	}
+	var tokens []Token
+	if err := DB.Select("id", "user_id", "name", "status", "expired_time", "created_time", "models").Where("user_id = ?", userID).Order("id DESC").Limit(100).Find(&tokens).Error; err != nil {
+		return nil, err
+	}
+	if len(tokens) == 0 {
+		return []PointTokenView{}, nil
+	}
+	ids := make([]int, 0, len(tokens))
+	for _, token := range tokens {
+		ids = append(ids, token.Id)
+	}
+	var budgets []PointTokenBudget
+	if err := DB.Where("user_id = ? AND token_id IN ?", userID, ids).Find(&budgets).Error; err != nil {
+		return nil, err
+	}
+	byID := make(map[int]PointTokenBudget, len(budgets))
+	for _, budget := range budgets {
+		byID[budget.TokenID] = budget
+	}
+	result := make([]PointTokenView, 0, len(tokens))
+	for _, token := range tokens {
+		budget, ok := byID[token.Id]
+		view := PointTokenView{ID: token.Id, Name: token.Name, Status: token.Status, ExpiredTime: token.ExpiredTime, CreatedTime: token.CreatedTime, Models: token.Models, HasBudget: ok}
+		if ok {
+			view.Unlimited, view.LimitMicro, view.HeldMicro, view.SpentMicro = budget.Unlimited, budget.LimitMicro, budget.HeldMicro, budget.SpentMicro
+		}
+		result = append(result, view)
+	}
+	return result, nil
+}
+
+type PointAttemptEvidence struct {
+	AttemptKey         string    `json:"attempt_key"`
+	LocalRequestID     string    `json:"local_request_id"`
+	State              string    `json:"state"`
+	UsageMicro         int64     `json:"usage_micro"`
+	UsageSource        string    `json:"usage_source"`
+	UsageAuthoritative bool      `json:"usage_authoritative"`
+	PromptTokens       int64     `json:"prompt_tokens"`
+	CachedPromptTokens int64     `json:"cached_prompt_tokens"`
+	CompletionTokens   int64     `json:"completion_tokens"`
+	ReasoningTokens    int64     `json:"reasoning_tokens"`
+	ProviderRequestID  string    `json:"provider_request_id"`
+	ProviderResponseID string    `json:"provider_response_id"`
+	CreatedAt          time.Time `json:"created_at"`
+}
+
+type PointRecoveryHoldView struct {
+	ID                uint                   `json:"id"`
+	LogicalRequestKey string                 `json:"logical_request_key"`
+	UserID            int                    `json:"user_id"`
+	TokenID           int                    `json:"token_id"`
+	BudgetMicro       int64                  `json:"budget_micro"`
+	PriceVersion      string                 `json:"price_version"`
+	State             string                 `json:"state"`
+	UsageMicro        int64                  `json:"usage_micro"`
+	CreatedAt         time.Time              `json:"created_at"`
+	Attempts          []PointAttemptEvidence `json:"attempts"`
+}
+
+func ListPointRecoveryHoldsWithAttempts(limit int) ([]PointRecoveryHoldView, error) {
+	holds, err := ListPointRecoveryHolds(limit)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]PointRecoveryHoldView, 0, len(holds))
+	for _, hold := range holds {
+		var attempts []PointHoldAttempt
+		if err := DB.Where("hold_id = ?", hold.ID).Order("id ASC").Find(&attempts).Error; err != nil {
+			return nil, err
+		}
+		view := PointRecoveryHoldView{ID: hold.ID, LogicalRequestKey: hold.LogicalRequestKey, UserID: hold.UserID, TokenID: hold.TokenID, BudgetMicro: hold.BudgetMicro, PriceVersion: hold.PriceVersion, State: hold.State, UsageMicro: hold.UsageMicro, CreatedAt: hold.CreatedAt, Attempts: make([]PointAttemptEvidence, 0, len(attempts))}
+		for _, attempt := range attempts {
+			view.Attempts = append(view.Attempts, PointAttemptEvidence{AttemptKey: attempt.AttemptKey, LocalRequestID: attempt.LocalRequestID, State: attempt.State, UsageMicro: attempt.UsageMicro, UsageSource: attempt.UsageSource, UsageAuthoritative: attempt.UsageAuthoritative, PromptTokens: attempt.PromptTokens, CachedPromptTokens: attempt.CachedPromptTokens, CompletionTokens: attempt.CompletionTokens, ReasoningTokens: attempt.ReasoningTokens, ProviderRequestID: attempt.ProviderRequestID, ProviderResponseID: attempt.ProviderResponseID, CreatedAt: attempt.CreatedAt})
+		}
+		result = append(result, view)
+	}
+	return result, nil
+}
+
 func ListPointUsage(userID int, limit int) ([]PointUsageView, error) {
 	if limit < 1 || limit > 100 {
 		limit = 50
@@ -407,6 +508,30 @@ func SetPointTokenBudget(userID, tokenID int, limitMicro int64) error {
 		}
 		return nil
 	})
+}
+
+func SetPointTokenSettings(userID, tokenID int, expiredAt int64, status int) error {
+	if userID <= 0 || tokenID <= 0 || (status != TokenStatusEnabled && status != TokenStatusDisabled) {
+		return ErrPointsInvalidTokenSettings
+	}
+	if status == TokenStatusEnabled && expiredAt != -1 && expiredAt <= time.Now().Unix() {
+		return ErrPointsInvalidTokenSettings
+	}
+	result := DB.Model(&Token{}).Where("id = ? AND user_id = ?", tokenID, userID).Updates(map[string]interface{}{"expired_time": expiredAt, "status": status})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		var current Token
+		if err := DB.Select("status", "expired_time").First(&current, "id = ? AND user_id = ?", tokenID, userID).Error; err != nil {
+			return err
+		}
+		if current.Status == status && current.ExpiredTime == expiredAt {
+			return nil
+		}
+		return ErrPointsConflict
+	}
+	return nil
 }
 
 func AdjustPoints(actorID, userID int, amountMicro int64, businessKey, reason string) error {

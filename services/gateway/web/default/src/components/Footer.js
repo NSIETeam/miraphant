@@ -1,61 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
-import { Container, Segment } from 'semantic-ui-react';
-import { getFooterHTML, getSystemName } from '../helpers';
-
-const Footer = () => {
-  const systemName = getSystemName();
-  const [footer, setFooter] = useState(getFooterHTML());
-  let remainCheckTimes = 5;
-
-  const loadFooter = () => {
-    let footer_html = localStorage.getItem('footer_html');
-    if (footer_html) {
-      setFooter(footer_html);
-    }
-  };
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (remainCheckTimes <= 0) {
-        clearInterval(timer);
-        return;
-      }
-      remainCheckTimes--;
-      loadFooter();
-    }, 200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <Segment vertical>
-      <Container textAlign='center'>
-        {footer ? (
-          <div
-            className='custom-footer'
-            dangerouslySetInnerHTML={{ __html: footer }}
-          ></div>
-        ) : (
-          <div className='custom-footer'>
-            <a
-              href='https://github.com/songquanpeng/one-api'
-              target='_blank'
-            >
-              {systemName} {process.env.REACT_APP_VERSION}{' '}
-            </a>
-            由{' '}
-            <a href='https://github.com/songquanpeng' target='_blank'>
-              JustSong
-            </a>{' '}
-            构建，源代码遵循{' '}
-            <a href='https://opensource.org/licenses/mit-license.php'>
-              MIT 协议
-            </a>
-          </div>
-        )}
-      </Container>
-    </Segment>
-  );
-};
+const Footer = () => <footer className='platform-footer'>
+  <div className='platform-footer-inner'>
+    <div className='footer-brand'><img src='/miraphant.svg' alt='' /><span>Miraphant · 统一模型服务与积分账户</span></div>
+    <div className='footer-links'><Link to='/pricing'>价格</Link><Link to='/help'>接入帮助</Link><Link to='/about'>关于</Link></div>
+    <div className='footer-license'>基于 <a href='https://github.com/songquanpeng/one-api' target='_blank' rel='noreferrer'>One API</a> 构建 · <a href='https://opensource.org/license/mit' target='_blank' rel='noreferrer'>MIT License</a></div>
+  </div>
+</footer>;
 
 export default Footer;

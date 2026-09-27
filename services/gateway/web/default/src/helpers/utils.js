@@ -23,15 +23,11 @@ export function isRoot() {
 }
 
 export function getSystemName() {
-  let system_name = localStorage.getItem('system_name');
-  if (!system_name) return 'One API';
-  return system_name;
+	return 'Miraphant';
 }
 
 export function getLogo() {
-  let logo = localStorage.getItem('logo');
-  if (!logo) return '/logo.png';
-  return logo;
+	return '/miraphant.svg';
 }
 
 export function getFooterHTML() {
@@ -77,7 +73,7 @@ export function showError(error) {
   console.error(error);
   if (error.message) {
     if (error.name === 'AxiosError') {
-      switch (error.response.status) {
+      switch (error.response?.status) {
         case 401:
           // toast.error('错误：未登录或登录已过期，请重新登录！', showErrorOptions);
           window.location.href = '/login?expired=true';

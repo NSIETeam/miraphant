@@ -7,7 +7,6 @@ import (
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/controller"
 	"github.com/songquanpeng/one-api/middleware"
 	"net/http"
@@ -15,11 +14,12 @@ import (
 )
 
 func SetWebRouter(router *gin.Engine, buildFS embed.FS) {
-	indexPageData, _ := buildFS.ReadFile(fmt.Sprintf("web/build/%s/index.html", config.Theme))
+	const theme = "default"
+	indexPageData, _ := buildFS.ReadFile(fmt.Sprintf("web/build/%s/index.html", theme))
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(middleware.GlobalWebRateLimit())
 	router.Use(middleware.Cache())
-	router.Use(static.Serve("/", common.EmbedFolder(buildFS, fmt.Sprintf("web/build/%s", config.Theme))))
+	router.Use(static.Serve("/", common.EmbedFolder(buildFS, fmt.Sprintf("web/build/%s", theme))))
 	router.NoRoute(func(c *gin.Context) {
 		if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") {
 			controller.RelayNotFound(c)

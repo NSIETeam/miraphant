@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
 	billingratio "github.com/songquanpeng/one-api/relay/billing/ratio"
@@ -101,6 +102,12 @@ func SyncOptions(frequency int) {
 }
 
 func UpdateOption(key string, value string) error {
+	if key == "SystemName" || key == "Logo" || key == "Footer" {
+		return errors.New("Miraphant brand settings are fixed by the application")
+	}
+	if key == "Theme" && value != "default" {
+		return errors.New("only the Miraphant theme is available")
+	}
 	// Save to database first
 	option := Option{
 		Key: key,
@@ -119,6 +126,16 @@ func UpdateOption(key string, value string) error {
 func updateOptionMap(key string, value string) (err error) {
 	config.OptionMapRWMutex.Lock()
 	defer config.OptionMapRWMutex.Unlock()
+	switch key {
+	case "SystemName":
+		value = "Miraphant"
+	case "Logo":
+		value = "/miraphant.svg"
+	case "Footer":
+		value = ""
+	case "Theme":
+		value = "default"
+	}
 	config.OptionMap[key] = value
 	if strings.HasSuffix(key, "Enabled") {
 		boolValue := value == "true"
@@ -191,12 +208,12 @@ func updateOptionMap(key string, value string) (err error) {
 		config.OidcTokenEndpoint = value
 	case "OidcUserinfoEndpoint":
 		config.OidcUserinfoEndpoint = value
-	case "Footer":
-		config.Footer = value
 	case "SystemName":
-		config.SystemName = value
+		config.SystemName = "Miraphant"
 	case "Logo":
-		config.Logo = value
+		config.Logo = "/miraphant.svg"
+	case "Footer":
+		config.Footer = ""
 	case "WeChatServerAddress":
 		config.WeChatServerAddress = value
 	case "WeChatServerToken":
@@ -238,7 +255,7 @@ func updateOptionMap(key string, value string) (err error) {
 	case "QuotaPerUnit":
 		config.QuotaPerUnit, _ = strconv.ParseFloat(value, 64)
 	case "Theme":
-		config.Theme = value
+		config.Theme = "default"
 	}
 	return err
 }
