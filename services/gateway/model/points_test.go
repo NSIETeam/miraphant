@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -18,7 +19,12 @@ import (
 
 func openPointsTestDB(t *testing.T, path string) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(path+"?_busy_timeout=10000&_journal_mode=WAL"), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
+	dsn, err := sqliteDSN(path, 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dsn += "&_journal_mode=WAL"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,10 +36,120 @@ func openPointsTestDB(t *testing.T, path string) *gorm.DB {
 	if err = db.AutoMigrate(&Token{}); err != nil {
 		t.Fatal(err)
 	}
-	if err = db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}); err != nil {
+	if err = db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}); err != nil {
 		t.Fatal(err)
 	}
 	return db
+}
+
+func TestSQLiteDSNForcesSingleImmediateLockAndBusyTimeout(t *testing.T) {
+	dsn, err := sqliteDSN("file:points.db?cache=shared&_txlock=deferred&_busy_timeout=999&_txlock=exclusive", 4321)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, query, ok := strings.Cut(dsn, "?")
+	if !ok || base != "file:points.db" {
+		t.Fatalf("unexpected DSN base: %q", dsn)
+	}
+	values, err := url.ParseQuery(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := values["_txlock"]; len(got) != 1 || got[0] != "immediate" {
+		t.Fatalf("txlock must be forced exactly once: %#v", got)
+	}
+	if got := values["_busy_timeout"]; len(got) != 1 || got[0] != "4321" {
+		t.Fatalf("busy timeout must be forced exactly once: %#v", got)
+	}
+	if got := values.Get("cache"); got != "shared" {
+		t.Fatalf("unrelated query setting was lost: %q", got)
+	}
+	if _, err := sqliteDSN("file:points.db?cache=%", 4321); err == nil {
+		t.Fatal("malformed SQLite DSN query was silently discarded")
+	}
+}
+
+func TestSQLiteImmediateTransactionSerializesIndependentHandles(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "immediate.db")
+	open := func(timeout int) *gorm.DB {
+		dsn, err := sqliteDSN(path, timeout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		sqlDB, err := db.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sqlDB.SetMaxOpenConns(2)
+		return db
+	}
+	dbA, dbB := open(1000), open(1)
+	defer func() { sqlDB, _ := dbA.DB(); _ = sqlDB.Close() }()
+	defer func() { sqlDB, _ := dbB.DB(); _ = sqlDB.Close() }()
+	if err := dbA.AutoMigrate(&PointsSchemaMigration{}); err != nil {
+		t.Fatal(err)
+	}
+	enteredA := make(chan struct{})
+	releaseA := make(chan struct{})
+	resultA := make(chan error, 1)
+	var releaseOnce sync.Once
+	aDone := false
+	release := func() { releaseOnce.Do(func() { close(releaseA) }) }
+	defer func() {
+		release()
+		if !aDone {
+			select {
+			case <-resultA:
+			case <-time.After(time.Second):
+				t.Error("connection A transaction did not exit after release")
+			}
+		}
+	}()
+	go func() {
+		resultA <- dbA.Transaction(func(tx *gorm.DB) error {
+			close(enteredA) // BEGIN IMMEDIATE already reserved the writer slot.
+			<-releaseA
+			return nil
+		})
+	}()
+	select {
+	case <-enteredA:
+	case <-time.After(time.Second):
+		release()
+		t.Fatal("connection A transaction did not enter")
+	}
+	enteredB := make(chan struct{}, 1)
+	err := dbB.Transaction(func(tx *gorm.DB) error {
+		enteredB <- struct{}{}
+		return nil
+	})
+	if !isSQLiteBusy(err) {
+		t.Fatal("connection B entered while A held the immediate transaction")
+	}
+	select {
+	case <-enteredB:
+		t.Fatal("connection B closure ran before A released the writer reservation")
+	default:
+	}
+	release()
+	if err := <-resultA; err != nil {
+		t.Fatal(err)
+	}
+	aDone = true
+	enteredAfterRelease := false
+	if err := dbB.Transaction(func(tx *gorm.DB) error {
+		enteredAfterRelease = true
+		return nil
+	}); err != nil {
+		t.Fatalf("connection B could not enter after A released: %v", err)
+	}
+	if !enteredAfterRelease {
+		t.Fatal("connection B closure did not run after A released")
+	}
 }
 
 func seedPointUser(t *testing.T, db *gorm.DB, balance, budget int64, unlimited bool) {
@@ -64,6 +180,9 @@ func withPointsFixture(t *testing.T, balance, budget int64, unlimited bool) (*go
 	path := filepath.Join(t.TempDir(), "points.db")
 	db := openPointsTestDB(t, path)
 	DB, common.UsingSQLite, config.PointsBillingEnabled = db, true, true
+	if err := db.Create(&PointsSchemaMigration{Version: pointsSchemaVersion, AppliedAt: time.Now().UTC()}).Error; err != nil {
+		t.Fatal(err)
+	}
 	seedPointUser(t, db, balance, budget, unlimited)
 	return db, func() {
 		sqlDB, _ := db.DB()

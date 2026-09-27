@@ -55,6 +55,8 @@ type PointLot struct {
 	HeldMicro      int64  `gorm:"not null;default:0"`
 	ConsumedMicro  int64  `gorm:"not null;default:0"`
 	RefundedMicro  int64  `gorm:"not null;default:0"`
+	RevokedMicro   int64  `gorm:"not null;default:0"`
+	ExpiredMicro   int64  `gorm:"not null;default:0"`
 	ExpiresAt      *int64 `gorm:"index:idx_point_lot_user_expiry"` // UTC Unix seconds
 	CreatedAt      time.Time
 }
@@ -174,6 +176,134 @@ func (*PointHoldDecision) BeforeUpdate(*gorm.DB) error {
 }
 func (*PointHoldDecision) BeforeDelete(*gorm.DB) error {
 	return errors.New("point hold decisions are append-only")
+}
+
+// PointRefund is an immutable request and lot reservation. Only its workflow
+// state and active-order claim may transition; money and point snapshots never
+// change after the reservation transaction commits.
+type PointRefund struct {
+	ID                    uint    `gorm:"primaryKey"`
+	RefundKey             string  `gorm:"size:180;not null;uniqueIndex"`
+	UserID                int     `gorm:"not null;index;uniqueIndex:idx_point_refund_idempotency"`
+	OrderKey              string  `gorm:"size:160;not null;index;uniqueIndex:idx_point_refund_idempotency"`
+	IdempotencyKey        *string `gorm:"size:180;uniqueIndex:idx_point_refund_idempotency"`
+	ActiveOrderKey        *string `gorm:"size:160;uniqueIndex"`
+	Channel               string  `gorm:"size:16;not null"`
+	ProviderMerchantID    string  `gorm:"size:80;not null"`
+	ProviderAppID         string  `gorm:"size:80;not null"`
+	ProviderTransactionID string  `gorm:"size:180;not null"`
+	ProviderRefundKey     string  `gorm:"size:64;not null;uniqueIndex"`
+	Currency              string  `gorm:"size:3;not null"`
+	AmountFen             int64   `gorm:"not null"`
+	PurchaseMicro         int64   `gorm:"not null"`
+	BonusRevokeMicro      int64   `gorm:"not null;default:0"`
+	OriginalAmountFen     int64   `gorm:"not null"`
+	OriginalPurchaseMicro int64   `gorm:"not null"`
+	OriginalBonusMicro    int64   `gorm:"not null;default:0"`
+	Reason                string  `gorm:"size:512;not null"`
+	State                 string  `gorm:"size:24;not null;index"` // awaiting_review, approved, submitting, submitted, unknown, succeeded, rejected, definite_failed, needs_manual_review
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+func (*PointRefund) BeforeUpdate(tx *gorm.DB) error {
+	updates, ok := tx.Statement.Dest.(map[string]interface{})
+	if !ok || len(updates) == 0 {
+		return errors.New("point refund updates must use the workflow-field allowlist")
+	}
+	for key := range updates {
+		switch strings.ToLower(key) {
+		case "state", "active_order_key", "updated_at":
+		default:
+			return errors.New("point refund request snapshot is immutable")
+		}
+	}
+	return nil
+}
+func (*PointRefund) BeforeDelete(*gorm.DB) error {
+	return errors.New("point refund requests are append-only")
+}
+
+type PointRefundAllocation struct {
+	ID            uint   `gorm:"primaryKey"`
+	RefundID      uint   `gorm:"not null;uniqueIndex:idx_point_refund_allocation_lot;index"`
+	LotID         uint   `gorm:"not null;uniqueIndex:idx_point_refund_allocation_lot;index"`
+	LotKind       string `gorm:"size:24;not null"`
+	PurchaseMicro int64  `gorm:"not null;default:0"`
+	BonusMicro    int64  `gorm:"not null;default:0"`
+	CreatedAt     time.Time
+}
+
+func (*PointRefundAllocation) BeforeUpdate(*gorm.DB) error {
+	return errors.New("point refund allocations are append-only")
+}
+func (*PointRefundAllocation) BeforeDelete(*gorm.DB) error {
+	return errors.New("point refund allocations are append-only")
+}
+
+type PointRefundDecision struct {
+	ID          uint   `gorm:"primaryKey"`
+	RefundID    uint   `gorm:"not null;index"`
+	DecisionKey string `gorm:"size:180;not null;uniqueIndex"`
+	ActorUserID int    `gorm:"not null;index"`
+	Action      string `gorm:"size:16;not null"` // approve, reject
+	Reason      string `gorm:"size:512;not null"`
+	CreatedAt   time.Time
+}
+
+func (*PointRefundDecision) BeforeUpdate(*gorm.DB) error {
+	return errors.New("point refund decisions are append-only")
+}
+func (*PointRefundDecision) BeforeDelete(*gorm.DB) error {
+	return errors.New("point refund decisions are append-only")
+}
+
+// PointRefundEvidence stores normalized, non-secret evidence only. The future
+// payment adapter must verify signatures and bind protocol-specific identity
+// before calling the internal model transition.
+type PointRefundEvidence struct {
+	ID                    uint   `gorm:"primaryKey"`
+	EvidenceKey           string `gorm:"size:180;not null;uniqueIndex"`
+	RefundKey             string `gorm:"size:180;not null;index"`
+	Provider              string `gorm:"size:16;not null"`
+	Outcome               string `gorm:"size:24;not null"` // pending, succeeded, definite_failed, abnormal
+	ProviderRefundID      string `gorm:"size:180;not null;default:''"`
+	ProviderRefundKey     string `gorm:"size:64;not null"`
+	OrderKey              string `gorm:"size:160;not null"`
+	ProviderTransactionID string `gorm:"size:180;not null"`
+	MerchantID            string `gorm:"size:80;not null"`
+	AppID                 string `gorm:"size:80;not null"`
+	AmountFen             int64  `gorm:"not null"`
+	TotalFen              int64  `gorm:"not null"`
+	Currency              string `gorm:"size:3;not null"`
+	Digest                string `gorm:"size:64;not null"`
+	CreatedAt             time.Time
+}
+
+func (*PointRefundEvidence) BeforeUpdate(*gorm.DB) error {
+	return errors.New("point refund evidence is append-only")
+}
+func (*PointRefundEvidence) BeforeDelete(*gorm.DB) error {
+	return errors.New("point refund evidence is append-only")
+}
+
+// PointRefundProviderOwner prevents one channel refund transaction from being
+// attached to two local refund requests. Rows are created only for a verified
+// provider refund identifier, so no empty placeholder needs a uniqueness key.
+type PointRefundProviderOwner struct {
+	ID               uint   `gorm:"primaryKey"`
+	Provider         string `gorm:"size:16;not null;uniqueIndex:idx_point_refund_provider_owner"`
+	MerchantID       string `gorm:"size:80;not null;uniqueIndex:idx_point_refund_provider_owner"`
+	ProviderRefundID string `gorm:"size:180;not null;uniqueIndex:idx_point_refund_provider_owner"`
+	RefundKey        string `gorm:"size:180;not null;index"`
+	CreatedAt        time.Time
+}
+
+func (*PointRefundProviderOwner) BeforeUpdate(*gorm.DB) error {
+	return errors.New("point refund transaction ownership is append-only")
+}
+func (*PointRefundProviderOwner) BeforeDelete(*gorm.DB) error {
+	return errors.New("point refund transaction ownership is append-only")
 }
 
 type PointTokenBudget struct {
@@ -405,11 +535,11 @@ func GetPointWallet(userID int) (*PointWalletView, error) {
 		}
 		view.AvailableMicro, view.HeldMicro, view.SpentMicro = account.AvailableMicro, account.HeldMicro, account.SpentMicro
 		var lots []PointLot
-		if err := tx.Select("kind", "initial_micro", "refunded_micro", "available_micro").Where("user_id = ?", userID).Find(&lots).Error; err != nil {
+		if err := tx.Select("kind", "initial_micro", "refunded_micro", "revoked_micro", "available_micro").Where("user_id = ?", userID).Find(&lots).Error; err != nil {
 			return err
 		}
 		for _, lot := range lots {
-			credited := lot.InitialMicro - lot.RefundedMicro
+			credited := lot.InitialMicro - lot.RefundedMicro - lot.RevokedMicro
 			if credited < 0 {
 				return errors.New("point lot refund exceeds original credit")
 			}
@@ -774,7 +904,7 @@ type PointsSchemaMigration struct {
 	AppliedAt time.Time
 }
 
-const pointsSchemaVersion = 8
+const pointsSchemaVersion = 9
 
 // MigratePointsSchema is deliberately separate from the normal startup migration.
 func MigratePointsSchema() error {
@@ -784,22 +914,74 @@ func MigratePointsSchema() error {
 	if err := DB.AutoMigrate(&PointsSchemaMigration{}); err != nil {
 		return err
 	}
-	var applied PointsSchemaMigration
-	err := DB.First(&applied, "version = ?", pointsSchemaVersion).Error
-	if err == nil {
-		return nil
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	var current PointsSchemaMigration
+	err := DB.Order("version DESC").First(&current).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
+	if err == nil && current.Version > pointsSchemaVersion {
+		return fmt.Errorf("database points schema v%d is newer than this binary v%d", current.Version, pointsSchemaVersion)
+	}
+	if err == nil && current.Version == pointsSchemaVersion {
+		return nil
+	}
 	// Each additive AutoMigrate is safe to rerun if a backend commits DDL implicitly.
-	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}}
+	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}}
 	for _, item := range models {
 		if err := DB.AutoMigrate(item); err != nil {
 			return err
 		}
 	}
-	return DB.Create(&PointsSchemaMigration{Version: pointsSchemaVersion, AppliedAt: time.Now().UTC()}).Error
+	return DB.Transaction(func(tx *gorm.DB) error {
+		// v8 lots did not have these counters. Their expired remainder can be
+		// reconstructed from the conserved lot amounts; expire ledger rows alone
+		// miss held bonuses released after expiry.
+		if err := backfillPointLotExpiryCountersTx(tx); err != nil {
+			return err
+		}
+		var prior PointsSchemaMigration
+		lookup := tx.Order("version DESC").First(&prior)
+		if lookup.Error != nil && !errors.Is(lookup.Error, gorm.ErrRecordNotFound) {
+			return lookup.Error
+		}
+		if lookup.Error == nil && prior.Version >= pointsSchemaVersion {
+			return nil
+		}
+		return tx.Create(&PointsSchemaMigration{Version: pointsSchemaVersion, AppliedAt: time.Now().UTC()}).Error
+	})
+}
+
+func backfillPointLotExpiryCountersTx(tx *gorm.DB) error {
+	nowUnix := time.Now().UTC().Unix()
+	var lots []PointLot
+	if err := tx.Order("id ASC").Find(&lots).Error; err != nil {
+		return err
+	}
+	for _, lot := range lots {
+		known := []int64{lot.AvailableMicro, lot.HeldMicro, lot.ConsumedMicro, lot.RefundedMicro, lot.RevokedMicro}
+		var accounted int64
+		for _, value := range known {
+			if value < 0 {
+				return fmt.Errorf("point lot %d has negative conserved amount", lot.ID)
+			}
+			var err error
+			accounted, err = checkedAdd(accounted, value)
+			if err != nil {
+				return fmt.Errorf("point lot %d amount overflow: %w", lot.ID, err)
+			}
+		}
+		if lot.InitialMicro < 0 || accounted > lot.InitialMicro {
+			return fmt.Errorf("point lot %d amount counters exceed initial credit", lot.ID)
+		}
+		expired := lot.InitialMicro - accounted
+		if expired > 0 && (lot.ExpiresAt == nil || *lot.ExpiresAt > nowUnix) {
+			return fmt.Errorf("point lot %d has an unexplained balance deficit without a past expiry", lot.ID)
+		}
+		if err := tx.Model(&PointLot{}).Where("id = ?", lot.ID).Update("expired_micro", expired).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func RequirePointsSchema() error {
@@ -830,7 +1012,7 @@ func pointsTransactionWithContext(ctx context.Context, db *gorm.DB, fn func(*gor
 			return ctx.Err()
 		}
 		err = db.WithContext(ctx).Transaction(fn)
-		if err == nil || !common.UsingSQLite || !isSQLiteBusy(err) {
+		if err == nil || db.Dialector.Name() != "sqlite" || !isSQLiteBusy(err) {
 			return err
 		}
 		// The DB-only closure resolves its unique business key before every retry.
@@ -852,6 +1034,9 @@ func expireAvailablePointLotsTx(tx *gorm.DB, userID int, now time.Time) error {
 	}
 	var total int64
 	for _, lot := range lots {
+		if err := validatePointLotConservation(lot); err != nil {
+			return err
+		}
 		next, err := checkedAdd(total, lot.AvailableMicro)
 		if err != nil {
 			return err
@@ -861,7 +1046,10 @@ func expireAvailablePointLotsTx(tx *gorm.DB, userID int, now time.Time) error {
 	if total == 0 {
 		return nil
 	}
-	update := tx.Model(&PointLot{}).Where("user_id = ? AND available_micro > 0 AND expires_at IS NOT NULL AND expires_at <= ?", userID, now.Unix()).Update("available_micro", 0)
+	update := tx.Model(&PointLot{}).Where("user_id = ? AND available_micro > 0 AND expires_at IS NOT NULL AND expires_at <= ?", userID, now.Unix()).Updates(map[string]interface{}{
+		"expired_micro":   gorm.Expr("expired_micro + available_micro"),
+		"available_micro": 0,
+	})
 	if update.Error != nil {
 		return update.Error
 	}
@@ -1298,10 +1486,25 @@ func settlePointHoldTx(tx *gorm.DB, hold *PointHold, usage int64) error {
 		if err := tx.First(&lot, allocation.LotID).Error; err != nil {
 			return err
 		}
+		if err := validatePointLotConservation(lot); err != nil {
+			return err
+		}
+		if _, err := checkedAdd(lot.ConsumedMicro, consume); err != nil {
+			return err
+		}
 		updates := map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", allocation.ReservedMicro), "consumed_micro": gorm.Expr("consumed_micro + ?", consume)}
 		if lot.ExpiresAt == nil || *lot.ExpiresAt > now.Unix() {
 			updates["available_micro"] = gorm.Expr("available_micro + ?", release)
-			availableRelease += release
+			next, sumErr := checkedAdd(availableRelease, release)
+			if sumErr != nil {
+				return sumErr
+			}
+			availableRelease = next
+		} else if release > 0 {
+			if _, err := checkedAdd(lot.ExpiredMicro, release); err != nil {
+				return err
+			}
+			updates["expired_micro"] = gorm.Expr("expired_micro + ?", release)
 		}
 		lotUpdate := tx.Model(&PointLot{}).Where("id = ? AND held_micro >= ?", lot.ID, allocation.ReservedMicro).Updates(updates)
 		if lotUpdate.Error != nil {
@@ -1318,23 +1521,15 @@ func settlePointHoldTx(tx *gorm.DB, hold *PointHold, usage int64) error {
 	if remaining != 0 {
 		return errors.New("hold allocation does not cover usage")
 	}
-	update := tx.Model(&PointAccount{}).Where("user_id = ? AND held_micro >= ?", hold.UserID, hold.BudgetMicro).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "available_micro": gorm.Expr("available_micro + ?", hold.BudgetMicro-usage), "spent_micro": gorm.Expr("spent_micro + ?", usage)})
+	maxInt64 := int64(^uint64(0) >> 1)
+	update := tx.Model(&PointAccount{}).Where("user_id = ? AND held_micro >= ? AND available_micro <= ? AND spent_micro <= ?", hold.UserID, hold.BudgetMicro, maxInt64-availableRelease, maxInt64-usage).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "available_micro": gorm.Expr("available_micro + ?", availableRelease), "spent_micro": gorm.Expr("spent_micro + ?", usage)})
 	if update.Error != nil {
 		return update.Error
 	}
 	if update.RowsAffected != 1 {
 		return errors.New("point account state changed")
 	}
-	if availableRelease != hold.BudgetMicro-usage {
-		update = tx.Model(&PointAccount{}).Where("user_id = ?", hold.UserID).Update("available_micro", gorm.Expr("available_micro - ?", hold.BudgetMicro-usage-availableRelease))
-		if update.Error != nil {
-			return update.Error
-		}
-		if update.RowsAffected != 1 {
-			return errors.New("point account expiry adjustment failed")
-		}
-	}
-	tokenUpdate := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND held_micro >= ?", hold.TokenID, hold.BudgetMicro).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "spent_micro": gorm.Expr("spent_micro + ?", usage)})
+	tokenUpdate := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND held_micro >= ? AND spent_micro <= ?", hold.TokenID, hold.BudgetMicro, maxInt64-usage).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "spent_micro": gorm.Expr("spent_micro + ?", usage)})
 	if tokenUpdate.Error != nil {
 		return tokenUpdate.Error
 	}
@@ -1525,11 +1720,23 @@ func releasePointHoldTx(tx *gorm.DB, hold *PointHold) error {
 		if err := tx.First(&lot, allocation.LotID).Error; err != nil {
 			return err
 		}
+		if err := validatePointLotConservation(lot); err != nil {
+			return err
+		}
 		release := allocation.ReservedMicro - allocation.SettledMicro
 		updates := map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", release)}
 		if lot.ExpiresAt == nil || *lot.ExpiresAt > now.Unix() {
 			updates["available_micro"] = gorm.Expr("available_micro + ?", release)
-			availableRelease += release
+			next, sumErr := checkedAdd(availableRelease, release)
+			if sumErr != nil {
+				return sumErr
+			}
+			availableRelease = next
+		} else if release > 0 {
+			if _, err := checkedAdd(lot.ExpiredMicro, release); err != nil {
+				return err
+			}
+			updates["expired_micro"] = gorm.Expr("expired_micro + ?", release)
 		}
 		upd := tx.Model(&PointLot{}).Where("id = ? AND held_micro >= ?", lot.ID, release).Updates(updates)
 		if upd.Error != nil {
@@ -1539,7 +1746,8 @@ func releasePointHoldTx(tx *gorm.DB, hold *PointHold) error {
 			return errors.New("point lot state changed")
 		}
 	}
-	update := tx.Model(&PointAccount{}).Where("user_id = ? AND held_micro >= ?", hold.UserID, hold.BudgetMicro).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "available_micro": gorm.Expr("available_micro + ?", availableRelease)})
+	maxInt64 := int64(^uint64(0) >> 1)
+	update := tx.Model(&PointAccount{}).Where("user_id = ? AND held_micro >= ? AND available_micro <= ?", hold.UserID, hold.BudgetMicro, maxInt64-availableRelease).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "available_micro": gorm.Expr("available_micro + ?", availableRelease)})
 	if update.Error != nil {
 		return update.Error
 	}

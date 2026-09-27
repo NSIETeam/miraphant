@@ -13,6 +13,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -109,10 +110,28 @@ func openMySQL(dsn string) (*gorm.DB, error) {
 func openSQLite() (*gorm.DB, error) {
 	logger.SysLog("SQL_DSN not set, using SQLite as database")
 	common.UsingSQLite = true
-	dsn := fmt.Sprintf("%s?_busy_timeout=%d", common.SQLitePath, common.SQLiteBusyTimeout)
+	dsn, err := sqliteDSN(common.SQLitePath, common.SQLiteBusyTimeout)
+	if err != nil {
+		return nil, err
+	}
 	return gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		PrepareStmt: true, // precompile SQL
 	})
+}
+
+// sqliteDSN acquires SQLite's writer reservation when each SQL transaction
+// begins, before application reads. Points/account transactions rely on this
+// cross-connection serialization; BUSY remains bounded by busy_timeout and the
+// points transaction retry policy.
+func sqliteDSN(path string, busyTimeout int) (string, error) {
+	base, rawQuery, _ := strings.Cut(path, "?")
+	values, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		return "", fmt.Errorf("parse SQLite DSN query: %w", err)
+	}
+	values.Set("_busy_timeout", fmt.Sprintf("%d", busyTimeout))
+	values.Set("_txlock", "immediate")
+	return base + "?" + values.Encode(), nil
 }
 
 func InitDB() {

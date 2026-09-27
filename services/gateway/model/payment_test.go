@@ -138,8 +138,20 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 				t.Fatalf("drop simulated v7 column %s: %v", column, err)
 			}
 		}
+	} else if version == 8 {
+		// v8 has payment tables but no refund schema or lot expiry/revocation counters.
 	} else {
 		t.Fatalf("unsupported migration fixture version %d", version)
+	}
+	for _, table := range []any{&PointRefundProviderOwner{}, &PointRefundEvidence{}, &PointRefundDecision{}, &PointRefundAllocation{}, &PointRefund{}} {
+		if err := db.Migrator().DropTable(table); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, column := range []string{"revoked_micro", "expired_micro"} {
+		if err := db.Migrator().DropColumn(&PointLot{}, column); err != nil {
+			t.Fatalf("drop simulated v%d lot column %s: %v", version, column, err)
+		}
 	}
 	if err := db.Where("1 = 1").Delete(&PointsSchemaMigration{}).Error; err != nil {
 		t.Fatal(err)
@@ -155,21 +167,38 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 	if err := db.Table("point_purchase_orders").Create(oldOrder).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Create(&PointAccount{UserID: 91, AvailableMicro: 700_000_000, SpentMicro: 25_000_000}).Error; err != nil {
+	if err := db.Create(&PointAccount{UserID: 91, AvailableMicro: 700_000_000, HeldMicro: 120_000_000, SpentMicro: 330_000_000}).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Create(&PointLedger{UserID: 91, BusinessKey: fmt.Sprintf("v%d-ledger", version), Kind: "migration_fixture", AvailableDelta: 700_000_000, AvailableAfter: 700_000_000, SpentAfter: 25_000_000, Reason: "historical balance"}).Error; err != nil {
+	if err := db.Table("point_lots").Create(map[string]any{"id": 9101, "user_id": 91, "business_key": fmt.Sprintf("v%d-purchase", version), "kind": "purchase", "source_ref": "historical", "amount_fen": 1200, "initial_micro": int64(1_200_000_000), "available_micro": int64(700_000_000), "held_micro": int64(100_000_000), "consumed_micro": int64(300_000_000), "refunded_micro": int64(100_000_000)}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Table("point_lots").Create(map[string]any{"id": 9102, "user_id": 91, "business_key": fmt.Sprintf("v%d-bonus-available-expired", version), "kind": "bonus", "source_ref": "historical", "initial_micro": int64(100_000_000), "available_micro": int64(40_000_000), "held_micro": int64(0), "consumed_micro": int64(30_000_000), "expires_at": time.Now().UTC().Add(-time.Hour).Unix()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Table("point_lots").Create(map[string]any{"id": 9103, "user_id": 91, "business_key": fmt.Sprintf("v%d-bonus-expired-hold-release", version), "kind": "bonus", "source_ref": "historical", "initial_micro": int64(100_000_000), "available_micro": int64(0), "held_micro": int64(0), "consumed_micro": int64(70_000_000), "expires_at": time.Now().UTC().Add(-time.Hour).Unix()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointLedger{UserID: 91, BusinessKey: fmt.Sprintf("v%d-ledger", version), Kind: "migration_fixture", AvailableDelta: 700_000_000, AvailableAfter: 700_000_000, HeldAfter: 120_000_000, SpentAfter: 330_000_000, Reason: "historical balance"}).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := MigratePointsSchema(); err != nil {
-		t.Fatalf("v%d to v8 migration failed: %v", version, err)
+		t.Fatalf("v%d to v9 migration failed: %v", version, err)
 	}
-	if !db.Migrator().HasTable(&PointPackage{}) || !db.Migrator().HasTable(&PointActivePackage{}) || !db.Migrator().HasTable(&PaymentEvent{}) || !db.Migrator().HasTable(&PaymentTransaction{}) {
-		t.Fatal("payment tables missing after current migration")
+	if !db.Migrator().HasTable(&PointPackage{}) || !db.Migrator().HasTable(&PointActivePackage{}) || !db.Migrator().HasTable(&PaymentEvent{}) || !db.Migrator().HasTable(&PaymentTransaction{}) || !db.Migrator().HasTable(&PointRefund{}) || !db.Migrator().HasTable(&PointRefundProviderOwner{}) || !db.Migrator().HasTable(&PointRefundEvidence{}) {
+		t.Fatal("payment/refund tables missing after current migration")
+	}
+	if !db.Migrator().HasColumn(&PointRefundEvidence{}, "provider_refund_key") {
+		t.Fatal("refund evidence stable provider refund key column missing")
 	}
 	for _, column := range []string{"channel", "package_id", "package_version", "package_snapshot", "currency", "bonus_validity_secs", "expires_at", "provider_transaction_id", "provider_merchant_id", "provider_app_id", "provider_create_state", "provider_create_started_at", "checkout_snapshot", "closed_reason", "idempotency_key"} {
 		if !db.Migrator().HasColumn(&PointPurchaseOrder{}, column) {
 			t.Fatalf("current order column missing: %s", column)
+		}
+	}
+	for _, column := range []string{"expired_micro", "revoked_micro"} {
+		if !db.Migrator().HasColumn(&PointLot{}, column) {
+			t.Fatalf("current lot column missing: %s", column)
 		}
 	}
 	var old PointPurchaseOrder
@@ -187,8 +216,21 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 	if err := db.First(&ledger, "business_key = ?", fmt.Sprintf("v%d-ledger", version)).Error; err != nil {
 		t.Fatal(err)
 	}
-	if account.AvailableMicro != 700_000_000 || account.SpentMicro != 25_000_000 || ledger.AvailableAfter != 700_000_000 || ledger.SpentAfter != 25_000_000 {
+	if account.AvailableMicro != 700_000_000 || account.HeldMicro != 120_000_000 || account.SpentMicro != 330_000_000 || ledger.AvailableAfter != 700_000_000 || ledger.HeldAfter != 120_000_000 || ledger.SpentAfter != 330_000_000 {
 		t.Fatalf("historical point balances changed: account=%+v ledger=%+v", account, ledger)
+	}
+	var purchaseLot, availableExpiredLot, releasedExpiredLot PointLot
+	if err := db.First(&purchaseLot, "business_key = ?", fmt.Sprintf("v%d-purchase", version)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&availableExpiredLot, "business_key = ?", fmt.Sprintf("v%d-bonus-available-expired", version)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&releasedExpiredLot, "business_key = ?", fmt.Sprintf("v%d-bonus-expired-hold-release", version)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if purchaseLot.ExpiredMicro != 0 || availableExpiredLot.ExpiredMicro != 30_000_000 || releasedExpiredLot.ExpiredMicro != 30_000_000 || purchaseLot.RevokedMicro != 0 || availableExpiredLot.RevokedMicro != 0 || releasedExpiredLot.RevokedMicro != 0 {
+		t.Fatalf("historical expired/revoked lot counters wrong: purchase=%+v available_expired=%+v released_expired=%+v", purchaseLot, availableExpiredLot, releasedExpiredLot)
 	}
 	if err := MigratePointsSchema(); err != nil {
 		t.Fatalf("repeat v%d migration failed: %v", version, err)
@@ -212,3 +254,66 @@ func TestPointsSchemaV6AndV7UpgradePreservesLegacyOrderIdentityGap(t *testing.T)
 func TestPointsSchemaV5AddsTransactionOwnershipTable(t *testing.T) {
 	testPointsSchemaUpgradeFrom(t, 5)
 }
+
+func TestPointsSchemaV8AddsRefundTablesAndBackfillsLotExpiry(t *testing.T) {
+	testPointsSchemaUpgradeFrom(t, 8)
+}
+
+func TestPointsSchemaV8RejectsUnexplainedLotDeficitAndRollsBack(t *testing.T) {
+	for _, expiry := range []struct {
+		name string
+		at   *int64
+	}{
+		{name: "missing"},
+		{name: "future", at: ptrInt64(time.Now().UTC().Add(time.Hour).Unix())},
+	} {
+		t.Run(expiry.name, func(t *testing.T) {
+			db, cleanup := withPointsFixture(t, 0, 100, true)
+			defer cleanup()
+			for _, table := range []any{&PointRefundProviderOwner{}, &PointRefundEvidence{}, &PointRefundDecision{}, &PointRefundAllocation{}, &PointRefund{}} {
+				if err := db.Migrator().DropTable(table); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, column := range []string{"revoked_micro", "expired_micro"} {
+				if err := db.Migrator().DropColumn(&PointLot{}, column); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := db.Where("1 = 1").Delete(&PointsSchemaMigration{}).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := db.Create(&PointsSchemaMigration{Version: 8, AppliedAt: time.Now().UTC()}).Error; err != nil {
+				t.Fatal(err)
+			}
+			past := time.Now().UTC().Add(-time.Hour).Unix()
+			if err := db.Table("point_lots").Create(map[string]any{"id": 9201, "user_id": 41, "business_key": "v8-valid-expired", "kind": "bonus", "initial_micro": int64(10), "available_micro": int64(5), "held_micro": int64(0), "consumed_micro": int64(0), "refunded_micro": int64(0), "expires_at": past}).Error; err != nil {
+				t.Fatal(err)
+			}
+			badLot := map[string]any{"id": 9202, "user_id": 41, "business_key": "v8-unexplained-deficit", "kind": "purchase", "initial_micro": int64(10), "available_micro": int64(5), "held_micro": int64(0), "consumed_micro": int64(0), "refunded_micro": int64(0)}
+			if expiry.at != nil {
+				badLot["expires_at"] = *expiry.at
+			}
+			if err := db.Table("point_lots").Create(badLot).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := MigratePointsSchema(); err == nil {
+				t.Fatal("migration accepted an unexplained lot deficit")
+			}
+			var count int64
+			db.Model(&PointsSchemaMigration{}).Where("version = 9").Count(&count)
+			if count != 0 {
+				t.Fatal("failed migration wrote the v9 marker")
+			}
+			var valid PointLot
+			if err := db.First(&valid, 9201).Error; err != nil {
+				t.Fatal(err)
+			}
+			if valid.ExpiredMicro != 0 {
+				t.Fatalf("partial expiry backfill escaped rolled-back transaction: %+v", valid)
+			}
+		})
+	}
+}
+
+func ptrInt64(value int64) *int64 { return &value }

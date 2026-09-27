@@ -343,3 +343,38 @@ schema 当前为 v6，迁移仍须显式执行。CI 已纳入服务层与 Paymen
 父审核 refunds.md 后要求修正：赠送差额下限为零、同原订单只能存在一个非终态退款的数据库占用、将现有写路径锁序差异与目标明确区分、按渠道实际响应字段验证身份、财务/客服 capability 与旧数值角色解耦，以及一次性动作绑定重新认证。修订后允许进入纯账本实现节点，尚未允许接入公开退款 HTTP 或真实商户调用。
 
 赠送按比例撤销、赠送不足时限制退款及双人审批阈值仍是候选商业规则，不代表已获得用户业务批准；公开条款和真实商户验收仍是后续门槛。
+
+
+退款 schema 早审（2026-09-28，未放行业务代码）：发现新增 ExpiredMicro 若只使用默认零，会丢失 v8 已过期可用余额和到期 hold 释放的历史计数。已要求以批次守恒重建历史过期量，检查负值/异常并覆盖幂等升级；不能只汇总 expire:lot 流水。另要求退款幂等索引与 user+order+key 契约一致。SQLite 共享事务拟用锁定依赖 go-sqlite3 的 `_txlock=immediate`，须由生产 DSN 与两独立连接的并发测试共同证明，尚未根据方案文字放行。
+
+
+退款契约文档提交 `faaad79419175a7b24f9d8ebd4d8bbcbf86961f9` 的 [CI 36331635805](https://github.com/NSIETeam/miraphant/actions/runs/36331635805) 已确认 completed/success。此结果覆盖提交中的既有代码，不能作为后续未提交 v9 schema／退款实现的验收证据。
+
+
+v9 迁移源码复审追加：余额守恒差额只有在批次确有已到期有效期时才可解释为过期；无到期时间或未来到期的差额须拒绝迁移，不能把账务缺口自动归零。首版合成 purchase fixture 无有效期却出现过期余量，已要求纠正并增加整事务回滚用例。SQLite DSN 参数须解析后覆盖，避免已有 `_txlock=deferred` 优先于重复追加的 immediate 参数。
+
+
+父独立运行当前 `go test ./model -run TestPointsSchema -count=1` 通过（0.777s），覆盖当时已落地的版本升级用例。异常差额迁移回滚、SQLite DSN 覆盖和独立连接 immediate 事务证明仍待补齐；此结果不是退款功能验收。
+
+
+退款事务／迁移子节点复核（2026-09-28）：父独立运行 `Test(SQLiteDSN|SQLiteImmediate|PointsSchema)` 全组通过（model 0.470s），已检查参数唯一覆盖、畸形 DSN 拒绝、两个独立数据库句柄的 BEGIN IMMEDIATE 互斥、异常过期差额拒绝与回填事务回滚。再跑现有积分 HTTP／router／model／relay／支付服务定向回归全部通过（controller 2.897s、model 2.253s、service/payments 3.007s）。SQLite／Refund 前缀已纳入待提交 CI。允许继续纯账本实现；这些结果不证明尚未完成的退款申请、冻结、终态处理或公开接口。
+
+
+退款事务首版源码审核（未通过）：要求补齐不同事件键的成功重放、同一本地退款的渠道退款标识稳定绑定、needs_manual_review 后可信终态恢复、迟到 pending 不回退终态、稳定商户退款号关联，以及既有模型 hold 过期释放计数与钱包撤销统计。冻结分配在完成/释放前须按原单、用户、批次类别及购买/赠送金额分别与退款快照精确核对，缺失或错配须整笔回滚。待修订和定向行为证明后再审。
+
+
+退款标识修订复审：微信必须保留并验证平台 refund_id，不能在其缺失时退回商户退款号而接受成功；支付宝以稳定 out_request_no 为该笔退款身份，不在可选字段有/无时切换 owner key。已要求对应缺字段拒绝及 pending→success／重复通知用例；待最终实现复验。
+
+退款当前快照定向运行（2026-09-28）：父独立运行 `go test ./model -run 'TestPointRefund' -count=1 -timeout=90s` 通过（0.774s）。当时有七个测试函数，涵盖成功记账、失败释放、异常恢复、顺序消费隔离、支付宝标识、数据库门槛与同单退款竞争。退款与消费的两连接交错、完成时累计退款金额上限、微信非成功证据的必要字段仍在修订，本次运行不作为纯退款账本整体验收。
+
+新增退款与 Reserve 两连接余额竞争、分配错配回滚用例后的当前快照，父独立运行既有积分／充值／管理查询／relay／SQLite 定向回归全部通过（controller 1.333s、router 1.043s、model 1.981s、relay/controller 2.648s、relay/adaptor/openai 2.022s、service/payments 3.196s）。使用上述七包与 `Test(AdminPayment|AdminAudit|OfflineRecovery|Payment|WeChatSigned|Point|LegacyQuota|NewUsers|NewPurchase|Adjustment|PendingUsage|ExpiredBonus|PaidOrder|Reviewed|SQLite)`，`-count=1 -timeout=120s`；middleware 无测试。此时 settle/release 的退款交错用例与完整节点报告尚未交付，保持未放行。
+
+随后新增 settle/release 与退款申请的两连接竞争、333/333/334 分三次全额退款的赠送累计舍入用例。父检查其启动屏障、结果限时等待、账户及批次守恒断言，并独立运行 `go test ./model -run 'TestPointRefund(Concurrent|Cumulative)' -count=10 -timeout=120s` 通过（0.957s）。这证明已覆盖场景的重复运行结果；微信证据字段和终态异常回滚仍待节点报告后集中放行。
+
+父补充运行 `go test -race ./model -run TestPointRefundConcurrent -count=1 -timeout=120s` 通过（2.064s），未报告 Go 数据竞态。macOS 链接器提示 LC_DYSYMTAB warning，命令最终退出码为 0。该检查覆盖当前并发测试，不代表任意执行顺序或全部支付业务已验收。
+
+## 退款纯账本节点放行（2026-09-28）
+
+Luna 已停止编辑并交付稳定节点。父确认微信所有可信退款证据必须包含平台 refund_id，支付宝固定以 out_request_no 绑定；新增缺字段拒绝、支付入账与退款竞争、累计超额及原订单身份变化的整事务回滚用例。父独立运行 `TestPointRefundFinalization` 通过（0.340s），最终再次运行上述七包定向回归全部通过（controller 1.265s、router 1.399s、model 2.193s、relay/controller 2.230s、relay/adaptor/openai 2.651s、service/payments 2.921s），`git diff --check` 无输出。
+
+允许提交本批 v9 迁移、SQLite 事务门槛和纯退款账本。仅 SQLite 路径获得本节点验证；MySQL/Postgres 退款拒绝启用。HTTP、平台验签/退款调用、提交前持久状态及超时恢复、角色授权与重新认证、客户及管理退款界面仍未实现，真实商户退款未验收。赠送积分按比例撤销仍属待确认商业规则，本节点不批准公开政策或生产发布。
