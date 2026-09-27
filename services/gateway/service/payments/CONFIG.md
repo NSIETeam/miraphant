@@ -122,9 +122,10 @@ recovery behavior.
 
 Provider reconciliation is available to root and users granted the independent
 `reconciliation.read`, `reconciliation.import`, and `reconciliation.note`
-capabilities. Role 10 does not receive those permissions by default, and refund
-capabilities do not grant reconciliation access. Import requires a configured
-payment provider and an independent source encryption key. It remains available
+capabilities as needed. Read, import, and note access are separate; role 10 does
+not receive these permissions by default, and refund capabilities do not grant
+reconciliation access. Import requires a configured payment provider and an
+independent source encryption key. It remains available
 while new purchases and points billing are paused; existing batch metadata can
 be read without source encryption being configured. Imports are limited to 30
 per user per hour and serialized within one gateway process.
@@ -146,6 +147,17 @@ capability checks; writes additionally require same-origin CSRF. Provider
 identity and URLs come from server configuration. WeChat ALL produces parsed
 rows; Alipay is retained as an `unsupported_format` opaque batch. Neither
 imports nor notes modify point balances or mark findings resolved.
+
+The default web theme provides `/admin/reconciliation`, guarded by the current
+`reconciliation.read` capability rather than the legacy role-10 administrator
+gate. The page has separate import and note controls, a paginated batch list,
+batch metadata, paginated normalized rows and findings, append-only action
+history, and grouped import attempts. It never exposes the encrypted source or
+download URL. A `started` attempt without a result stays “processing or result
+not confirmed.” Replaying a note after an uncertain response reuses its saved
+action key and full payload; a conflict does not generate a replacement key.
+The root financial-access page now also grants the three independent
+reconciliation capabilities while preserving existing refund capabilities.
 
 Points refunds and reconciliation are currently restricted to the verified
 single-instance SQLite configuration; other database backends are not enabled.

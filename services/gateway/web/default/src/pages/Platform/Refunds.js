@@ -38,7 +38,7 @@ async function csrf() {
 }
 function StateBadge({ state }) { return <span className={`order-state-chip ${stateTone(state)}`}>{stateLabels[state] || '状态核对中'}</span>; }
 
-export function RefundCapabilityRoute({ anyOf = [] , children }) {
+export function RefundCapabilityRoute({ anyOf = [], children, moduleLabel = '退款' }) {
   const [state, setState] = useState('loading');
   const [capabilities, setCapabilities] = useState([]);
   const [error, setError] = useState('');
@@ -63,8 +63,8 @@ export function RefundCapabilityRoute({ anyOf = [] , children }) {
   }, [required, navigate]);
   useEffect(() => { load(); }, [load]);
   if (state === 'loading') return <div className='platform-state'>正在核验当前权限…</div>;
-  if (state === 'error') return <main className='platform-page'><PageTitle title='退款权限核验' intro='权限会按当前账户状态实时检查。' /><Alert kind='error'>{error}</Alert><button className='platform-button secondary' onClick={load}>重新核验</button></main>;
-  if (state === 'denied') return <main className='platform-page'><PageTitle title='无权访问' intro='此页面仅向已获授权的退款处理人员开放。' /><Alert kind='warning'>你的当前账户没有此退款模块所需的权限。</Alert><Link className='platform-button secondary' to='/console'>返回控制台</Link></main>;
+  if (state === 'error') return <main className='platform-page'><PageTitle eyebrow='ACCESS' title={`${moduleLabel}权限核验`} intro='权限会按当前账户状态实时检查。' /><Alert kind='error'>{error}</Alert><button className='platform-button secondary' onClick={load}>重新核验</button></main>;
+  if (state === 'denied') return <main className='platform-page'><PageTitle eyebrow='ACCESS' title='无权访问' intro={`此页面仅向已获授权的${moduleLabel}人员开放。`} /><Alert kind='warning'>你的当前账户没有此模块所需的权限。</Alert><Link className='platform-button secondary' to='/console'>返回控制台</Link></main>;
   return typeof children === 'function' ? children(capabilities) : children;
 }
 
@@ -334,6 +334,7 @@ export function RefundCapabilityManagementPage() {
   const capabilities = [
     ['refund.read', '查看退款申请与进度'], ['refund.review', '审核通过或拒绝'], ['refund.submit', '单独确认并提交退款'],
     ['refund.reconcile', '核实已提交退款进度'], ['refund.audit', '查看退款审计'],
+    ['reconciliation.read', '查看账单批次与差异'], ['reconciliation.import', '获取并导入渠道账单'], ['reconciliation.note', '追加对账备注与业务引用'],
   ];
   const load = useCallback(async (id = targetID) => {
     if (!/^\d+$/.test(String(id)) || Number(id) <= 0) { setError('请输入有效的用户编号。'); return; }
@@ -357,10 +358,10 @@ export function RefundCapabilityManagementPage() {
     finally { setBusy(false); }
   };
   return <main className='platform-page refund-capability-page'>
-    <PageTitle eyebrow='ROOT · REFUND ACCESS' title='退款权限管理' intro='仅平台管理员可管理委派权限。财务、审核、只读等权限独立控制，不会授予旧版系统管理能力。' action={<Link className='platform-button secondary' to='/admin'>管理首页</Link>} />
+    <PageTitle eyebrow='ROOT · DELEGATED ACCESS' title='财务与对账权限' intro='仅平台管理员可管理委派权限。退款与对账分别授权，不会授予旧版系统管理能力。' action={<Link className='platform-button secondary' to='/admin'>管理首页</Link>} />
     <section className='platform-panel'><form className='platform-form refund-user-lookup' onSubmit={(event) => { event.preventDefault(); load(); }}><label>用户编号<input inputMode='numeric' value={targetID} onChange={(e) => { setTargetID(e.target.value); setLoaded(false); setGrants([]); setSelected([]); setError(''); setNotice(''); }} placeholder='输入账户用户编号' required /></label><button className='platform-button primary'>读取权限</button></form>
       {error && <Alert kind='error'>{error}</Alert>}{loaded && <><div className='refund-grant-list'><h2>历史授权记录</h2><p>记录仅反映授予或撤销时间；账户禁用、角色或登录凭证变更后，权限可能已失效。</p>{grants.length ? grants.map((grant) => <div key={grant.capability}><strong>{capabilities.find(([key]) => key === grant.capability)?.[1] || grant.capability}</strong><span>{grant.revoked_at ? `已撤销 · ${date(grant.revoked_at)}` : `曾授予 · ${date(grant.granted_at)}`}</span></div>) : <div className='platform-empty'><strong>该账户尚无委派权限记录</strong></div>}</div>
-        <form className='platform-form refund-grant-form' onSubmit={submit}><div className='refund-form-heading'><h2>更新权限</h2><span>每次变更都需重新输入本地密码，并记录操作原因。</span></div><label>操作<select value={action} onChange={(e) => setAction(e.target.value)}><option value='grant'>授予所选权限</option><option value='revoke'>撤销所选权限</option></select></label><fieldset className='refund-capability-options'><legend>权限范围</legend>{capabilities.map(([key, label]) => <label key={key}><input type='checkbox' checked={selected.includes(key)} onChange={() => toggle(key)} /><span>{label}</span><small>{key}</small></label>)}</fieldset><label>变更原因<textarea value={reason} onChange={(e) => setReason(e.target.value)} rows='3' maxLength='256' required /><small>{new TextEncoder().encode(reason.trim()).length}/256 字节</small></label><label>本地密码<input type='password' autoComplete='current-password' value={password} onChange={(e) => setPassword(e.target.value)} required /></label><div className='platform-form-footer'><span>撤销权限会立即影响该用户后续请求。</span><button className='platform-button primary' disabled={busy || !selected.length || !reason.trim() || new TextEncoder().encode(reason.trim()).length > 256 || !password}>{busy ? '正在更新…' : '重新验证并更新权限'}</button></div></form></>}
+        <form className='platform-form refund-grant-form' onSubmit={submit}><div className='refund-form-heading'><h2>更新权限</h2><span>每次变更都需重新输入本地密码，并记录操作原因。</span></div><label>操作<select value={action} onChange={(e) => setAction(e.target.value)}><option value='grant'>授予所选权限</option><option value='revoke'>撤销所选权限</option></select></label><fieldset className='refund-capability-options'><legend>退款处理权限</legend>{capabilities.slice(0, 5).map(([key, label]) => <label key={key}><input type='checkbox' checked={selected.includes(key)} onChange={() => toggle(key)} /><span>{label}</span><small>{key}</small></label>)}</fieldset><fieldset className='refund-capability-options'><legend>账单对账权限</legend>{capabilities.slice(5).map(([key, label]) => <label key={key}><input type='checkbox' checked={selected.includes(key)} onChange={() => toggle(key)} /><span>{label}</span><small>{key}</small></label>)}</fieldset><label>变更原因<textarea value={reason} onChange={(e) => setReason(e.target.value)} rows='3' maxLength='256' required /><small>{new TextEncoder().encode(reason.trim()).length}/256 字节</small></label><label>本地密码<input type='password' autoComplete='current-password' value={password} onChange={(e) => setPassword(e.target.value)} required /></label><div className='platform-form-footer'><span>撤销权限会立即影响该用户后续请求。</span><button className='platform-button primary' disabled={busy || !selected.length || !reason.trim() || new TextEncoder().encode(reason.trim()).length > 256 || !password}>{busy ? '正在更新…' : '重新验证并更新权限'}</button></div></form></>}
     </section>
     {notice && <Alert kind='success'>{notice}</Alert>}
   </main>;

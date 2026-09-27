@@ -358,6 +358,67 @@ button { cursor: pointer; }
 .refund-capability-options input { width: 16px; height: 16px; accent-color: var(--brand); }
 .refund-capability-options small { color: var(--muted); font-size: 9px; }
 
+.admin-reconciliation-page { max-width: 1180px; }
+.recon-status-panel, .recon-batch-list, .recon-attempt-list, .recon-difference-list, .recon-row-list { display: grid; gap: 12px; }
+.recon-provider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.recon-provider-grid article, .recon-attempt-list article, .recon-difference-card, .recon-row-list article { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.recon-provider-grid article > div, .recon-attempt-list article > div, .recon-batch-top, .recon-difference-heading, .recon-row-title, .recon-row-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.recon-provider-grid article strong, .recon-attempt-list article strong, .recon-batch-card strong { color: var(--brand-dark); font-size: 13px; }
+.recon-provider-grid article p, .recon-muted, .recon-readiness-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.recon-readiness-note { padding-top: 12px; border-top: 1px solid var(--line); }
+.recon-status-chip { display: inline-flex; align-items: center; flex: 0 0 auto; padding: 4px 8px; border-radius: 999px; background: #edf1ee; color: #536156; font-size: 10px; font-weight: 650; }
+.recon-status-chip.ready { background: #e8f3e9; color: #27643a; }
+.recon-status-chip.off { background: #fcebea; color: #9a4138; }
+.recon-status-chip.warning { background: #fff3dc; color: #86611b; }
+.recon-status-chip.info { background: #edf2f7; color: #536b85; }
+.recon-batch-list { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 15px; }
+.recon-batch-card { display: flex; min-width: 0; flex-direction: column; align-items: stretch; gap: 9px; padding: 15px; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: white; cursor: pointer; transition: border-color .16s, transform .16s; }
+.recon-batch-card:hover { border-color: #9bad9d; transform: translateY(-1px); }
+.recon-batch-meta, .recon-attempt-list small { color: var(--muted); font-size: 11px; }
+.recon-batch-card code, .recon-attempt-list code, .recon-row-list code { color: #6c786e; font-size: 10px; overflow-wrap: anywhere; }
+.recon-batch-open { align-self: flex-end; color: var(--brand); font-size: 11px; font-weight: 650; }
+.recon-filter-form { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 12px; }
+.recon-batch-facts, .recon-difference-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 16px; }
+.recon-batch-facts > div, .recon-difference-facts > div { min-width: 0; padding: 10px; border: 1px solid #edf0ec; border-radius: 8px; background: #fbfcfa; }
+.recon-batch-facts dt, .recon-difference-facts dt { color: var(--muted); font-size: 10px; }
+.recon-batch-facts dd, .recon-difference-facts dd { margin: 5px 0 0; color: var(--ink); font-size: 12px; overflow-wrap: anywhere; }
+.recon-hash-fact { grid-column: span 2; }
+.recon-hash-fact dd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+.recon-tabs { display: flex; gap: 7px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.recon-tabs button { padding: 9px 14px; color: var(--muted); border: 1px solid transparent; border-radius: 8px; background: transparent; cursor: pointer; }
+.recon-tabs button.active { color: var(--brand); border-color: #d6dfd8; background: #f5f8f5; font-weight: 650; }
+.recon-difference-heading small { color: var(--muted); font-size: 10px; }
+.recon-difference-facts { grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 13px 0 8px; }
+.recon-action-area { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.recon-action-list { display: grid; gap: 8px; }
+.recon-action-list > div { display: grid; gap: 4px; padding: 10px; border-left: 3px solid #9bad9d; background: #f8faf8; }
+.recon-action-list strong { color: var(--brand-dark); font-size: 11px; }
+.recon-action-list span { color: var(--ink); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.recon-action-list small { color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.recon-action-form { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; border: 1px solid #edf0ec; border-radius: 9px; background: #fbfcfa; }
+.recon-action-reason, .recon-action-disclaimer { grid-column: 1 / -1; }
+.recon-action-form select, .recon-action-form textarea, .recon-action-form input { width: 100%; }
+.recon-action-disclaimer { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.recon-row-list article { display: grid; gap: 10px; }
+.recon-row-title strong { color: var(--brand-dark); font-size: 12px; }
+.recon-row-main { color: var(--ink); font-size: 11px; }
+.recon-row-amounts { display: flex; flex-wrap: wrap; gap: 7px; }
+.recon-row-amounts span { padding: 5px 8px; border-radius: 6px; background: #f2f5f1; color: #405047; font-size: 10px; }
+.recon-attempt-list article { display: grid; gap: 7px; }
+.recon-modal-backdrop { position: fixed; z-index: 1000; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 27, 20, .46); }
+.recon-modal { width: min(620px, 100%); max-height: min(90vh, 800px); overflow: auto; }
+.recon-import-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.recon-import-provider-note { padding: 11px 12px; border-radius: 8px; background: #f3f6f2; color: #536156; font-size: 11px; line-height: 1.65; }
+.platform-text-button { padding: 0; color: var(--brand); font-size: 11px; font-weight: 650; border: 0; background: transparent; cursor: pointer; }
+.platform-text-button:hover { text-decoration: underline; }
+
+@media (max-width: 1120px) and (min-width: 761px) {
+  .platform-nav { gap: clamp(7px, 1.15vw, 13px); }
+  .platform-nav > a { font-size: 11px; }
+  .platform-account { margin-left: 8px; padding-left: 9px; }
+  .platform-account .account-name { max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
 @media (max-width: 760px) {
   .platform-header-inner { width: calc(100% - 32px); min-height: 64px; }
   .brand-lockup { font-size: 16px; }
@@ -432,6 +493,15 @@ button { cursor: pointer; }
   .refund-card-top { align-items: flex-start; }
   .refund-capability-options label { grid-template-columns: 18px 1fr; }
   .refund-capability-options small { grid-column: 2; }
+  .recon-provider-grid, .recon-batch-list { grid-template-columns: 1fr; }
+  .recon-filter-form, .recon-import-form, .recon-action-form { grid-template-columns: 1fr; }
+  .recon-action-reason, .recon-action-disclaimer { grid-column: auto; }
+  .recon-batch-facts, .recon-difference-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recon-hash-fact { grid-column: 1 / -1; }
+  .recon-difference-heading, .recon-row-main { align-items: flex-start; flex-direction: column; }
+  .recon-modal-backdrop { align-items: flex-end; padding: 0; }
+  .recon-modal { width: 100%; max-height: 92vh; border-radius: 14px 14px 0 0; }
+  .recon-tabs { overflow-x: auto; }
   .platform-footer-inner { width: calc(100% - 32px); align-items: flex-start; flex-direction: column; justify-content: center; padding: 19px 0; }
   .footer-links { gap: 14px; }
 }

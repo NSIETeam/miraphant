@@ -379,7 +379,7 @@ func AdminImportReconciliationBill(c *gin.Context) {
 		auditErr := model.RecordPointReconciliationImportAuditContext(finishCtx, resultAudit)
 		finishCancel()
 		if auditErr != nil {
-			reconciliationHTTPError(c, http.StatusInternalServerError, "导入结果暂未确认，请查询导入记录后重试")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "导入结果暂未确认，请查询导入记录后重试", "request_key": requestKey, "outcome": "unknown"})
 			return
 		}
 	}
@@ -396,14 +396,18 @@ func AdminImportReconciliationBill(c *gin.Context) {
 			status = http.StatusServiceUnavailable
 			message = "该支付渠道尚未配置"
 		}
-		reconciliationHTTPError(c, status, message)
+		c.AbortWithStatusJSON(status, gin.H{"error": message, "request_key": requestKey, "outcome": "failed", "error_code": resultAudit.ErrorCode})
 		return
 	}
 	status := http.StatusCreated
+	outcome := "imported"
 	if !created {
 		status = http.StatusOK
+		outcome = "replayed"
+	} else if batch.Status == "unsupported_format" {
+		outcome = "unsupported"
 	}
-	c.JSON(status, gin.H{"batch": toReconciliationBatchDTO(model.PointReconciliationBatchView{ID: batch.ID, BatchKey: batch.BatchKey, Provider: batch.Provider, MerchantID: batch.MerchantID, AppID: batch.AppID, BillDate: batch.BillDate, BillType: batch.BillType, FormatVersion: batch.FormatVersion, ImportVersion: batch.ImportVersion, Timezone: batch.Timezone, Status: batch.Status, SourceSHA256: batch.SourceSHA256, ProviderHashType: batch.ProviderHashType, ProviderHashVerified: batch.ProviderHashVerified, SourceSize: batch.SourceSize, RowCount: batch.RowCount, CreatedAt: batch.CreatedAt}), "created": created})
+	c.JSON(status, gin.H{"batch": toReconciliationBatchDTO(model.PointReconciliationBatchView{ID: batch.ID, BatchKey: batch.BatchKey, Provider: batch.Provider, MerchantID: batch.MerchantID, AppID: batch.AppID, BillDate: batch.BillDate, BillType: batch.BillType, FormatVersion: batch.FormatVersion, ImportVersion: batch.ImportVersion, Timezone: batch.Timezone, Status: batch.Status, SourceSHA256: batch.SourceSHA256, ProviderHashType: batch.ProviderHashType, ProviderHashVerified: batch.ProviderHashVerified, SourceSize: batch.SourceSize, RowCount: batch.RowCount, CreatedAt: batch.CreatedAt}), "created": created, "request_key": requestKey, "outcome": outcome})
 }
 
 func AdminRecordReconciliationAction(c *gin.Context) {

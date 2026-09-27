@@ -200,6 +200,18 @@ func TestAdminReconciliationRoutesCapabilitiesImportAuditAndRedaction(t *testing
 	if failedFetch.Code != http.StatusBadGateway || strings.Contains(failedFetch.Body.String(), "secret-download-token-and-url") {
 		t.Fatalf("downloader error leaked: %d %s", failedFetch.Code, failedFetch.Body.String())
 	}
+	var failedImport struct {
+		RequestKey string `json:"request_key"`
+		Outcome    string `json:"outcome"`
+		ErrorCode  string `json:"error_code"`
+	}
+	if err := json.Unmarshal(failedFetch.Body.Bytes(), &failedImport); err != nil || failedImport.RequestKey == "" || failedImport.Outcome != "failed" || failedImport.ErrorCode != "download_or_import_failed" {
+		t.Fatalf("failed import did not return stable audit reference: %v %+v %s", err, failedImport, failedFetch.Body.String())
+	}
+	var failedAudit dbmodel.PointReconciliationImportAudit
+	if err := db.Where("request_key = ? AND phase = ?", failedImport.RequestKey, "result").First(&failedAudit).Error; err != nil || failedAudit.Phase != "result" || failedAudit.Outcome != "failed" || failedAudit.ErrorCode != failedImport.ErrorCode {
+		t.Fatalf("failed response did not identify its persisted audit: %v %+v", err, failedAudit)
+	}
 	var batchCount, importedAuditCount int64
 	db.Model(&dbmodel.PointReconciliationBatch{}).Count(&batchCount)
 	db.Model(&dbmodel.PointReconciliationImportAudit{}).Where("phase = ? AND outcome IN ?", "result", []string{"imported", "replayed", "unsupported"}).Count(&importedAuditCount)

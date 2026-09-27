@@ -602,3 +602,25 @@ Luna 冻结交接后，父复核独立密钥配置、真实会话与 reconciliat
 父独立执行 `go test -race ./controller ./model ./service/payments -run 'Test(AdminReconciliation|Reconciliation)' -count=3 -timeout=120s` 全通过：controller 12.033s、model 5.354s、service/payments 2.977s。CI 同口径 controller/router/middleware/model/relay 定向回归也全通过；只有既有 macOS 链接器警告，`git diff --check` 通过。
 
 允许提交此 HTTP 节点。管理 UI 尚未接线；导入路由使用合成服务端下载结果测试，真实签名下载适配器的证据仍来自前一协议测试节点，并非实商户联调。支付宝解析、渠道实账、生产迁移与发布仍未完成。限流当前固定每人每小时 30 次、单进程导入串行；不是多实例分布式任务调度。
+
+父确认管理 HTTP 提交 `8ef83a442a46be488e67a8203415cf4cedf7803b` 的 CI [36352919319](https://github.com/NSIETeam/miraphant/actions/runs/36352919319) completed/success。该提交未包含随后新增的密钥配置测试文件，也不覆盖正在开发的对账 UI。
+
+
+## 对账页面早审（未放行）
+
+父检查 Reconciliation.js 初稿：待确认备注只存 action_key，刷新后原 action/reason/business_ref 丢失，无法可靠恢复同内容重试。已要求按用户和差异隔离存完整 payload、恢复表单并锁定待确认内容，明确成功才清除，409 不自动换键。Header 的权限三元分支使角色 1 同时具备退款和对账权限时丢失退款入口，要求独立显示两个可用入口。开发中的能力变量初始化/Set 使用和漏传错误回调也已指出，待稳定构建和浏览器验收。
+
+父续审备注恢复：浏览器存储失败需内存保留完整请求，差异筛选排除 matched。另已指出首次响应丢失后，重试取 CSRF 遇到 401/403 时不能清掉既有 pending key/payload，否则重新登录后会生成新 key 重复追加；仅无此前不明结果、可证明未受理的参数拒绝可释放草稿。待稳定构建后以浏览器故障场景复核。
+
+### 后续品牌收尾范围确认（2026-09-28）
+
+本次重新检查源码，品牌尚不能判定完整：`/admin/brand` 仍为 UnavailableAdminPage，而管理总览宣称统一品牌配置；OtherSetting 仍让用户编辑后端强制固定的 SystemName/Logo/Footer，并指向上游版本更新；OperationSetting 保留美元额度、发卡充值链接和旧倍率；public 仍有旧 logo.png/favicon.ico，缺少触屏图标/分享预览，noscript 为英文。
+
+下一实施节点应以现有正式 SVG 为源统一资产（保留源码及 MIT 署名），建立可查看实际品牌状态的品牌页；移除无法生效的编辑入口，清楚链接真实积分价格/套餐/钱包配置。不得为消除占位而伪造可保存品牌设置，不得让旧美元额度控制积分价格。涉及设置写入时须复用当前会话、数据库即时角色及 CSRF 保护。先给出具体改动清单再由 Luna 实施，父代理逐路由审核。
+
+### 导入结果关联修正审核要求（2026-09-28）
+
+- 拒绝用 actor/provider/day、递增 ID 或相近时间推测“本次”导入结果：同一用户多标签并发时不能唯一关联。
+- 服务端在受理后返回该次 request_key。只有失败结果审计成功落库才可返回 outcome=failed 与稳定错误码；结果审计写入失败须明确 unknown。成功响应同样返回请求编号。
+- 前端只依赖准确响应或同 request_key 的审计，不得将其他请求的失败当成当前结果。断网或没有编号时保留未知提示。新增窄 HTTP 断言应证明返回编号对应持久化审计；还须重新构建和浏览器复核失败弹窗。
+- 独立账单密钥配置测试父代理本次重跑 race/count=3 通过（1.720s），仅既有 macOS 链接警告；该未跟踪测试待随本轮 UI/契约提交纳入。

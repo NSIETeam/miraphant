@@ -12,21 +12,21 @@ const publicLinks = [
 const Header = () => {
   const [userState, userDispatch] = useContext(UserContext);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [refundCapabilities, setRefundCapabilities] = useState([]);
+  const [operatorCapabilities, setOperatorCapabilities] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
   const user = userState.user || (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
   const currentUserID = user?.id;
   useEffect(() => {
     let active = true;
-    if (!currentUserID) { setRefundCapabilities([]); return undefined; }
+    if (!currentUserID) { setOperatorCapabilities([]); return undefined; }
     StrictAPI.get('/api/refund-auth/self').then((response) => {
-      if (active) setRefundCapabilities(Array.isArray(response?.data?.capabilities) ? response.data.capabilities : []);
-    }).catch(() => { if (active) setRefundCapabilities([]); });
+      if (active) setOperatorCapabilities(Array.isArray(response?.data?.capabilities) ? response.data.capabilities : []);
+    }).catch(() => { if (active) setOperatorCapabilities([]); });
     return () => { active = false; };
   }, [currentUserID]);
   const links = user
-    ? [...publicLinks, { label: '控制台', to: '/console' }, { label: '积分与充值', to: '/console/wallet' }, { label: '充值订单', to: '/console/orders' }, { label: '访问密钥', to: '/console/keys' }, { label: '个人资料', to: '/console/profile' }, ...(user.role >= 10 ? [{ label: '管理', to: '/admin' }] : refundCapabilities.includes('refund.read') ? [{ label: '退款工作台', to: '/admin/refunds' }] : [])]
+    ? [...publicLinks, { label: '控制台', to: '/console' }, { label: '积分与充值', to: '/console/wallet' }, { label: '充值订单', to: '/console/orders' }, { label: '访问密钥', to: '/console/keys' }, { label: '个人资料', to: '/console/profile' }, ...(user.role >= 10 ? [{ label: '管理', to: '/admin' }] : [...(operatorCapabilities.includes('refund.read') ? [{ label: '退款工作台', to: '/admin/refunds' }] : []), ...(operatorCapabilities.includes('reconciliation.read') ? [{ label: '支付对账', to: '/admin/reconciliation' }] : [])])]
     : publicLinks;
 
   const logout = async () => {

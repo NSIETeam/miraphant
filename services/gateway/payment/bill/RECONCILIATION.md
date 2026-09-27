@@ -114,3 +114,23 @@ An absent bill, failed download, invalid signature/hash, or incomplete statement
 is an error, not a zero-row day. This layer is explicitly limited to trade bill
 matching; settlement account statements and fee/settlement reconciliation are
 separate work.
+
+## Default admin interface
+
+The default web theme exposes these records at `/admin/reconciliation` to
+accounts with `reconciliation.read`; delegated role-1 accounts are supported
+without the legacy role-10 administrator role. Import and append-note controls
+are shown only with their corresponding capabilities. The page offers
+provider/date filters, cursor pagination, batch detail, normalized rows,
+findings and append-only action history. It does not provide raw source export.
+An attempt with only a `started` row is shown as processing or unconfirmed,
+never as success or failure. Repeating a note after an uncertain response
+reuses the same action key and full payload; a conflict does not silently
+replace it.
+
+`request_query` and `record_reference` entries are operator records only. They
+do not issue a provider query, verify an external reference, or resolve a
+finding. The page explicitly treats WeChat `PROCESSING` as a historical bill
+state. Refunds cannot be classified as missing from a particular daily bill
+when the trusted application date is unavailable; the interface does not
+infer a missing refund from the refund completion/query time.
