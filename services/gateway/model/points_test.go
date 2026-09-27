@@ -30,7 +30,7 @@ func openPointsTestDB(t *testing.T, path string) *gorm.DB {
 	if err = db.AutoMigrate(&Token{}); err != nil {
 		t.Fatal(err)
 	}
-	if err = db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}); err != nil {
+	if err = db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}); err != nil {
 		t.Fatal(err)
 	}
 	return db
@@ -516,7 +516,8 @@ func TestPaidOrderCreditIsIdempotent(t *testing.T) {
 	db, cleanup := withPointsFixture(t, 0, 100, true)
 	defer cleanup()
 	paidEvent := "verified-notification-1"
-	order := PointPurchaseOrder{OrderKey: "order-1", UserID: 41, AmountFen: 10, PurchaseMicro: 10_000_000, BonusMicro: 2_000_000, State: "paid", PaidEventKey: &paidEvent}
+	expires := time.Now().UTC().Add(time.Hour).Unix()
+	order := PointPurchaseOrder{OrderKey: "order-1", UserID: 41, AmountFen: 10, PurchaseMicro: 10_000_000, BonusMicro: 2_000_000, BonusValiditySecs: 3600, BonusExpiresAt: &expires, State: "paid", PaidEventKey: &paidEvent}
 	if err := db.Create(&order).Error; err != nil {
 		t.Fatal(err)
 	}

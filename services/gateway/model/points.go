@@ -187,17 +187,117 @@ type PointTokenBudget struct {
 }
 
 type PointPurchaseOrder struct {
-	ID             uint    `gorm:"primaryKey"`
-	OrderKey       string  `gorm:"size:160;not null;uniqueIndex"`
-	UserID         int     `gorm:"not null;index"`
-	AmountFen      int64   `gorm:"not null"`
-	PurchaseMicro  int64   `gorm:"not null"`
-	BonusMicro     int64   `gorm:"not null;default:0"`
-	BonusExpiresAt *int64  // UTC Unix seconds
-	State          string  `gorm:"size:24;not null;index"` // pending, paid, credited, closed, refunded
-	PaidEventKey   *string `gorm:"size:180;uniqueIndex"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                    uint    `gorm:"primaryKey"`
+	OrderKey              string  `gorm:"size:160;not null;uniqueIndex"`
+	UserID                int     `gorm:"not null;index;uniqueIndex:idx_point_order_idempotency"`
+	IdempotencyKey        *string `gorm:"size:180;uniqueIndex:idx_point_order_idempotency"`
+	Channel               string  `gorm:"size:16;not null;default:'';index"`
+	PackageID             string  `gorm:"size:80;not null;default:'';index"`
+	PackageVersion        string  `gorm:"size:80;not null;default:''"`
+	PackageSnapshot       string  `gorm:"type:text;not null;default:''"`
+	Currency              string  `gorm:"size:3;not null;default:'CNY'"`
+	AmountFen             int64   `gorm:"not null"`
+	PurchaseMicro         int64   `gorm:"not null"`
+	BonusMicro            int64   `gorm:"not null;default:0"`
+	BonusValiditySecs     int64   `gorm:"not null;default:0"`
+	BonusExpiresAt        *int64  // UTC Unix seconds
+	ExpiresAt             *int64  // UTC Unix seconds
+	ProviderTransactionID string  `gorm:"size:180;not null;default:'';index"`
+	ProviderMerchantID    string  `gorm:"size:80;not null;default:''"`
+	State                 string  `gorm:"size:24;not null;index"` // pending, paid, credited, closed, paid_review, refunded
+	PaidEventKey          *string `gorm:"size:180;uniqueIndex"`
+	ClosedReason          string  `gorm:"size:128;not null;default:''"`
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+// PointPackage is an immutable price/credit snapshot. Package changes create
+// a new version; existing orders retain the exact snapshot they were created
+// from, including bonus expiry.
+type PointPackage struct {
+	ID                uint   `gorm:"primaryKey"`
+	PackageID         string `gorm:"size:80;not null;uniqueIndex:idx_point_package_version"`
+	Version           string `gorm:"size:80;not null;uniqueIndex:idx_point_package_version"`
+	Name              string `gorm:"size:160;not null"`
+	AmountFen         int64  `gorm:"not null"`
+	PurchaseMicro     int64  `gorm:"not null"`
+	BonusMicro        int64  `gorm:"not null;default:0"`
+	BonusValiditySecs int64  `gorm:"not null;default:0"`
+	Currency          string `gorm:"size:3;not null;default:'CNY'"`
+	Published         bool   `gorm:"not null;default:false;index"`
+	CreatedBy         int    `gorm:"not null;default:0"`
+	CreatedAt         time.Time
+}
+
+func (*PointPackage) BeforeUpdate(*gorm.DB) error {
+	return errors.New("point packages are immutable; publish a new version")
+}
+func (*PointPackage) BeforeDelete(*gorm.DB) error {
+	return errors.New("point packages are immutable")
+}
+
+type PointActivePackage struct {
+	PackageID string `gorm:"primaryKey;size:80"`
+	Version   string `gorm:"size:80;not null"`
+	UpdatedBy int    `gorm:"not null;default:0"`
+	UpdatedAt time.Time
+}
+
+// PaymentEvent is a durable notification inbox. Raw callback bodies and
+// credentials are intentionally never stored; Digest is SHA-256 of the exact
+// callback body and Payload is the normalized, non-secret provider result.
+type PaymentEvent struct {
+	ID                    uint   `gorm:"primaryKey"`
+	Provider              string `gorm:"size:16;not null;uniqueIndex:idx_payment_event_provider_key"`
+	ProviderEventID       string `gorm:"size:180;not null;uniqueIndex:idx_payment_event_provider_key"`
+	OrderKey              string `gorm:"size:160;not null;index"`
+	ProviderTransactionID string `gorm:"size:180;not null;default:'';index"`
+	Digest                string `gorm:"size:64;not null"`
+	Payload               string `gorm:"type:text;not null"`
+	Verification          string `gorm:"size:24;not null"`       // verified, rejected, mismatch
+	State                 string `gorm:"size:24;not null;index"` // received, processed, quarantined
+	ErrorCode             string `gorm:"size:64;not null;default:''"`
+	CreatedAt             time.Time
+	ProcessedAt           *time.Time
+}
+
+// PaymentTransaction is the durable, unique owner of a provider transaction.
+// Quarantined inbox notifications never claim ownership. A claim is inserted
+// in the same transaction as the paid order transition and point credit.
+type PaymentTransaction struct {
+	ID                    uint   `gorm:"primaryKey"`
+	Provider              string `gorm:"size:16;not null;uniqueIndex:idx_payment_transaction_owner"`
+	MerchantID            string `gorm:"size:80;not null;uniqueIndex:idx_payment_transaction_owner"`
+	AppID                 string `gorm:"size:80;not null"`
+	ProviderTransactionID string `gorm:"size:180;not null;uniqueIndex:idx_payment_transaction_owner"`
+	OrderKey              string `gorm:"size:160;not null;index"`
+	EventID               uint   `gorm:"not null;index"`
+	CreatedAt             time.Time
+}
+
+func (*PaymentTransaction) BeforeUpdate(*gorm.DB) error {
+	return errors.New("payment transaction ownership is append-only")
+}
+func (*PaymentTransaction) BeforeDelete(*gorm.DB) error {
+	return errors.New("payment transaction ownership is append-only")
+}
+
+func (*PaymentEvent) BeforeUpdate(tx *gorm.DB) error {
+	updates, ok := tx.Statement.Dest.(map[string]interface{})
+	if !ok || len(updates) == 0 {
+		return errors.New("payment event updates must use the transition-field allowlist")
+	}
+	for key := range updates {
+		switch strings.ToLower(key) {
+		case "state", "processed_at", "error_code":
+		default:
+			return errors.New("payment event evidence is immutable")
+		}
+	}
+	return nil
+}
+func (*PaymentEvent) BeforeDelete(*gorm.DB) error {
+	return errors.New("payment event evidence is append-only")
 }
 
 func (*PointPriceVersion) BeforeUpdate(*gorm.DB) error {
@@ -670,7 +770,7 @@ type PointsSchemaMigration struct {
 	AppliedAt time.Time
 }
 
-const pointsSchemaVersion = 4
+const pointsSchemaVersion = 6
 
 // MigratePointsSchema is deliberately separate from the normal startup migration.
 func MigratePointsSchema() error {
@@ -689,7 +789,7 @@ func MigratePointsSchema() error {
 		return err
 	}
 	// Each additive AutoMigrate is safe to rerun if a backend commits DDL implicitly.
-	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}}
+	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}}
 	for _, item := range models {
 		if err := DB.AutoMigrate(item); err != nil {
 			return err
@@ -1468,65 +1568,81 @@ func CreditPaidPointOrder(orderKey, eventKey string) error {
 	if orderKey == "" || eventKey == "" {
 		return errors.New("order and verified event keys are required")
 	}
-	return pointsTransaction(func(tx *gorm.DB) error {
-		var order PointPurchaseOrder
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_key = ?", orderKey).First(&order).Error; err != nil {
+	return pointsTransaction(func(tx *gorm.DB) error { return creditPaidPointOrderTx(tx, orderKey, eventKey) })
+}
+
+// creditPaidPointOrderTx lets the verified payment inbox processor mark an
+// order paid and credit its lots/account/ledger in one transaction.
+func creditPaidPointOrderTx(tx *gorm.DB, orderKey, eventKey string) error {
+	var order PointPurchaseOrder
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_key = ?", orderKey).First(&order).Error; err != nil {
+		return err
+	}
+	if order.State == "credited" {
+		if order.PaidEventKey != nil && *order.PaidEventKey == eventKey {
+			return nil
+		}
+		return ErrPointsConflict
+	}
+	if order.State != "paid" {
+		return errors.New("order is not verified paid")
+	}
+	if order.PaidEventKey == nil || *order.PaidEventKey != eventKey {
+		return ErrPointsConflict
+	}
+	if order.PurchaseMicro <= 0 || order.AmountFen <= 0 || order.AmountFen > int64(^uint64(0)>>1)/PointMicroPerPoint || order.PurchaseMicro != order.AmountFen*PointMicroPerPoint || order.BonusMicro < 0 {
+		return errors.New("invalid paid order snapshot")
+	}
+	if order.BonusMicro > 0 && (order.BonusExpiresAt == nil || *order.BonusExpiresAt <= 0) {
+		return errors.New("paid order bonus must carry an explicit expiry")
+	}
+	if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&PointAccount{UserID: order.UserID}).Error; err != nil {
+		return err
+	}
+	lot := PointLot{UserID: order.UserID, BusinessKey: "purchase:" + order.OrderKey, Kind: "purchase", SourceRef: order.OrderKey, AmountFen: order.AmountFen, InitialMicro: order.PurchaseMicro, AvailableMicro: order.PurchaseMicro}
+	if err := tx.Create(&lot).Error; err != nil {
+		return err
+	}
+	if order.BonusMicro > 0 {
+		bonus := PointLot{UserID: order.UserID, BusinessKey: "bonus:" + order.OrderKey, Kind: "bonus", SourceRef: order.OrderKey, InitialMicro: order.BonusMicro, AvailableMicro: order.BonusMicro, ExpiresAt: order.BonusExpiresAt}
+		if err := tx.Create(&bonus).Error; err != nil {
 			return err
 		}
-		if order.State == "credited" {
-			if order.PaidEventKey != nil && *order.PaidEventKey == eventKey {
-				return nil
-			}
-			return ErrPointsConflict
-		}
-		if order.State != "paid" {
-			return errors.New("order is not verified paid")
-		}
-		if order.PaidEventKey == nil || *order.PaidEventKey != eventKey {
-			return ErrPointsConflict
-		}
-		if order.PurchaseMicro <= 0 || order.AmountFen <= 0 || order.AmountFen > int64(^uint64(0)>>1)/PointMicroPerPoint || order.PurchaseMicro != order.AmountFen*PointMicroPerPoint || order.BonusMicro < 0 {
-			return errors.New("invalid paid order snapshot")
-		}
-		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&PointAccount{UserID: order.UserID}).Error; err != nil {
-			return err
-		}
-		lot := PointLot{UserID: order.UserID, BusinessKey: "purchase:" + order.OrderKey, Kind: "purchase", SourceRef: order.OrderKey, AmountFen: order.AmountFen, InitialMicro: order.PurchaseMicro, AvailableMicro: order.PurchaseMicro}
-		if err := tx.Create(&lot).Error; err != nil {
-			return err
-		}
-		if order.BonusMicro > 0 {
-			bonus := PointLot{UserID: order.UserID, BusinessKey: "bonus:" + order.OrderKey, Kind: "bonus", SourceRef: order.OrderKey, InitialMicro: order.BonusMicro, AvailableMicro: order.BonusMicro, ExpiresAt: order.BonusExpiresAt}
-			if err := tx.Create(&bonus).Error; err != nil {
-				return err
-			}
-		}
-		total, err := checkedAdd(order.PurchaseMicro, order.BonusMicro)
-		if err != nil {
-			return err
-		}
-		upd := tx.Model(&PointAccount{}).Where("user_id = ? AND available_micro <= ?", order.UserID, int64(^uint64(0)>>1)-total).Update("available_micro", gorm.Expr("available_micro + ?", total))
-		if upd.Error != nil {
-			return upd.Error
-		}
-		if upd.RowsAffected != 1 {
-			return errors.New("point account missing")
-		}
-		var account PointAccount
-		if err := tx.First(&account, "user_id = ?", order.UserID).Error; err != nil {
-			return err
-		}
-		ledger := PointLedger{UserID: order.UserID, BusinessKey: "credit:" + order.OrderKey, Kind: "purchase_credit", AvailableDelta: total, AvailableAfter: account.AvailableMicro, HeldAfter: account.HeldMicro, SpentAfter: account.SpentMicro, Reason: "verified paid order credit"}
-		if err := tx.Create(&ledger).Error; err != nil {
-			return err
-		}
-		orderUpdate := tx.Model(&order).Where("state = ? AND paid_event_key = ?", "paid", eventKey).Update("state", "credited")
-		if orderUpdate.Error != nil {
-			return orderUpdate.Error
-		}
-		if orderUpdate.RowsAffected != 1 {
-			return ErrPointsConflict
-		}
-		return nil
-	})
+	}
+	total, err := checkedAdd(order.PurchaseMicro, order.BonusMicro)
+	if err != nil {
+		return err
+	}
+	upd := tx.Model(&PointAccount{}).Where("user_id = ? AND available_micro <= ?", order.UserID, int64(^uint64(0)>>1)-total).Update("available_micro", gorm.Expr("available_micro + ?", total))
+	if upd.Error != nil {
+		return upd.Error
+	}
+	if upd.RowsAffected != 1 {
+		return errors.New("point account missing or point balance overflow")
+	}
+	var account PointAccount
+	if err := tx.First(&account, "user_id = ?", order.UserID).Error; err != nil {
+		return err
+	}
+	ledger := PointLedger{UserID: order.UserID, BusinessKey: "credit:" + order.OrderKey, Kind: "purchase_credit", AvailableDelta: total, AvailableAfter: account.AvailableMicro, HeldAfter: account.HeldMicro, SpentAfter: account.SpentMicro, Reason: "verified paid order credit"}
+	if err := tx.Create(&ledger).Error; err != nil {
+		return err
+	}
+	orderUpdate := tx.Model(&order).Where("state = ? AND paid_event_key = ?", "paid", eventKey).Update("state", "credited")
+	if orderUpdate.Error != nil {
+		return orderUpdate.Error
+	}
+	if orderUpdate.RowsAffected != 1 {
+		return ErrPointsConflict
+	}
+	return nil
+}
+
+// CreditPaidPointOrderTx is reserved for the payment inbox transaction, where
+// marking the verified order paid and crediting the ledger must commit together.
+func CreditPaidPointOrderTx(tx *gorm.DB, orderKey, eventKey string) error {
+	if tx == nil || orderKey == "" || eventKey == "" {
+		return errors.New("transaction, order, and verified event keys are required")
+	}
+	return creditPaidPointOrderTx(tx, orderKey, eventKey)
 }
