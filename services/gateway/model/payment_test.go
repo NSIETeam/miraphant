@@ -143,7 +143,7 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 	} else {
 		t.Fatalf("unsupported migration fixture version %d", version)
 	}
-	for _, table := range []any{&PointRefundProviderOwner{}, &PointRefundEvidence{}, &PointRefundDecision{}, &PointRefundAllocation{}, &PointRefund{}} {
+	for _, table := range []any{&PointRefundProviderOwner{}, &PointRefundInbox{}, &PointRefundEvidence{}, &PointRefundDecision{}, &PointRefundAllocation{}, &PointRefund{}} {
 		if err := db.Migrator().DropTable(table); err != nil {
 			t.Fatal(err)
 		}
@@ -185,7 +185,7 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 	if err := MigratePointsSchema(); err != nil {
 		t.Fatalf("v%d to v9 migration failed: %v", version, err)
 	}
-	if !db.Migrator().HasTable(&PointPackage{}) || !db.Migrator().HasTable(&PointActivePackage{}) || !db.Migrator().HasTable(&PaymentEvent{}) || !db.Migrator().HasTable(&PaymentTransaction{}) || !db.Migrator().HasTable(&PointRefund{}) || !db.Migrator().HasTable(&PointRefundProviderOwner{}) || !db.Migrator().HasTable(&PointRefundEvidence{}) {
+	if !db.Migrator().HasTable(&PointPackage{}) || !db.Migrator().HasTable(&PointActivePackage{}) || !db.Migrator().HasTable(&PaymentEvent{}) || !db.Migrator().HasTable(&PaymentTransaction{}) || !db.Migrator().HasTable(&PointRefund{}) || !db.Migrator().HasTable(&PointRefundProviderOwner{}) || !db.Migrator().HasTable(&PointRefundInbox{}) || !db.Migrator().HasTable(&PointRefundEvidence{}) {
 		t.Fatal("payment/refund tables missing after current migration")
 	}
 	if !db.Migrator().HasColumn(&PointRefundEvidence{}, "provider_refund_key") {
@@ -270,7 +270,7 @@ func TestPointsSchemaV8RejectsUnexplainedLotDeficitAndRollsBack(t *testing.T) {
 		t.Run(expiry.name, func(t *testing.T) {
 			db, cleanup := withPointsFixture(t, 0, 100, true)
 			defer cleanup()
-			for _, table := range []any{&PointRefundProviderOwner{}, &PointRefundEvidence{}, &PointRefundDecision{}, &PointRefundAllocation{}, &PointRefund{}} {
+			for _, table := range []any{&PointRefundProviderOwner{}, &PointRefundInbox{}, &PointRefundEvidence{}, &PointRefundDecision{}, &PointRefundAllocation{}, &PointRefund{}} {
 				if err := db.Migrator().DropTable(table); err != nil {
 					t.Fatal(err)
 				}

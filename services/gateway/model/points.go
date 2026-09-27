@@ -193,6 +193,7 @@ type PointRefund struct {
 	ProviderAppID         string  `gorm:"size:80;not null"`
 	ProviderTransactionID string  `gorm:"size:180;not null"`
 	ProviderRefundKey     string  `gorm:"size:64;not null;uniqueIndex"`
+	PriorRefundedFen      int64   `gorm:"not null;default:0"`
 	Currency              string  `gorm:"size:3;not null"`
 	AmountFen             int64   `gorm:"not null"`
 	PurchaseMicro         int64   `gorm:"not null"`
@@ -202,6 +203,10 @@ type PointRefund struct {
 	OriginalBonusMicro    int64   `gorm:"not null;default:0"`
 	Reason                string  `gorm:"size:512;not null"`
 	State                 string  `gorm:"size:24;not null;index"` // awaiting_review, approved, submitting, submitted, unknown, succeeded, rejected, definite_failed, needs_manual_review
+	OperationToken        string  `gorm:"size:80;not null;default:''"`
+	OperationKind         string  `gorm:"size:16;not null;default:''"` // apply, query
+	OperationClaimedAt    int64   `gorm:"not null;default:0;index"`
+	OperationLeaseUntil   int64   `gorm:"not null;default:0;index"`
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 }
@@ -213,7 +218,7 @@ func (*PointRefund) BeforeUpdate(tx *gorm.DB) error {
 	}
 	for key := range updates {
 		switch strings.ToLower(key) {
-		case "state", "active_order_key", "updated_at":
+		case "state", "active_order_key", "updated_at", "operation_token", "operation_kind", "operation_claimed_at", "operation_lease_until":
 		default:
 			return errors.New("point refund request snapshot is immutable")
 		}
@@ -297,6 +302,55 @@ type PointRefundProviderOwner struct {
 	ProviderRefundID string `gorm:"size:180;not null;uniqueIndex:idx_point_refund_provider_owner"`
 	RefundKey        string `gorm:"size:180;not null;index"`
 	CreatedAt        time.Time
+}
+
+// PointRefundInbox contains only verified, normalized provider evidence. Raw
+// notices, signatures, credentials, and certificate material are never stored.
+// A received row is replayable until its corresponding immutable evidence and
+// ledger transition have committed.
+type PointRefundInbox struct {
+	ID                    uint   `gorm:"primaryKey"`
+	EvidenceKey           string `gorm:"size:180;not null;uniqueIndex"`
+	RefundKey             string `gorm:"size:180;not null;index"`
+	Provider              string `gorm:"size:16;not null;index"`
+	EvidenceSource        string `gorm:"size:24;not null"`
+	OperationToken        string `gorm:"size:80;not null;default:'';index"`
+	ProviderEventID       string `gorm:"size:180;not null;default:''"`
+	ProviderRefundID      string `gorm:"size:180;not null;default:''"`
+	ProviderRefundKey     string `gorm:"size:64;not null"`
+	OrderKey              string `gorm:"size:160;not null;index"`
+	ProviderTransactionID string `gorm:"size:180;not null"`
+	MerchantID            string `gorm:"size:80;not null"`
+	AppID                 string `gorm:"size:80;not null"`
+	Outcome               string `gorm:"size:24;not null"`
+	ProviderStatus        string `gorm:"size:48;not null;default:''"`
+	AmountFen             int64  `gorm:"not null"`
+	TotalFen              int64  `gorm:"not null"`
+	Currency              string `gorm:"size:3;not null"`
+	ProviderOccurredAt    int64  `gorm:"not null;default:0"`
+	Digest                string `gorm:"size:64;not null"`
+	State                 string `gorm:"size:16;not null;default:received;index"` // received, processed, quarantined
+	ErrorCode             string `gorm:"size:48;not null;default:''"`
+	CreatedAt             time.Time
+	ProcessedAt           *time.Time
+}
+
+func (*PointRefundInbox) BeforeUpdate(tx *gorm.DB) error {
+	updates, ok := tx.Statement.Dest.(map[string]interface{})
+	if !ok || len(updates) == 0 {
+		return errors.New("refund inbox updates must use the processing-field allowlist")
+	}
+	for key := range updates {
+		switch strings.ToLower(key) {
+		case "state", "error_code", "processed_at":
+		default:
+			return errors.New("refund inbox evidence is immutable")
+		}
+	}
+	return nil
+}
+func (*PointRefundInbox) BeforeDelete(*gorm.DB) error {
+	return errors.New("point refund inbox is append-only")
 }
 
 func (*PointRefundProviderOwner) BeforeUpdate(*gorm.DB) error {
@@ -904,7 +958,7 @@ type PointsSchemaMigration struct {
 	AppliedAt time.Time
 }
 
-const pointsSchemaVersion = 9
+const pointsSchemaVersion = 10
 
 // MigratePointsSchema is deliberately separate from the normal startup migration.
 func MigratePointsSchema() error {
@@ -926,7 +980,7 @@ func MigratePointsSchema() error {
 		return nil
 	}
 	// Each additive AutoMigrate is safe to rerun if a backend commits DDL implicitly.
-	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}}
+	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}}
 	for _, item := range models {
 		if err := DB.AutoMigrate(item); err != nil {
 			return err
@@ -939,6 +993,9 @@ func MigratePointsSchema() error {
 		if err := backfillPointLotExpiryCountersTx(tx); err != nil {
 			return err
 		}
+		if err := backfillPointRefundPriorAmountsTx(tx); err != nil {
+			return err
+		}
 		var prior PointsSchemaMigration
 		lookup := tx.Order("version DESC").First(&prior)
 		if lookup.Error != nil && !errors.Is(lookup.Error, gorm.ErrRecordNotFound) {
@@ -949,6 +1006,44 @@ func MigratePointsSchema() error {
 		}
 		return tx.Create(&PointsSchemaMigration{Version: pointsSchemaVersion, AppliedAt: time.Now().UTC()}).Error
 	})
+}
+
+// v9 stored successful refund rows but did not freeze the prior cumulative
+// amount on each request. Deterministic per-order ID order reflects the only
+// permitted single-in-flight sequence. Reject inconsistent history rather
+// than guessing a provider cumulative value.
+func backfillPointRefundPriorAmountsTx(tx *gorm.DB) error {
+	var refunds []PointRefund
+	if err := tx.Order("order_key ASC, id ASC").Find(&refunds).Error; err != nil {
+		return err
+	}
+	priorByOrder := make(map[string]int64)
+	orders := make(map[string]PointPurchaseOrder)
+	for _, refund := range refunds {
+		var order PointPurchaseOrder
+		if cached, ok := orders[refund.OrderKey]; ok {
+			order = cached
+		} else {
+			if err := tx.Where("order_key = ?", refund.OrderKey).First(&order).Error; err != nil {
+				return fmt.Errorf("cannot prove prior refund amount for %s: %w", refund.RefundKey, err)
+			}
+			orders[refund.OrderKey] = order
+		}
+		if refund.AmountFen <= 0 || refund.OriginalAmountFen != order.AmountFen || refund.UserID != order.UserID || refund.ProviderMerchantID != order.ProviderMerchantID || refund.ProviderAppID != order.ProviderAppID || refund.ProviderTransactionID != order.ProviderTransactionID || refund.Channel != order.Channel {
+			return fmt.Errorf("cannot prove refund identity or prior amount for %s", refund.RefundKey)
+		}
+		prior := priorByOrder[refund.OrderKey]
+		if prior > order.AmountFen || refund.AmountFen > order.AmountFen-prior {
+			return fmt.Errorf("refund history exceeds original amount for %s", refund.OrderKey)
+		}
+		if err := tx.Exec("UPDATE point_refunds SET prior_refunded_fen = ? WHERE id = ?", prior, refund.ID).Error; err != nil {
+			return err
+		}
+		if refund.State == "succeeded" {
+			priorByOrder[refund.OrderKey] = prior + refund.AmountFen
+		}
+	}
+	return nil
 }
 
 func backfillPointLotExpiryCountersTx(tx *gorm.DB) error {

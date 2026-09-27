@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -105,8 +106,15 @@ func TestPointRefundReserveApproveSuccessIdempotencyAndWallet(t *testing.T) {
 	if err := RecordPointRefundEvidence(evidence); err != nil {
 		t.Fatalf("second signed event for same provider refund should be accepted as evidence: %v", err)
 	}
-	if err := RecordPointRefundEvidence(refundEvidence(refund, "refund-event-pending-late", "pending", "wx-refund-1", "digest-3")); !errors.Is(err, ErrPointRefundState) {
-		t.Fatalf("late pending evidence must not revert completed refund: %v", err)
+	if err := RecordPointRefundEvidence(refundEvidence(refund, "refund-event-pending-late", "pending", "wx-refund-1", "digest-3")); err != nil {
+		t.Fatalf("late pending evidence should be recorded without reverting completed refund: %v", err)
+	}
+	var completed PointRefund
+	if err := db.First(&completed, "refund_key = ?", refund.RefundKey).Error; err != nil {
+		t.Fatal(err)
+	}
+	if completed.State != "succeeded" {
+		t.Fatalf("late pending evidence changed completed refund state: %+v", completed)
 	}
 	var purchase, bonus PointLot
 	if err := db.First(&purchase, "business_key = ?", "purchase:"+order.OrderKey).Error; err != nil {
@@ -447,6 +455,247 @@ func TestPointRefundConcurrentWithUsageSettleAndRelease(t *testing.T) {
 	}
 }
 
+func TestPointRefundOperationClaimIsDurableSingleWinnerAndRecoversQueryOnly(t *testing.T) {
+	dbA, cleanup, order := pointRefundFixture(t)
+	defer cleanup()
+	dsn := dbA.Dialector.(*sqlite.Dialector).DSN
+	dbB, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlB, _ := dbB.DB()
+	sqlB.SetMaxOpenConns(4)
+	defer sqlB.Close()
+	refund, err := requestPointRefundOn(dbA, refundRequest(order, "claim-idem", "claim-refund", "claim-provider", 100))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := decidePointRefundOn(dbA, refund.RefundKey, "claim-approve", 99, "approve", "批准"); err != nil {
+		t.Fatal(err)
+	}
+	barrier := make(chan struct{})
+	results := make(chan error, 2)
+	var winners int
+	var winnerToken string
+	var mu sync.Mutex
+	for _, item := range []struct {
+		db    *gorm.DB
+		token string
+	}{{dbA, "worker-a"}, {dbB, "worker-b"}} {
+		item := item
+		go func() {
+			<-barrier
+			_, err := claimPointRefundOperationOn(item.db, refund.RefundKey, item.token, 2_000, 90)
+			if err == nil {
+				mu.Lock()
+				winners++
+				winnerToken = item.token
+				mu.Unlock()
+			}
+			results <- err
+		}()
+	}
+	close(barrier)
+	for i := 0; i < 2; i++ {
+		select {
+		case err := <-results:
+			if err != nil && !errors.Is(err, ErrPointRefundInFlight) {
+				t.Fatalf("losing claim failed for an unexpected reason: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("concurrent refund claims did not finish")
+		}
+	}
+	if winners != 1 {
+		t.Fatalf("independent SQLite handles claimed apply %d times; winner=%q", winners, winnerToken)
+	}
+	// A process restart and a caller choosing a shorter lease cannot shorten
+	// the persisted owner deadline. At expiry, the only returned operation is
+	// query, never a second apply.
+	_ = sqlB.Close()
+	dbRestart, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { sqlDB, _ := dbRestart.DB(); _ = sqlDB.Close() }()
+	if _, err := claimPointRefundOperationOn(dbRestart, refund.RefundKey, "early-worker", 2_020, 1); !errors.Is(err, ErrPointRefundInFlight) {
+		t.Fatalf("shorter new lease stole a still-live claim: %v", err)
+	}
+	recovered, err := claimPointRefundOperationOn(dbRestart, refund.RefundKey, "recovery-worker", 2_090, 1)
+	if err != nil || recovered.Kind != "query" || recovered.Refund.PriorRefundedFen != 0 || recovered.Refund.OperationToken != "recovery-worker" {
+		t.Fatalf("expired apply claim did not recover as query: %+v %v", recovered, err)
+	}
+}
+
+func TestPointsSchemaV9BackfillsFrozenPriorRefundAmountAndInbox(t *testing.T) {
+	db, cleanup, order := pointRefundFixture(t)
+	defer cleanup()
+	first, err := RequestPointRefund(refundRequest(order, "v9-first", "v9-refund-1", "v9-provider-1", 100))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApprovePointRefund(first.RefundKey, "v9-first-approved", 99, "批准首笔"); err != nil {
+		t.Fatal(err)
+	}
+	if err := RecordPointRefundEvidence(refundEvidence(first, "v9-first-success", "succeeded", "v9-provider-refund-1", "v9-first-digest")); err != nil {
+		t.Fatal(err)
+	}
+	second, err := RequestPointRefund(refundRequest(order, "v9-second", "v9-refund-2", "v9-provider-2", 100))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, column := range []string{"prior_refunded_fen", "operation_token", "operation_kind", "operation_claimed_at", "operation_lease_until"} {
+		if err := db.Migrator().DropColumn(&PointRefund{}, column); err != nil {
+			t.Fatalf("simulate v9 missing column %s: %v", column, err)
+		}
+	}
+	if err := db.Migrator().DropTable(&PointRefundInbox{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Where("1 = 1").Delete(&PointsSchemaMigration{}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointsSchemaMigration{Version: 9, AppliedAt: time.Now().UTC()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatalf("v9 refund orchestration migration failed: %v", err)
+	}
+	if !db.Migrator().HasTable(&PointRefundInbox{}) || !db.Migrator().HasColumn(&PointRefund{}, "operation_lease_until") {
+		t.Fatal("v10 refund orchestration schema is incomplete")
+	}
+	var firstAfter, secondAfter PointRefund
+	if err := db.First(&firstAfter, first.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&secondAfter, second.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if firstAfter.PriorRefundedFen != 0 || secondAfter.PriorRefundedFen != 100 || secondAfter.State != "awaiting_review" {
+		t.Fatalf("prior amounts were not backfilled from proven successful history: first=%+v second=%+v", firstAfter, secondAfter)
+	}
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatalf("repeat v10 migration failed: %v", err)
+	}
+	if err := db.First(&secondAfter, second.ID).Error; err != nil || secondAfter.PriorRefundedFen != 100 {
+		t.Fatalf("repeat migration changed frozen prior amount: %+v err=%v", secondAfter, err)
+	}
+}
+
+func TestPointsSchemaV9RejectsUnprovableRefundHistoryWithoutVersionMarker(t *testing.T) {
+	db, cleanup, order := pointRefundFixture(t)
+	defer cleanup()
+	for i, amount := range []int64{100, 100, 900} {
+		refund := PointRefund{RefundKey: fmt.Sprintf("v9-unprovable-%d", i), UserID: order.UserID, OrderKey: order.OrderKey, Channel: order.Channel, ProviderMerchantID: order.ProviderMerchantID, ProviderAppID: order.ProviderAppID, ProviderTransactionID: order.ProviderTransactionID, ProviderRefundKey: fmt.Sprintf("v9-unprovable-provider-%d", i), Currency: order.Currency, AmountFen: amount, OriginalAmountFen: order.AmountFen, State: "succeeded", PurchaseMicro: amount * PointMicroPerPoint}
+		if err := db.Create(&refund).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, column := range []string{"prior_refunded_fen", "operation_token", "operation_kind", "operation_claimed_at", "operation_lease_until"} {
+		if err := db.Migrator().DropColumn(&PointRefund{}, column); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Migrator().DropTable(&PointRefundInbox{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Where("1 = 1").Delete(&PointsSchemaMigration{}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointsSchemaMigration{Version: 9, AppliedAt: time.Now().UTC()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := MigratePointsSchema(); err == nil {
+		t.Fatal("migration accepted successful refund history exceeding the original payment")
+	}
+	var latest PointsSchemaMigration
+	if err := db.Order("version DESC").First(&latest).Error; err != nil {
+		t.Fatal(err)
+	}
+	if latest.Version != 9 {
+		t.Fatalf("failed migration wrote a new schema marker: %+v", latest)
+	}
+	var second PointRefund
+	if err := db.First(&second, "refund_key = ?", "v9-unprovable-1").Error; err != nil {
+		t.Fatal(err)
+	}
+	if second.PriorRefundedFen != 0 {
+		t.Fatalf("partial prior-amount backfill escaped rolled-back transaction: %+v", second)
+	}
+}
+
+func TestLateNonterminalRefundEvidenceCannotClearNewerOperationClaim(t *testing.T) {
+	db, cleanup, order := pointRefundFixture(t)
+	defer cleanup()
+	refund, err := RequestPointRefund(refundRequest(order, "stale-worker-idem", "stale-worker-refund", "stale-worker-provider", 100))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApprovePointRefund(refund.RefundKey, "stale-worker-approve", 99, "批准"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ClaimPointRefundOperation(refund.RefundKey, "worker-a", 3_000, 5); err != nil {
+		t.Fatal(err)
+	}
+	claimB, err := ClaimPointRefundOperation(refund.RefundKey, "worker-b", 3_005, 30)
+	if err != nil || claimB.Kind != "query" {
+		t.Fatalf("expected expired apply claim to become query claim: %+v %v", claimB, err)
+	}
+	late := refundEvidence(refund, "stale-worker-late-pending", "pending", "wx-refund-stale", "stale-worker-digest")
+	late.OperationToken = "worker-a"
+	if err := RecordPointRefundEvidence(late); err != nil {
+		t.Fatal(err)
+	}
+	var current PointRefund
+	if err := db.First(&current, "refund_key = ?", refund.RefundKey).Error; err != nil {
+		t.Fatal(err)
+	}
+	if current.OperationToken != "worker-b" || current.OperationKind != "query" || current.OperationLeaseUntil != 3_035 {
+		t.Fatalf("late old response cleared/replaced the newer claim: %+v", current)
+	}
+	queryResult := refundEvidence(refund, "stale-worker-query-pending", "pending", "wx-refund-stale", "stale-worker-query-digest")
+	queryResult.OperationToken = "worker-b"
+	if err := RecordPointRefundEvidence(queryResult); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&current, "refund_key = ?", refund.RefundKey).Error; err != nil {
+		t.Fatal(err)
+	}
+	if current.State != "submitted" || current.OperationToken != "" || current.OperationLeaseUntil != 0 {
+		t.Fatalf("current query result did not safely complete its claim: %+v", current)
+	}
+}
+
+func TestUnknownRecoveryDoesNotDowngradeManualReview(t *testing.T) {
+	db, cleanup, order := pointRefundFixture(t)
+	defer cleanup()
+	refund, err := RequestPointRefund(refundRequest(order, "manual-query-idem", "manual-query-refund", "manual-query-provider", 100))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApprovePointRefund(refund.RefundKey, "manual-query-approve", 99, "批准"); err != nil {
+		t.Fatal(err)
+	}
+	abnormal := refundEvidence(refund, "manual-query-abnormal", "abnormal", "wx-refund-manual", "manual-query-abnormal-digest")
+	if err := RecordPointRefundEvidence(abnormal); err != nil {
+		t.Fatal(err)
+	}
+	claim, err := ClaimPointRefundOperation(refund.RefundKey, "manual-query-worker", 4_000, 30)
+	if err != nil || claim.Kind != "query" {
+		t.Fatalf("manual review should allow query-only recovery: %+v %v", claim, err)
+	}
+	if err := RecordPointRefundOperationUnknown(refund.RefundKey, "manual-query-worker", time.Unix(4_005, 0)); err != nil {
+		t.Fatal(err)
+	}
+	var current PointRefund
+	if err := db.First(&current, "refund_key = ?", refund.RefundKey).Error; err != nil {
+		t.Fatal(err)
+	}
+	if current.State != "needs_manual_review" || current.OperationToken != "" || current.ActiveOrderKey == nil {
+		t.Fatalf("unknown recovery changed manual-review state or released funds: %+v", current)
+	}
+}
+
 func TestPointRefundConcurrentWithPaidOrderCreditAcrossSQLiteConnections(t *testing.T) {
 	oldDB, oldSQLite, oldEnabled := DB, common.UsingSQLite, config.PointsBillingEnabled
 	path := filepath.Join(t.TempDir(), "refund-vs-credit.db")
@@ -538,7 +787,7 @@ func TestPointRefundUsesActualSQLiteImmediateDatabaseGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := deferredDB.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPurchaseOrder{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}); err != nil {
+	if err := deferredDB.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPurchaseOrder{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := deferredDB.Create(&PointsSchemaMigration{Version: pointsSchemaVersion, AppliedAt: time.Now().UTC()}).Error; err != nil {

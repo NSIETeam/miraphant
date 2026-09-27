@@ -392,3 +392,19 @@ Luna 已停止编辑并交付稳定节点。父确认微信所有可信退款证
 修订地址和通知错误断言后，父复跑同一命令通过（alipay 3.788s、wechat 0.731s、service/payments 0.624s）。当前证据包含官方回调层级、签名和解密、累计退款金额区分、身份/金额错配及未知状态处理；仍等待协议说明与稳定节点报告后集中放行。测试通过不代表真实商户接入或退款业务编排完成。
 
 退款协议稳定节点已交付并停止编辑。父已审阅 REFUND-PROTOCOL.md 与渠道字段绑定实现，独立运行 `go test -race ./payment/... -count=1 -timeout=120s` 通过（alipay 6.362s、wechat 2.505s），最终复跑支付协议及服务包通过（alipay 3.370s、wechat 0.779s、service/payments 0.681s），`git diff --check` 无输出。允许提交协议适配器及合成测试。微信申请仅记受理，终态由查询/通知确认；支付宝申请错误保持未知，累计金额仅由可信服务端历史提供。运行配置、通知路由、持久提交/恢复、授权与界面仍未接入，本节点不放行真实退款。
+
+提交 `30ca4b3d64db8d92fa60a0358ae426706c1672f9` 已推送，父独立确认 [CI 36335672785](https://github.com/NSIETeam/miraphant/actions/runs/36335672785) 为 completed/success。此检查对应协议适配器节点，不覆盖后续持久编排。
+
+## 持久退款编排设计审核（实现中）
+
+已要求申请前提交数据库 claim，再调用外部接口；claim token 仅防止旧工作进程覆盖新 claim，不得丢弃迟到的可信终态证据。此前成功退款累计值须由服务端历史计算并冻结；inbox 与账本间允许崩溃重放，以稳定证据键保证不重复扣减。claim 提交后、HTTP 发出前崩溃的恢复先查单，查无记录不等于允许解冻。本节点 query-only 的策略尚不覆盖安全续发原退款号，后续须独立完成，不能据此宣称所有重启恢复已验收。
+
+模型/服务首版早审要求：v9→v10 对历史部分退款显式回填 PriorRefundedFen，金额或原单身份无法证明则回滚迁移，不写新版本标记；执行期限须保存为 OperationLeaseUntil，不能使用后来的调用参数缩短已有期限；非终态迟到结果须绑定原执行 token，不能清除新执行的 claim；通知证据键须整体哈希为固定长度，避免最长退款号拼接后超过 180 字节约束。这些项待最终代码和迁移/交错用例验收。
+
+## 持久退款模型与服务节点放行（2026-09-28）
+
+Luna 已停止编辑。父检查迁移、跨连接 claim、迟到 token、人工状态保留、通知先到及分页恢复用例；现有升级测试、v9 部分退款回填与失败拒绝、超时后原退款号查单和规范化证据存储已通过独立定向运行。首次服务测试发现本地超时被误当平台证据并因缺微信 refund_id 失败，修订为独立本地未知结果处理后通过，未降低可信平台证据的字段要求。恢复扫描改为 afterID/HasMore，坏页之后可以续扫，DB 读取失败返回 error。
+
+父最终广回归全部通过：与 CI 相同的积分/接口/relay/model 筛选（controller 1.382s、router 1.281s、model 2.834s、relay/controller 2.808s、relay/adaptor/openai 1.690s），以及完整支付协议和服务包（alipay 4.280s、wechat 0.789s、service/payments 0.802s）。稳定节点独立竞态检测 `go test -race ./model ./service/payments -run 'Test(PointRefundOperationClaim|LateNonterminalRefund|UnknownRecovery|PointsSchemaV9|RefundDispatch|WeChatVerifiedRefund|RefundInbox|VerifiedSuccess|QueryTimeout)' -count=1 -timeout=120s` 通过（model 1.793s、service/payments 2.127s）；仅 macOS 既有链接器 warning，退出码 0。新增模型测试前缀已纳入 CI，diff 格式检查通过。
+
+允许提交 v10 迁移、持久 claim、规范化 inbox 和显式服务函数。本节点的服务集成使用合成 verifier，真实签名/AES-GCM由前序协议测试覆盖；未声称真实渠道联调。未实现公共 HTTP、自动调度、查无结果后的安全同号续发/人工处理入口、细分授权及退款页面。未知结果仍冻结，后续必须完成上述恢复与运营入口后才可放行真实退款。
