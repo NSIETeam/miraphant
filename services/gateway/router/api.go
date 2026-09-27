@@ -10,6 +10,11 @@ import (
 )
 
 func SetApiRouter(router *gin.Engine) {
+	callbacks := router.Group("/api/payments/notify")
+	callbacks.Use(middleware.PaymentCallbackRateLimit())
+	callbacks.POST("/wechat", controller.WeChatPaymentNotify)
+	callbacks.POST("/alipay", controller.AlipayPaymentNotify)
+
 	apiRouter := router.Group("/api")
 	apiRouter.Use(gzip.Gzip(gzip.DefaultCompression))
 	apiRouter.Use(middleware.GlobalAPIRateLimit())
@@ -19,6 +24,23 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/notice", controller.GetNotice)
 		apiRouter.GET("/about", controller.GetAbout)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
+		apiRouter.GET("/payments/packages", controller.PaymentPackages)
+		paymentUser := apiRouter.Group("/payments")
+		paymentUser.Use(middleware.PointsUserAuth())
+		{
+			paymentUser.GET("/csrf", controller.PaymentsCSRF)
+			paymentUser.POST("/orders", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.CreatePointPurchaseOrder)
+			paymentUser.GET("/orders", controller.PointPurchaseOrders)
+			paymentUser.GET("/orders/:key", controller.PointPurchaseOrder)
+			paymentUser.POST("/orders/:key/query", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.PointPurchaseOrderQuery)
+			paymentUser.POST("/orders/:key/close", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.PointPurchaseOrderClose)
+		}
+		paymentAdmin := apiRouter.Group("/admin/points/payments")
+		paymentAdmin.Use(middleware.PointsAdminAuth())
+		{
+			paymentAdmin.POST("/packages", middleware.PointsCSRF(), controller.CreatePointPackage)
+			paymentAdmin.POST("/recover", middleware.PointsCSRF(), controller.AdminRecoverPaymentEvents)
+		}
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)

@@ -31,22 +31,40 @@ func TestPointPackageReplayDoesNotRevertActiveVersionAndOrdersSnapshotTerms(t *t
 	if active.Version != "v2" {
 		t.Fatalf("old publication replay rolled current version back to %q", active.Version)
 	}
-	order, err := CreatePointPurchaseOrder(CreatePointPurchaseOrderRequest{UserID: 41, PackageID: "starter", Channel: "wechat", IdempotencyKey: "checkout-attempt-1"})
+	order, err := CreatePointPurchaseOrder(CreatePointPurchaseOrderRequest{UserID: 41, PackageID: "starter", Channel: "wechat", MerchantID: "merchant-1", AppID: "app-1", IdempotencyKey: "checkout-attempt-1"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(order.OrderKey) != 32 || order.PackageVersion != "v2" || order.AmountFen != 500 || order.PurchaseMicro != 500*PointMicroPerPoint || order.State != "created" {
 		t.Fatalf("unexpected immutable checkout snapshot: %+v", order)
 	}
-	replayed, err := CreatePointPurchaseOrder(CreatePointPurchaseOrderRequest{UserID: 41, PackageID: "starter", Channel: "wechat", IdempotencyKey: "checkout-attempt-1"})
+	replayed, err := CreatePointPurchaseOrder(CreatePointPurchaseOrderRequest{UserID: 41, PackageID: "starter", Channel: "wechat", MerchantID: "merchant-1", AppID: "app-1", IdempotencyKey: "checkout-attempt-1"})
 	if err != nil || replayed.OrderKey != order.OrderKey {
 		t.Fatalf("idempotent order replay changed order: %+v %v", replayed, err)
 	}
-	if _, err := CreatePointPurchaseOrder(CreatePointPurchaseOrderRequest{UserID: 41, PackageID: "starter", Channel: "alipay", IdempotencyKey: "checkout-attempt-1"}); !errors.Is(err, ErrPointsConflict) {
+	if _, err := CreatePointPurchaseOrder(CreatePointPurchaseOrderRequest{UserID: 41, PackageID: "starter", Channel: "alipay", MerchantID: "merchant-1", AppID: "app-1", IdempotencyKey: "checkout-attempt-1"}); !errors.Is(err, ErrPointsConflict) {
 		t.Fatalf("changed checkout params should conflict, got %v", err)
 	}
 	if err := db.Model(&PointPackage{}).Where("package_id = ? AND version = ?", "starter", "v2").Update("name", "mutated").Error; err == nil {
 		t.Fatal("immutable package version was updated")
+	}
+}
+
+func TestNewPurchaseOrderRequiresFrozenProviderIdentity(t *testing.T) {
+	_, cleanup := withPointsFixture(t, 0, 100, true)
+	defer cleanup()
+	pkg := &PointPackage{PackageID: "identity-check", Version: "v1", Name: "Identity", AmountFen: 100, Currency: "CNY", PurchaseMicro: 100 * PointMicroPerPoint}
+	if err := CreatePointPackageVersion(pkg, 91, "identity-pkg", true); err != nil {
+		t.Fatal(err)
+	}
+	_, err := CreatePointPurchaseOrder(CreatePointPurchaseOrderRequest{UserID: 41, PackageID: pkg.PackageID, Channel: "wechat", IdempotencyKey: "missing-identity"})
+	if err == nil {
+		t.Fatal("order without a frozen merchant/app identity was accepted")
+	}
+	var count int64
+	DB.Model(&PointPurchaseOrder{}).Count(&count)
+	if count != 0 {
+		t.Fatalf("invalid order persisted: %d", count)
 	}
 }
 
@@ -108,6 +126,18 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 		if err := db.Migrator().DropTable(&PaymentTransaction{}); err != nil {
 			t.Fatal(err)
 		}
+	} else if version == 6 {
+		for _, column := range []string{"provider_app_id", "provider_create_state", "provider_create_started_at", "checkout_snapshot"} {
+			if err := db.Migrator().DropColumn(&PointPurchaseOrder{}, column); err != nil {
+				t.Fatalf("drop simulated v6 column %s: %v", column, err)
+			}
+		}
+	} else if version == 7 {
+		for _, column := range []string{"provider_create_state", "provider_create_started_at", "checkout_snapshot"} {
+			if err := db.Migrator().DropColumn(&PointPurchaseOrder{}, column); err != nil {
+				t.Fatalf("drop simulated v7 column %s: %v", column, err)
+			}
+		}
 	} else {
 		t.Fatalf("unsupported migration fixture version %d", version)
 	}
@@ -118,7 +148,11 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 		t.Fatal(err)
 	}
 	orderKey := fmt.Sprintf("v%d-order", version)
-	if err := db.Table("point_purchase_orders").Create(map[string]any{"order_key": orderKey, "user_id": 41, "amount_fen": 700, "purchase_micro": 700 * PointMicroPerPoint, "bonus_micro": 0, "state": "paid"}).Error; err != nil {
+	oldOrder := map[string]any{"order_key": orderKey, "user_id": 41, "amount_fen": 700, "purchase_micro": 700 * PointMicroPerPoint, "bonus_micro": 0, "state": "paid"}
+	if version >= 7 {
+		oldOrder["provider_app_id"] = ""
+	}
+	if err := db.Table("point_purchase_orders").Create(oldOrder).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Create(&PointAccount{UserID: 91, AvailableMicro: 700_000_000, SpentMicro: 25_000_000}).Error; err != nil {
@@ -128,21 +162,21 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 		t.Fatal(err)
 	}
 	if err := MigratePointsSchema(); err != nil {
-		t.Fatalf("v%d to v6 migration failed: %v", version, err)
+		t.Fatalf("v%d to v8 migration failed: %v", version, err)
 	}
 	if !db.Migrator().HasTable(&PointPackage{}) || !db.Migrator().HasTable(&PointActivePackage{}) || !db.Migrator().HasTable(&PaymentEvent{}) || !db.Migrator().HasTable(&PaymentTransaction{}) {
-		t.Fatal("v6 payment tables missing")
+		t.Fatal("payment tables missing after current migration")
 	}
-	for _, column := range []string{"channel", "package_id", "package_version", "package_snapshot", "currency", "bonus_validity_secs", "expires_at", "provider_transaction_id", "provider_merchant_id", "closed_reason", "idempotency_key"} {
+	for _, column := range []string{"channel", "package_id", "package_version", "package_snapshot", "currency", "bonus_validity_secs", "expires_at", "provider_transaction_id", "provider_merchant_id", "provider_app_id", "provider_create_state", "provider_create_started_at", "checkout_snapshot", "closed_reason", "idempotency_key"} {
 		if !db.Migrator().HasColumn(&PointPurchaseOrder{}, column) {
-			t.Fatalf("v6 order column missing: %s", column)
+			t.Fatalf("current order column missing: %s", column)
 		}
 	}
 	var old PointPurchaseOrder
 	if err := db.First(&old, "order_key = ?", orderKey).Error; err != nil {
 		t.Fatal(err)
 	}
-	if old.AmountFen != 700 || old.PurchaseMicro != 700*PointMicroPerPoint || old.State != "paid" {
+	if old.AmountFen != 700 || old.PurchaseMicro != 700*PointMicroPerPoint || old.State != "paid" || (version == 6 && old.ProviderAppID != "") {
 		t.Fatalf("historical order changed: %+v", old)
 	}
 	var account PointAccount
@@ -168,6 +202,11 @@ func testPointsSchemaUpgradeFrom(t *testing.T, version int) {
 
 func TestPointsSchemaV4UpgradesPaymentTablesAndOrderColumns(t *testing.T) {
 	testPointsSchemaUpgradeFrom(t, 4)
+}
+
+func TestPointsSchemaV6AndV7UpgradePreservesLegacyOrderIdentityGap(t *testing.T) {
+	testPointsSchemaUpgradeFrom(t, 6)
+	testPointsSchemaUpgradeFrom(t, 7)
 }
 
 func TestPointsSchemaV5AddsTransactionOwnershipTable(t *testing.T) {

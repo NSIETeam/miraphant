@@ -169,3 +169,25 @@ var PointsBillingEnabled = env.Bool("POINTS_BILLING_ENABLED", false)
 var PointsMaxInputBytes = env.Int("POINTS_MAX_INPUT_BYTES", 131072)
 var PointsMaxOutputTokens = env.Int("POINTS_MAX_OUTPUT_TOKENS", 8192)
 var PointsRelayTimeout = env.Int("POINTS_RELAY_TIMEOUT", 120)
+
+// Payment credentials are loaded from server environment or server-owned files.
+// These do not follow the new-order toggle: historical callbacks and recovery
+// remain verifiable after new orders are disabled.
+var PaymentNewOrdersEnabled = env.Bool("POINTS_NEW_ORDERS_ENABLED", false)
+var WeChatPayEnabled = env.Bool("WECHAT_PAY_CONFIGURED", false)
+var WeChatPayMerchantID = env.String("WECHAT_PAY_MERCHANT_ID", "")
+var WeChatPayAppID = env.String("WECHAT_PAY_APP_ID", "")
+var WeChatPayMerchantSerial = env.String("WECHAT_PAY_MERCHANT_SERIAL", "")
+var WeChatPayPlatformSerial = env.String("WECHAT_PAY_PLATFORM_SERIAL", "")
+var WeChatPayPrivateKeyFile = env.String("WECHAT_PAY_PRIVATE_KEY_FILE", "")
+var WeChatPayPlatformKeyFile = env.String("WECHAT_PAY_PLATFORM_KEY_FILE", "")
+var WeChatPayAPIv3Key = env.String("WECHAT_PAY_API_V3_KEY", "")
+var WeChatPayNotifyURL = env.String("WECHAT_PAY_NOTIFY_URL", "")
+
+var AlipayConfigured = env.Bool("ALIPAY_CONFIGURED", false)
+var AlipayAppID = env.String("ALIPAY_APP_ID", "")
+var AlipaySellerID = env.String("ALIPAY_SELLER_ID", "")
+var AlipayPrivateKeyFile = env.String("ALIPAY_PRIVATE_KEY_FILE", "")
+var AlipayPublicKeyFile = env.String("ALIPAY_PUBLIC_KEY_FILE", "")
+var AlipayNotifyURL = env.String("ALIPAY_NOTIFY_URL", "")
+var AlipayReturnURL = env.String("ALIPAY_RETURN_URL", "")

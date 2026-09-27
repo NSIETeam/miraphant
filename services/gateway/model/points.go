@@ -187,28 +187,32 @@ type PointTokenBudget struct {
 }
 
 type PointPurchaseOrder struct {
-	ID                    uint    `gorm:"primaryKey"`
-	OrderKey              string  `gorm:"size:160;not null;uniqueIndex"`
-	UserID                int     `gorm:"not null;index;uniqueIndex:idx_point_order_idempotency"`
-	IdempotencyKey        *string `gorm:"size:180;uniqueIndex:idx_point_order_idempotency"`
-	Channel               string  `gorm:"size:16;not null;default:'';index"`
-	PackageID             string  `gorm:"size:80;not null;default:'';index"`
-	PackageVersion        string  `gorm:"size:80;not null;default:''"`
-	PackageSnapshot       string  `gorm:"type:text;not null;default:''"`
-	Currency              string  `gorm:"size:3;not null;default:'CNY'"`
-	AmountFen             int64   `gorm:"not null"`
-	PurchaseMicro         int64   `gorm:"not null"`
-	BonusMicro            int64   `gorm:"not null;default:0"`
-	BonusValiditySecs     int64   `gorm:"not null;default:0"`
-	BonusExpiresAt        *int64  // UTC Unix seconds
-	ExpiresAt             *int64  // UTC Unix seconds
-	ProviderTransactionID string  `gorm:"size:180;not null;default:'';index"`
-	ProviderMerchantID    string  `gorm:"size:80;not null;default:''"`
-	State                 string  `gorm:"size:24;not null;index"` // pending, paid, credited, closed, paid_review, refunded
-	PaidEventKey          *string `gorm:"size:180;uniqueIndex"`
-	ClosedReason          string  `gorm:"size:128;not null;default:''"`
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                      uint    `gorm:"primaryKey"`
+	OrderKey                string  `gorm:"size:160;not null;uniqueIndex"`
+	UserID                  int     `gorm:"not null;index;uniqueIndex:idx_point_order_idempotency"`
+	IdempotencyKey          *string `gorm:"size:180;uniqueIndex:idx_point_order_idempotency"`
+	Channel                 string  `gorm:"size:16;not null;default:'';index"`
+	PackageID               string  `gorm:"size:80;not null;default:'';index"`
+	PackageVersion          string  `gorm:"size:80;not null;default:''"`
+	PackageSnapshot         string  `gorm:"type:text;not null;default:''"`
+	Currency                string  `gorm:"size:3;not null;default:'CNY'"`
+	AmountFen               int64   `gorm:"not null"`
+	PurchaseMicro           int64   `gorm:"not null"`
+	BonusMicro              int64   `gorm:"not null;default:0"`
+	BonusValiditySecs       int64   `gorm:"not null;default:0"`
+	BonusExpiresAt          *int64  // UTC Unix seconds
+	ExpiresAt               *int64  // UTC Unix seconds
+	ProviderTransactionID   string  `gorm:"size:180;not null;default:'';index"`
+	ProviderMerchantID      string  `gorm:"size:80;not null;default:''"`
+	ProviderAppID           string  `gorm:"size:80;not null;default:''"`
+	ProviderCreateState     string  `gorm:"size:16;not null;default:'new'"` // new, started, ready
+	ProviderCreateStartedAt *int64  // UTC Unix seconds; stuck attempts are queried before retry
+	CheckoutSnapshot        string  `gorm:"type:text;not null;default:''"`
+	State                   string  `gorm:"size:24;not null;index"` // pending, paid, credited, closed, paid_review, refunded
+	PaidEventKey            *string `gorm:"size:180;uniqueIndex"`
+	ClosedReason            string  `gorm:"size:128;not null;default:''"`
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 // PointPackage is an immutable price/credit snapshot. Package changes create
@@ -770,7 +774,7 @@ type PointsSchemaMigration struct {
 	AppliedAt time.Time
 }
 
-const pointsSchemaVersion = 6
+const pointsSchemaVersion = 8
 
 // MigratePointsSchema is deliberately separate from the normal startup migration.
 func MigratePointsSchema() error {

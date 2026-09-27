@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/ctxkey"
 )
 
 var timeFormat = "2006-01-02T15:04:05.000Z"
@@ -16,9 +18,13 @@ var timeFormat = "2006-01-02T15:04:05.000Z"
 var inMemoryRateLimiter common.InMemoryRateLimiter
 
 func redisRateLimiter(c *gin.Context, maxRequestNum int, duration int64, mark string) {
+	redisRateLimiterKey(c, maxRequestNum, duration, mark, c.ClientIP())
+}
+
+func redisRateLimiterKey(c *gin.Context, maxRequestNum int, duration int64, mark, identity string) {
 	ctx := context.Background()
 	rdb := common.RDB
-	key := "rateLimit:" + mark + c.ClientIP()
+	key := "rateLimit:" + mark + identity
 	listLength, err := rdb.LLen(ctx, key).Result()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -99,6 +105,40 @@ func GlobalAPIRateLimit() func(c *gin.Context) {
 
 func CriticalRateLimit() func(c *gin.Context) {
 	return rateLimitFactory(config.CriticalRateLimitNum, config.CriticalRateLimitDuration, "CT")
+}
+
+// PaymentCallbackRateLimit allows provider IPs a separate, higher retry budget.
+func PaymentCallbackRateLimit() func(c *gin.Context) {
+	return rateLimitFactory(600, 60, "PAYCB")
+}
+
+// PaymentUserWriteRateLimit bounds network-backed payment operations per user.
+func PaymentUserWriteRateLimit() func(c *gin.Context) {
+	const limit = 60
+	const duration = int64(60)
+	if !common.RedisEnabled {
+		inMemoryRateLimiter.Init(config.RateLimitKeyExpirationDuration)
+	}
+	return func(c *gin.Context) {
+		id := c.GetInt(ctxkey.Id)
+		if id <= 0 {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		key := strconv.Itoa(id)
+		if common.RedisEnabled {
+			redisRateLimiterKey(c, limit, duration, "PAYUSER", key)
+		} else {
+			memoryRateLimiterForKey(c, limit, duration, "PAYUSER"+key)
+		}
+	}
+}
+
+func memoryRateLimiterForKey(c *gin.Context, maxRequestNum int, duration int64, key string) {
+	if !inMemoryRateLimiter.Request(key, maxRequestNum, duration) {
+		c.Status(http.StatusTooManyRequests)
+		c.Abort()
+	}
 }
 
 func DownloadRateLimit() func(c *gin.Context) {

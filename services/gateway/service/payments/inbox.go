@@ -28,6 +28,7 @@ type PaymentInboxResult struct {
 }
 
 type paymentEventPayload struct {
+	EvidenceSource     string    `json:"evidence_source,omitempty"`
 	Provider           string    `json:"provider"`
 	ProviderEventID    string    `json:"provider_event_id"`
 	ProviderOccurredAt time.Time `json:"provider_occurred_at"`
@@ -41,7 +42,7 @@ type paymentEventPayload struct {
 }
 
 func normalizedPayload(trade payment.VerifiedNotification) paymentEventPayload {
-	return paymentEventPayload{Provider: trade.Provider, ProviderEventID: trade.ProviderEventID, ProviderOccurredAt: trade.ProviderOccurredAt, OrderKey: trade.OrderKey, TransactionID: trade.TransactionID, MerchantID: trade.MerchantID, AppID: trade.AppID, AmountFen: trade.AmountFen, Currency: trade.Currency, Status: trade.Status}
+	return paymentEventPayload{EvidenceSource: trade.EvidenceSource, Provider: trade.Provider, ProviderEventID: trade.ProviderEventID, ProviderOccurredAt: trade.ProviderOccurredAt, OrderKey: trade.OrderKey, TransactionID: trade.TransactionID, MerchantID: trade.MerchantID, AppID: trade.AppID, AmountFen: trade.AmountFen, Currency: trade.Currency, Status: trade.Status}
 }
 
 // PersistVerifiedNotification durably records verified, normalized evidence
@@ -62,8 +63,11 @@ func PersistVerifiedNotification(trade payment.VerifiedNotification, rawBody []b
 	digestBytes := sha256.Sum256(rawBody)
 	digest := hex.EncodeToString(digestBytes[:])
 	event := model.PaymentEvent{Provider: trade.Provider, ProviderEventID: trade.ProviderEventID, OrderKey: trade.OrderKey, ProviderTransactionID: trade.TransactionID, Digest: digest, Payload: string(payloadBytes), Verification: "verified", State: "received"}
+	baseEvent := event
 	duplicate := false
 	err = model.WithPaymentTransaction(func(tx *gorm.DB) error {
+		event = baseEvent
+		duplicate = false
 		insert := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&event)
 		if insert.Error != nil {
 			return insert.Error
@@ -171,12 +175,18 @@ func ProcessVerifiedPaymentEvent(eventID uint, identity MerchantIdentity) (Payme
 		}
 		reason := ""
 		switch {
+		case order.ProviderMerchantID == "" || order.ProviderAppID == "":
+			reason = "order_provider_snapshot_missing"
 		case notice.MerchantID != identity.MerchantID:
 			reason = "merchant_mismatch"
 		case notice.AppID != identity.AppID:
 			reason = "app_mismatch"
 		case order.Channel != identity.Provider:
 			reason = "channel_mismatch"
+		case order.ProviderMerchantID != notice.MerchantID:
+			reason = "order_merchant_mismatch"
+		case order.ProviderAppID != notice.AppID:
+			reason = "order_app_mismatch"
 		case notice.OrderKey != order.OrderKey || event.OrderKey != order.OrderKey:
 			reason = "order_mismatch"
 		case notice.AmountFen != order.AmountFen || notice.Currency != order.Currency:
@@ -308,29 +318,64 @@ func ProcessVerifiedPaymentEvent(eventID uint, identity MerchantIdentity) (Payme
 
 // RetryReceivedPaymentEvents is a network-free recovery path for a durable
 // inbox event left at `received` by a crash between persistence and credit.
-func RetryReceivedPaymentEvents(limit int, identities map[string]MerchantIdentity) (int, error) {
+type RecoveryReport struct {
+	Scanned     int  `json:"scanned"`
+	Attempted   int  `json:"attempted"`
+	Processed   int  `json:"processed"`
+	Quarantined int  `json:"quarantined"`
+	Failed      int  `json:"failed"`
+	Skipped     int  `json:"skipped"`
+	NextAfterID uint `json:"next_after_id"`
+	HasMore     bool `json:"has_more"`
+}
+
+func RetryReceivedPaymentEventsDetailed(afterID uint, limit int, identities map[string]MerchantIdentity) (RecoveryReport, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
 	var events []model.PaymentEvent
-	if err := model.DB.Where("state = ?", "received").Order("id ASC").Limit(limit).Find(&events).Error; err != nil {
-		return 0, err
+	if err := model.DB.Where("state = ? AND id > ?", "received", afterID).Order("id ASC").Limit(limit + 1).Find(&events).Error; err != nil {
+		return RecoveryReport{}, err
 	}
-	processed := 0
+	report := RecoveryReport{}
+	if len(events) > limit {
+		report.HasMore = true
+		events = events[:limit]
+	}
 	for _, event := range events {
+		report.Scanned++
+		report.NextAfterID = event.ID
 		identity, ok := identities[event.Provider]
 		if !ok {
+			report.Skipped++
 			continue
 		}
+		report.Attempted++
 		result, err := ProcessVerifiedPaymentEvent(event.ID, identity)
 		if err != nil && !errors.Is(err, payment.ErrOrderMismatch) {
-			return processed, fmt.Errorf("process payment inbox event %d: %w", event.ID, err)
+			report.Failed++
+			continue
 		}
 		if result.State == "processed" {
-			processed++
+			report.Processed++
+		} else if result.State == "quarantined" {
+			report.Quarantined++
+		} else if err != nil {
+			report.Failed++
 		}
 	}
-	return processed, nil
+	return report, nil
+}
+
+func RetryReceivedPaymentEvents(limit int, identities map[string]MerchantIdentity) (int, error) {
+	report, err := RetryReceivedPaymentEventsDetailed(0, limit, identities)
+	if err != nil {
+		return report.Processed, err
+	}
+	if report.Failed > 0 || report.Skipped > 0 || report.HasMore {
+		return report.Processed, fmt.Errorf("payment recovery incomplete: scanned=%d processed=%d quarantined=%d failed=%d skipped=%d has_more=%t", report.Scanned, report.Processed, report.Quarantined, report.Failed, report.Skipped, report.HasMore)
+	}
+	return report.Processed, nil
 }
 
 func ReceiptAcknowledgementSafe(result PaymentInboxResult) bool {

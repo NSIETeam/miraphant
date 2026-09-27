@@ -16,6 +16,7 @@ import (
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/router"
+	"github.com/songquanpeng/one-api/service/payments"
 	"net"
 	"os"
 	"strconv"
@@ -72,9 +73,9 @@ func main() {
 		}
 		return
 	}
-	if config.PointsBillingEnabled {
+	if config.PointsBillingEnabled || config.WeChatPayEnabled || config.AlipayConfigured {
 		if err := model.RequirePointsSchema(); err != nil {
-			logger.FatalLog("points billing is enabled but its schema is not ready: " + err.Error())
+			logger.FatalLog("points or payment processing is configured but its schema is not ready")
 		}
 	}
 
@@ -98,6 +99,9 @@ func main() {
 
 	// Initialize options
 	model.InitOptionMap()
+	if err := payments.ConfigureProviders(); err != nil {
+		logger.FatalLog("payment provider configuration is invalid")
+	}
 	logger.SysLog(fmt.Sprintf("using theme %s", config.Theme))
 	if common.RedisEnabled {
 		// for compatibility with old versions

@@ -46,6 +46,7 @@ type Trade struct {
 	Status             string
 	ProviderEventID    string
 	ProviderOccurredAt time.Time
+	EvidenceSource     string
 }
 
 type VerifiedNotification = Trade

@@ -13,6 +13,7 @@ import (
 )
 
 var ErrPaymentPackageUnavailable = errors.New("payment package is unavailable")
+var ErrPaymentOperationPending = errors.New("payment provider operation is already in progress")
 
 // WithPaymentTransaction exposes the same bounded transaction/retry policy as
 // the points ledger for payment event state transitions. Callers must not do
@@ -82,6 +83,7 @@ func CreatePointPackageVersion(p *PointPackage, actorID int, businessKey string,
 		} else {
 			copy := *p
 			copy.Published = true
+			copy.CreatedBy = actorID
 			if err := tx.Create(&copy).Error; err != nil {
 				return err
 			}
@@ -140,6 +142,8 @@ type CreatePointPurchaseOrderRequest struct {
 	UserID         int
 	PackageID      string
 	Channel        string
+	MerchantID     string
+	AppID          string
 	IdempotencyKey string
 	ExpiresIn      time.Duration
 }
@@ -152,8 +156,8 @@ func sameCreateOrderRequest(order PointPurchaseOrder, req CreatePointPurchaseOrd
 // contacting any provider. A repeated user idempotency key returns the same
 // order only when every client-controlled argument matches.
 func CreatePointPurchaseOrder(req CreatePointPurchaseOrderRequest) (PointPurchaseOrder, error) {
-	if req.UserID <= 0 || req.PackageID == "" || req.IdempotencyKey == "" {
-		return PointPurchaseOrder{}, errors.New("user, package, and idempotency key are required")
+	if req.UserID <= 0 || req.PackageID == "" || req.IdempotencyKey == "" || req.MerchantID == "" || req.AppID == "" {
+		return PointPurchaseOrder{}, errors.New("user, package, provider identity, and idempotency key are required")
 	}
 	if req.Channel != "wechat" && req.Channel != "alipay" {
 		return PointPurchaseOrder{}, errors.New("unsupported payment channel")
@@ -196,10 +200,10 @@ func CreatePointPurchaseOrder(req CreatePointPurchaseOrderRequest) (PointPurchas
 		expires := now.Add(req.ExpiresIn).Unix()
 		result = PointPurchaseOrder{
 			OrderKey: orderKey, UserID: req.UserID, IdempotencyKey: &idempotencyKey,
-			Channel: req.Channel, PackageID: pkg.PackageID, PackageVersion: pkg.Version,
+			Channel: req.Channel, ProviderMerchantID: req.MerchantID, ProviderAppID: req.AppID, PackageID: pkg.PackageID, PackageVersion: pkg.Version,
 			PackageSnapshot: string(snapshot), Currency: pkg.Currency,
 			AmountFen: pkg.AmountFen, PurchaseMicro: pkg.PurchaseMicro,
-			BonusMicro: pkg.BonusMicro, BonusValiditySecs: pkg.BonusValiditySecs, ExpiresAt: &expires, State: "created",
+			BonusMicro: pkg.BonusMicro, BonusValiditySecs: pkg.BonusValiditySecs, ExpiresAt: &expires, State: "created", ProviderCreateState: "new",
 		}
 		return tx.Create(&result).Error
 	})
@@ -215,4 +219,135 @@ func CreatePointPurchaseOrder(req CreatePointPurchaseOrderRequest) (PointPurchas
 		return PointPurchaseOrder{}, err
 	}
 	return result, nil
+}
+
+func GetPointPurchaseOrderForUser(userID int, orderKey string) (PointPurchaseOrder, error) {
+	var order PointPurchaseOrder
+	err := DB.Where("user_id = ? AND order_key = ?", userID, orderKey).First(&order).Error
+	return order, err
+}
+
+func GetPointPurchaseOrderByIdempotency(userID int, key string) (PointPurchaseOrder, error) {
+	var order PointPurchaseOrder
+	err := DB.Where("user_id = ? AND idempotency_key = ?", userID, key).First(&order).Error
+	return order, err
+}
+
+func ListPointPurchaseOrdersForUser(userID int, limit int) ([]PointPurchaseOrder, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 30
+	}
+	var orders []PointPurchaseOrder
+	err := DB.Where("user_id = ?", userID).Order("id DESC").Limit(limit).Find(&orders).Error
+	return orders, err
+}
+
+func MarkPointPurchaseOrderPending(orderKey string) error {
+	return pointsTransaction(func(tx *gorm.DB) error {
+		var order PointPurchaseOrder
+		if err := tx.Where("order_key = ?", orderKey).First(&order).Error; err != nil {
+			return err
+		}
+		if order.State == "pending" || order.State == "credited" || order.State == "closed" {
+			return nil
+		}
+		if order.State != "created" {
+			return ErrPointsConflict
+		}
+		result := tx.Model(&PointPurchaseOrder{}).Where("id = ? AND state = ?", order.ID, "created").Update("state", "pending")
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrPointsConflict
+		}
+		order.State = "pending"
+		return nil
+	})
+}
+
+// BeginPointProviderCreate leases a provider create attempt. A stale previous
+// attempt may only be retried after the caller has queried the same frozen
+// merchant order and confirmed it remains unpaid.
+func BeginPointProviderCreate(orderKey string, staleRetry bool) (PointPurchaseOrder, error) {
+	var result PointPurchaseOrder
+	err := pointsTransaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_key = ?", orderKey).First(&result).Error; err != nil {
+			return err
+		}
+		if result.State != "pending" {
+			return ErrPointsConflict
+		}
+		if result.CheckoutSnapshot != "" && result.ProviderCreateState == "ready" {
+			return ErrPointsConflict
+		}
+		now := time.Now().UTC().Unix()
+		if result.ProviderCreateState == "started" {
+			if !staleRetry || result.ProviderCreateStartedAt == nil || now-*result.ProviderCreateStartedAt < 30 {
+				return ErrPaymentOperationPending
+			}
+		} else if result.ProviderCreateState != "" && result.ProviderCreateState != "new" {
+			return ErrPointsConflict
+		}
+		result.ProviderCreateState = "started"
+		result.ProviderCreateStartedAt = &now
+		update := tx.Model(&PointPurchaseOrder{}).Where("id = ? AND state = ?", result.ID, "pending").Updates(map[string]any{"provider_create_state": "started", "provider_create_started_at": now})
+		if update.Error != nil {
+			return update.Error
+		}
+		if update.RowsAffected != 1 {
+			return ErrPointsConflict
+		}
+		return nil
+	})
+	return result, err
+}
+
+func SavePointPurchaseCheckout(orderKey string, checkout []byte) error {
+	if len(checkout) == 0 || len(checkout) > 64*1024 {
+		return errors.New("invalid checkout snapshot")
+	}
+	return pointsTransaction(func(tx *gorm.DB) error {
+		var order PointPurchaseOrder
+		if err := tx.Where("order_key = ?", orderKey).First(&order).Error; err != nil {
+			return err
+		}
+		if order.ProviderCreateState == "ready" && order.CheckoutSnapshot != "" {
+			if order.CheckoutSnapshot != string(checkout) {
+				return ErrPointsConflict
+			}
+			return nil
+		}
+		if order.State != "pending" || order.ProviderCreateState != "started" {
+			return ErrPointsConflict
+		}
+		result := tx.Model(&PointPurchaseOrder{}).Where("id = ? AND state = ? AND provider_create_state = ?", order.ID, "pending", "started").Updates(map[string]any{"provider_create_state": "ready", "checkout_snapshot": string(checkout)})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrPointsConflict
+		}
+		return nil
+	})
+}
+
+func MarkPointPurchaseOrderClosed(orderKey, reason string) error {
+	return pointsTransaction(func(tx *gorm.DB) error {
+		result := tx.Model(&PointPurchaseOrder{}).Where("order_key = ? AND state IN ?", orderKey, []string{"created", "pending"}).Updates(map[string]any{"state": "closed", "closed_reason": reason})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 1 {
+			return nil
+		}
+		var order PointPurchaseOrder
+		if err := tx.Where("order_key = ?", orderKey).First(&order).Error; err != nil {
+			return err
+		}
+		if order.State == "closed" {
+			return nil
+		}
+		return ErrPointsConflict
+	})
 }

@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -27,7 +28,7 @@ func setupPaymentInbox(t *testing.T, orderState string) (*gorm.DB, func()) {
 		t.Fatal(err)
 	}
 	model.DB, common.UsingSQLite = db, true
-	order := model.PointPurchaseOrder{OrderKey: "payment-order-0001", UserID: 41, Channel: "wechat", PackageID: "starter", PackageVersion: "v1", PackageSnapshot: `{"package_id":"starter","version":"v1"}`, Currency: "CNY", AmountFen: 500, PurchaseMicro: 500 * model.PointMicroPerPoint, BonusMicro: 25 * model.PointMicroPerPoint, BonusValiditySecs: 3600, State: orderState}
+	order := model.PointPurchaseOrder{OrderKey: "payment-order-0001", UserID: 41, Channel: "wechat", ProviderMerchantID: "merchant-1", ProviderAppID: "app-1", PackageID: "starter", PackageVersion: "v1", PackageSnapshot: `{"package_id":"starter","version":"v1"}`, Currency: "CNY", AmountFen: 500, PurchaseMicro: 500 * model.PointMicroPerPoint, BonusMicro: 25 * model.PointMicroPerPoint, BonusValiditySecs: 3600, State: orderState}
 	if err := db.Create(&order).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -89,6 +90,35 @@ func TestVerifiedPaymentInboxCreditsAtomicallyAndDeduplicates(t *testing.T) {
 	}
 }
 
+func TestNotificationReplayRemainsCompatibleWithPreQueryEvidencePayload(t *testing.T) {
+	db, cleanup := setupPaymentInbox(t, "pending")
+	defer cleanup()
+	trade := testTrade("notify-pre-query-schema", "payment-order-0001", "pre-query-tx", 500)
+	legacyPayload, _ := json.Marshal(struct {
+		Provider           string    `json:"provider"`
+		ProviderEventID    string    `json:"provider_event_id"`
+		ProviderOccurredAt time.Time `json:"provider_occurred_at"`
+		OrderKey           string    `json:"order_key"`
+		TransactionID      string    `json:"transaction_id"`
+		MerchantID         string    `json:"merchant_id"`
+		AppID              string    `json:"app_id"`
+		AmountFen          int64     `json:"amount_fen"`
+		Currency           string    `json:"currency"`
+		Status             string    `json:"status"`
+	}{trade.Provider, trade.ProviderEventID, trade.ProviderOccurredAt, trade.OrderKey, trade.TransactionID, trade.MerchantID, trade.AppID, trade.AmountFen, trade.Currency, trade.Status})
+	first, err := PersistVerifiedNotification(trade, []byte("same exact provider body"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("UPDATE payment_events SET payload = ? WHERE id = ?", string(legacyPayload), first.EventID).Error; err != nil {
+		t.Fatal(err)
+	}
+	replay, err := PersistVerifiedNotification(trade, []byte("same exact provider body"))
+	if err != nil || !replay.Duplicate || replay.EventID != first.EventID {
+		t.Fatalf("legacy event replay conflicted: %+v %v", replay, err)
+	}
+}
+
 func TestVerifiedPaymentInboxMismatchQuarantinesAndLateClosedOrderCredits(t *testing.T) {
 	t.Run("mismatch quarantine", func(t *testing.T) {
 		db, cleanup := setupPaymentInbox(t, "pending")
@@ -127,6 +157,105 @@ func TestVerifiedPaymentInboxMismatchQuarantinesAndLateClosedOrderCredits(t *tes
 			t.Fatalf("late payment lacked audit: %d", lateAudit)
 		}
 	})
+}
+
+func TestFrozenOrderIdentityRequiredAndRotatedMerchantQuarantines(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		merchant, app string
+	}{
+		{name: "missing legacy identity", merchant: "", app: ""},
+		{name: "rotated identity", merchant: "old-merchant", app: "old-app"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, cleanup := setupPaymentInbox(t, "pending")
+			defer cleanup()
+			if err := db.Model(&model.PointPurchaseOrder{}).Where("order_key = ?", "payment-order-0001").Updates(map[string]any{"provider_merchant_id": tc.merchant, "provider_app_id": tc.app}).Error; err != nil {
+				t.Fatal(err)
+			}
+			trade := testTrade("notify-identity-"+tc.name, "payment-order-0001", "tx-identity-"+tc.name, 500)
+			inbox, err := PersistVerifiedNotification(trade, []byte("signed identity fixture"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := ProcessVerifiedPaymentEvent(inbox.EventID, MerchantIdentity{Provider: "wechat", MerchantID: "merchant-1", AppID: "app-1"})
+			if err == nil || result.State != "quarantined" {
+				t.Fatalf("identity mismatch accepted: result=%+v err=%v", result, err)
+			}
+			var accounts, credits int64
+			db.Model(&model.PointAccount{}).Where("user_id = ?", 41).Count(&accounts)
+			db.Model(&model.PointLedger{}).Where("business_key = ?", "credit:payment-order-0001").Count(&credits)
+			if accounts != 0 || credits != 0 {
+				t.Fatalf("identity mismatch credited order: accounts=%d credits=%d", accounts, credits)
+			}
+		})
+	}
+}
+
+func TestRecoveryContinuesAfterFailureAndUsesCursor(t *testing.T) {
+	db, cleanup := setupPaymentInbox(t, "pending")
+	defer cleanup()
+	firstTrade := payment.VerifiedNotification{Provider: "alipay", ProviderEventID: "notify-alipay-recovery", OrderKey: "unavailable-provider-order", TransactionID: "alipay-recovery-tx", MerchantID: "ali-mch", AppID: "ali-app", AmountFen: 10, Currency: "CNY", Status: "TRADE_SUCCESS"}
+	first, err := PersistVerifiedNotification(firstTrade, []byte("verified alipay notice"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondTrade := testTrade("notify-wechat-after-skip", "payment-order-0001", "wechat-after-skip", 500)
+	second, err := PersistVerifiedNotification(secondTrade, []byte("verified wechat notice"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	identities := map[string]MerchantIdentity{"wechat": {Provider: "wechat", MerchantID: "merchant-1", AppID: "app-1"}}
+	page1, err := RetryReceivedPaymentEventsDetailed(0, 1, identities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page1.Scanned != 1 || page1.Skipped != 1 || !page1.HasMore || page1.NextAfterID != first.EventID {
+		t.Fatalf("unexpected first recovery page: %+v", page1)
+	}
+	page2, err := RetryReceivedPaymentEventsDetailed(page1.NextAfterID, 1, identities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page2.Attempted != 1 || page2.Processed != 1 || page2.NextAfterID != second.EventID {
+		t.Fatalf("later provider event starved: %+v", page2)
+	}
+
+	thirdTrade := payment.VerifiedNotification{Provider: "alipay", ProviderEventID: "notify-alipay-corrupt", OrderKey: "broken", TransactionID: "broken-tx", MerchantID: "ali-mch", AppID: "ali-app", AmountFen: 10, Currency: "CNY", Status: "TRADE_SUCCESS"}
+	third, err := PersistVerifiedNotification(thirdTrade, []byte("verified corruptible notice"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&model.PaymentEvent{}).Where("id = ?", third.EventID).Update("payload", "{").Error; err == nil {
+		t.Fatal("test failed to corrupt fixture payload")
+	}
+	// The event hook intentionally protects evidence; create a durable failure fixture directly.
+	if err := db.Exec("UPDATE payment_events SET payload = ? WHERE id = ?", "{", third.EventID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&model.PointPurchaseOrder{OrderKey: "payment-order-0002", UserID: 42, Channel: "wechat", ProviderMerchantID: "merchant-1", ProviderAppID: "app-1", Currency: "CNY", AmountFen: 500, PurchaseMicro: 500 * model.PointMicroPerPoint, State: "pending"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	fourthTrade := testTrade("notify-wechat-after-failure", "payment-order-0002", "wechat-after-failure", 500)
+	fourth, err := PersistVerifiedNotification(fourthTrade, []byte("verified after failure"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	allIDs := map[string]MerchantIdentity{"alipay": {Provider: "alipay", MerchantID: "ali-mch", AppID: "ali-app"}, "wechat": identities["wechat"]}
+	report, err := RetryReceivedPaymentEventsDetailed(second.EventID, 10, allIDs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Failed != 1 || report.Processed != 1 || report.NextAfterID != fourth.EventID {
+		t.Fatalf("recovery stopped after first failure: %+v", report)
+	}
+	var saved model.PaymentEvent
+	if err := db.First(&saved, third.EventID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if saved.State != "received" {
+		t.Fatalf("failed evidence was not preserved for retry: %s", saved.State)
+	}
 }
 
 func TestPaymentInboxEachMismatchFieldQuarantinesWithoutClaim(t *testing.T) {
@@ -231,7 +360,7 @@ func TestPaymentInboxRecoveryAndCreditRollback(t *testing.T) {
 
 	// A failed credit must roll back paid state and retain the durable inbox as
 	// received so a later recovery can safely retry.
-	if err := db.Create(&model.PointPurchaseOrder{OrderKey: "payment-order-0002", UserID: 42, Channel: "wechat", Currency: "CNY", AmountFen: 10, PurchaseMicro: 10 * model.PointMicroPerPoint, State: "pending"}).Error; err != nil {
+	if err := db.Create(&model.PointPurchaseOrder{OrderKey: "payment-order-0002", UserID: 42, Channel: "wechat", ProviderMerchantID: "merchant-1", ProviderAppID: "app-1", Currency: "CNY", AmountFen: 10, PurchaseMicro: 10 * model.PointMicroPerPoint, State: "pending"}).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Create(&model.PointAccount{UserID: 42, AvailableMicro: int64(^uint64(0) >> 1)}).Error; err != nil {
@@ -370,7 +499,7 @@ func TestConflictForCreditedOrderDoesNotClaimSecondTransaction(t *testing.T) {
 func TestConcurrentDifferentOrdersCannotClaimSameProviderTransaction(t *testing.T) {
 	db, cleanup := setupPaymentInbox(t, "pending")
 	defer cleanup()
-	if err := db.Create(&model.PointPurchaseOrder{OrderKey: "payment-order-0002", UserID: 42, Channel: "wechat", Currency: "CNY", AmountFen: 500, PurchaseMicro: 500 * model.PointMicroPerPoint, State: "pending"}).Error; err != nil {
+	if err := db.Create(&model.PointPurchaseOrder{OrderKey: "payment-order-0002", UserID: 42, Channel: "wechat", ProviderMerchantID: "merchant-1", ProviderAppID: "app-1", Currency: "CNY", AmountFen: 500, PurchaseMicro: 500 * model.PointMicroPerPoint, State: "pending"}).Error; err != nil {
 		t.Fatal(err)
 	}
 	identity := MerchantIdentity{Provider: "wechat", MerchantID: "merchant-1", AppID: "app-1"}

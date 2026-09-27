@@ -18,6 +18,8 @@ func PointsCSRF(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"csrf_token": middleware.PointsCSRFToken(c.GetInt(ctxkey.Id))})
 }
 
+func PaymentsCSRF(c *gin.Context) { PointsCSRF(c) }
+
 func PointsWallet(c *gin.Context) {
 	wallet, err := dbmodel.GetPointWallet(c.GetInt(ctxkey.Id))
 	if err != nil {
