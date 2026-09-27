@@ -416,3 +416,41 @@ Luna 已停止编辑。父检查迁移、跨连接 claim、迟到 token、人工
 父对照官方退款文档确认微信查无退款单应使用原单原参数重试，支付宝同 out_request_no 保证只退款一次；协议证据与重试策略须分开，缺失退款状态不能伪造未受理证据或释放冻结。自动恢复默认关闭，需持久退避、跨进程 claim、批次外呼上限及显式停止等待；主程序必须先停止 worker 再关闭数据库。
 
 源码检查发现申请原因允许 512 字节，而微信适配器限制 80 字节、支付宝限制 256 字节；已要求冻结前按渠道校验，历史非法请求进入人工处理并停止自动外呼，不能改变原参数后重试。上述修订仍待实现和定向验收。
+
+审核文档提交 `312bfaea0da094b037c3fe4c171230e728ba9d7d` 的 [CI 36338160575](https://github.com/NSIETeam/miraphant/actions/runs/36338160575) 已独立确认 completed/success。该提交只更新审计总览，不包含开发中的 v11 恢复代码。
+
+恢复服务首版早审未放行：同一通知的证据键固定，但每次重算 RecoveryNextAt／QueryFailures 后参与同键 payload 比较，会使合法跨时间重放发生冲突；要求复用首次保存的调度数据并保留原始证据一致性校验。另要求限制支付宝未知查单后的幂等重发策略适用范围，不得无说明扩展到微信；updated_at 使用实际处理时间，不能写入未来调度时间。待修订及重放、缺字段和断点恢复用例。
+
+后台恢复 worker 首审：发现 MaxProviderCalls 仅累计最终成功返回的 dispatch；渠道请求已发出但随后 inbox 写入／处理失败时未计数，实际外呼可能超出配置预算。要求按真实已发出调用（无论最终 error）计数或采用明确的保守尝试预算，并覆盖外呼后持久化失败测试。当前尚未完成主程序接线与集中验收。
+
+父对开发中快照独立回归：`go test ./model ./service/payments ./payment/... -run 'Test(PointRefund|PointsSchema|Refund|WeChatVerifiedRefund|VerifiedSuccess|QueryTimeout)' -count=1 -timeout=120s` 通过（model 0.886s、service 0.710s；微信该筛选无匹配用例）。随后完整运行 `go test ./payment/... ./service/payments -count=1 -timeout=120s` 通过（alipay 3.222s、wechat 0.597s、service 0.586s）。此时自动恢复与生命周期新增用例未交付，不能作为 v11 完整节点验收。
+
+新增模型用例首次独立运行 `Test(PointsSchemaV10|PointRefundInboxReplay)` 未通过：重放用例把 RecoveryAction 改 query 但保留 RetrySameKey=true，先被输入合法性校验拒绝，未进入预期 ErrPointsConflict 分支。已要求修订为合法但不同的调度输入，并同时断言首次决定保留及原始证据变化拒绝。该失败属于用例路径构造，尚不能据此判断并发重放已正确。
+
+恢复新增用例第二轮独立运行未通过：同键改金额已被 frozen-refund 身份金额校验正确拒绝，但用例仍只接受 ErrPointsConflict；两渠道 pre-send-crash 用例在查询后未等待/推进 RecoveryNextAt 就要求再次调用，实际批次正确跳过未到期记录。已要求先断言退避期零调用，再推进可控时间验证原号续发；不得为通过用例缩短生产退避。本轮停止等待与外呼后持久化失败预算用例未报失败。
+
+修订后父复验 `Test(PointsSchemaV10|PointRefundInboxReplay|PointRefundRequestUsesProvider|RefundRecovery)` 通过（model 0.394s、service 0.607s）；检查用例先证明退避期不外呼，再显式推进测试持久期限验证原号恢复。父另运行 `go test -race ./service/payments -run TestConcurrentVerifiedRefundNotificationsReuseFirstScheduleAndCreditOnce -count=10 -timeout=120s` 通过（1.956s），无 Go race，只有 macOS 链接器既有 warning。该结果仍不替代待交付协议边界、旧 inbox 与完整生命周期节点验收。
+
+稳定节点集中复审仍未放行：发现 DispatchPointRefundOperation 在身份校验前保存返回 Outcome，可能将已被账本降为 unknown 的错配成功结果返回 succeeded；要求修订与测试。尚缺微信 signed 404 RESOURCE_NOT_EXISTS 分支、支付宝三次未知查询后的策略 fallback、v10 received inbox 重放和重复 worker／持久游标重启的专门覆盖，已交 Luna 有界补齐。
+
+父独立构建二进制 SHA-256 `b64f9a1071f498692952e7e9a66a52d4f87a46c47b8993ede3c63e9ebb25b9a4`（与子交付一致），在隔离临时 SQLite、无支付凭据且外网代理阻断下开启退款恢复：显式迁移退出 0，HTTP /api/status 可用；SIGTERM 后 0.005s 正常退出 0；占用本地端口时 0.184s 退出 1；退出后 SQLite quick_check=ok 且可获得 BEGIN IMMEDIATE 写锁。临时数据库及日志已清理。该检查覆盖空队列真实进程生命周期，带在途退款的停止仍由合成 provider 测试证明，不代表真实商户退款。
+
+集中补修复验：微信查无退款单的签名／状态码／错误码矩阵通过（0.658s），身份错配成功结果必须降为 unknown 的服务测试通过（0.956s）。父按 CI 七包完整筛选回归时发现旧 LateNonterminalRefund 用例未推进持久重试期限，收到 ErrPointRefundNotDue；已要求修正测试时间而保留旧 token 不可清除新 claim 的断言。controller 2.037s、router 2.588s、relay/controller 2.033s、relay/adaptor/openai 0.628s 均通过，model 尚未全通过。
+
+父独立复验 `Test(LateNonterminalRefund|AlipayUnconfirmedQueries|QueryRefundMissingAmount)` 全通过（model 1.154s、alipay 1.717s、service 0.672s）。支付宝协议缺金额用例保留 unknown/error；服务用例通过三次 query error 实际触发同号策略，确认保持冻结、原金额/商户/退款号不变，受理不当成成功。仍待 v10 received inbox 和重复 worker／游标重启证据。
+
+父检查新增 worker／历史 inbox 用例，独立执行 `go test -race ./service/payments -run 'Test(V10Received|ConcurrentRefundRecovery|RefundRecoveryWorkerRestart)' -count=5 -timeout=120s` 通过（2.567s；仅既有链接器 warning）。重复批次在首次外呼阻塞期间未再调用；重建 worker 可恢复 unknown 并完成一次。当前 restart 用例扫描全部记录后 cursor=0，已要求补非零持久 cursor 的续扫证明；历史 inbox 当前有平台 refund_id，另补无 refund_id、有 operation token 的 v10 本地未知分支。
+
+父扩大回归当前全部通过：CI 七包筛选 controller 2.474s、router 0.467s、model 2.214s、relay/controller 0.880s、relay/adaptor/openai 1.378s；完整 payment/... 与 service/payments 通过（alipay 4.793s、wechat 1.019s、service 0.981s）；diff 检查通过。非零 cursor 和 v10 本地未知 inbox 两个补充用例尚未交付，本次不是最终稳定节点放行。
+
+非零 cursor 增补用例首次父独立 -race count=5 未通过：新 worker 从第 2 行之后继续，正确先处理第 3 行；用例却在 1 小时 ticker 下等待第 2 行查询，五次均超时。要求按 keyset 顺序先证明后续行完成及游标回绕，再显式驱动下一批恢复较早到期行，不改变生产扫描逻辑或引入固定 sleep。v10 无平台退款号、有 operation token 的本地未知 inbox 用例本轮未报失败。
+
+非零 cursor 用例顺序修订后的父复验仍失败：多订单 fake provider 对每笔微信退款固定返回 wx-refund-key-1，后处理的退款被已存在平台退款号 owner 唯一约束正确拒绝。要求多订单 fixture 使用每笔独立且稳定的平台退款号，并断言批次 RefundFailed／InboxFailed 为零；不放松生产身份唯一约束。
+
+## 同号续发与自动恢复节点放行（2026-09-28）
+
+Luna 已停止编辑并交付稳定节点。父核对 v11 additive schema、持久重试时间/尝试计数/游标、同号重发策略、失配结果归 unknown、历史原因异常隔离、通知重放和 worker 启停；最后多订单 fixture 修正平台退款身份冲突后复验通过。
+
+父最终 CI 七包定向回归全通过（controller 1.894s、router 0.440s、model 2.626s、relay/controller 1.484s、relay/adaptor/openai 0.619s）；完整支付协议与服务 `go test -race ./payment/... ./service/payments -count=1 -timeout=120s` 全通过（alipay 8.184s、wechat 2.988s、service 3.517s）。无 Go 数据竞态，存在 macOS 既有链接器 warning；diff 检查通过。非零 cursor 按页向后扫描并回绕较早到期记录、旧 v10 本地未知通知升级后处理、重复批次不重复外呼均已覆盖。
+
+允许提交本节点。自动恢复默认关闭；恢复只处理已审批记录及已入箱证据，未知结果不释放冻结，沿用原退款号及金额。真实二进制空队列生命周期证据见前文；在途操作与重建 worker 使用合成渠道，不能声称真实商户或完整进程宕机联调。公共退款接口、细分权限与二次认证、客户/管理退款页面、支付对账及真实商户验收仍待完成。

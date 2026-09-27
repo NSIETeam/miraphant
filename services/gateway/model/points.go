@@ -207,6 +207,11 @@ type PointRefund struct {
 	OperationKind         string  `gorm:"size:16;not null;default:''"` // apply, query
 	OperationClaimedAt    int64   `gorm:"not null;default:0;index"`
 	OperationLeaseUntil   int64   `gorm:"not null;default:0;index"`
+	RecoveryAction        string  `gorm:"size:16;not null;default:'';index"` // apply, query
+	RecoveryNextAt        int64   `gorm:"not null;default:0;index"`
+	RecoveryAttempts      int     `gorm:"not null;default:0"`
+	RecoveryQueryFailures int     `gorm:"not null;default:0"`
+	RecoveryLastErrorCode string  `gorm:"size:48;not null;default:''"`
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 }
@@ -218,7 +223,7 @@ func (*PointRefund) BeforeUpdate(tx *gorm.DB) error {
 	}
 	for key := range updates {
 		switch strings.ToLower(key) {
-		case "state", "active_order_key", "updated_at", "operation_token", "operation_kind", "operation_claimed_at", "operation_lease_until":
+		case "state", "active_order_key", "updated_at", "operation_token", "operation_kind", "operation_claimed_at", "operation_lease_until", "recovery_action", "recovery_next_at", "recovery_attempts", "recovery_query_failures", "recovery_last_error_code":
 		default:
 			return errors.New("point refund request snapshot is immutable")
 		}
@@ -329,10 +334,35 @@ type PointRefundInbox struct {
 	Currency              string `gorm:"size:3;not null"`
 	ProviderOccurredAt    int64  `gorm:"not null;default:0"`
 	Digest                string `gorm:"size:64;not null"`
+	RetrySameKey          bool   `gorm:"not null;default:false"`
+	RecoveryAction        string `gorm:"size:16;not null;default:''"`
+	RecoveryNextAt        int64  `gorm:"not null;default:0;index"`
+	RecoveryQueryFailures int    `gorm:"not null;default:0"`
 	State                 string `gorm:"size:16;not null;default:received;index"` // received, processed, quarantined
 	ErrorCode             string `gorm:"size:48;not null;default:''"`
 	CreatedAt             time.Time
 	ProcessedAt           *time.Time
+}
+
+// PointRefundRecoveryCursor keeps bounded scheduler scans moving past rows
+// that repeatedly fail, including across process restarts.
+type PointRefundRecoveryCursor struct {
+	Name      string `gorm:"primaryKey;size:32"`
+	CursorID  uint   `gorm:"not null;default:0"`
+	UpdatedAt time.Time
+}
+
+func (*PointRefundRecoveryCursor) BeforeUpdate(tx *gorm.DB) error {
+	updates, ok := tx.Statement.Dest.(map[string]interface{})
+	if !ok || len(updates) == 0 {
+		return errors.New("refund recovery cursor updates must be explicit")
+	}
+	for key := range updates {
+		if strings.ToLower(key) != "cursor_id" && strings.ToLower(key) != "updated_at" {
+			return errors.New("refund recovery cursor field is immutable")
+		}
+	}
+	return nil
 }
 
 func (*PointRefundInbox) BeforeUpdate(tx *gorm.DB) error {
@@ -958,7 +988,7 @@ type PointsSchemaMigration struct {
 	AppliedAt time.Time
 }
 
-const pointsSchemaVersion = 10
+const pointsSchemaVersion = 11
 
 // MigratePointsSchema is deliberately separate from the normal startup migration.
 func MigratePointsSchema() error {
@@ -980,7 +1010,7 @@ func MigratePointsSchema() error {
 		return nil
 	}
 	// Each additive AutoMigrate is safe to rerun if a backend commits DDL implicitly.
-	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}}
+	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}, &PointRefundRecoveryCursor{}}
 	for _, item := range models {
 		if err := DB.AutoMigrate(item); err != nil {
 			return err

@@ -624,9 +624,155 @@ func TestPointsSchemaV9RejectsUnprovableRefundHistoryWithoutVersionMarker(t *tes
 	}
 }
 
+func TestPointsSchemaV10AddsPersistentRecoveryStateWithoutChangingRefundHold(t *testing.T) {
+	db, cleanup, order := pointRefundFixture(t)
+	defer cleanup()
+	refund, err := RequestPointRefund(refundRequest(order, "v10-recovery-idem", "v10-recovery-refund", "v10-provider-key", 100))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApprovePointRefund(refund.RefundKey, "v10-recovery-approve", 99, "批准"); err != nil {
+		t.Fatal(err)
+	}
+	var beforeAccount PointAccount
+	if err := db.First(&beforeAccount, "user_id = ?", order.UserID).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, column := range []string{"recovery_action", "recovery_next_at", "recovery_attempts", "recovery_query_failures", "recovery_last_error_code"} {
+		if err := db.Migrator().DropColumn(&PointRefund{}, column); err != nil {
+			t.Fatalf("simulate v10 missing refund column %s: %v", column, err)
+		}
+	}
+	for _, column := range []string{"retry_same_key", "recovery_action", "recovery_next_at", "recovery_query_failures"} {
+		if err := db.Migrator().DropColumn(&PointRefundInbox{}, column); err != nil {
+			t.Fatalf("simulate v10 missing inbox column %s: %v", column, err)
+		}
+	}
+	if err := db.Migrator().DropTable(&PointRefundRecoveryCursor{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Where("1 = 1").Delete(&PointsSchemaMigration{}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointsSchemaMigration{Version: 10, AppliedAt: time.Now().UTC()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatalf("v10 recovery schema migration failed: %v", err)
+	}
+	for _, column := range []string{"recovery_action", "recovery_next_at", "recovery_attempts", "recovery_query_failures"} {
+		if !db.Migrator().HasColumn(&PointRefund{}, column) {
+			t.Fatalf("v11 missing point refund recovery column %s", column)
+		}
+	}
+	if !db.Migrator().HasTable(&PointRefundRecoveryCursor{}) || !db.Migrator().HasColumn(&PointRefundInbox{}, "retry_same_key") {
+		t.Fatal("v11 recovery inbox or cursor schema is incomplete")
+	}
+	var afterRefund PointRefund
+	var afterAccount PointAccount
+	if err := db.First(&afterRefund, "refund_key = ?", refund.RefundKey).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&afterAccount, "user_id = ?", order.UserID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if afterRefund.State != "approved" || afterRefund.PurchaseMicro != refund.PurchaseMicro || afterRefund.ProviderRefundKey != refund.ProviderRefundKey || afterRefund.ActiveOrderKey == nil || afterRefund.RecoveryAction != "" || afterAccount.AvailableMicro != beforeAccount.AvailableMicro || afterAccount.HeldMicro != beforeAccount.HeldMicro {
+		t.Fatalf("v11 migration changed a frozen refund or balance: refund=%+v account=%+v", afterRefund, afterAccount)
+	}
+}
+
+func TestPointRefundInboxReplayReusesFirstScheduleButRejectsDirectMutation(t *testing.T) {
+	db, cleanup, order := pointRefundFixture(t)
+	defer cleanup()
+	refund, err := RequestPointRefund(refundRequest(order, "inbox-schedule-idem", "inbox-schedule-refund", "inbox-schedule-provider", 100))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApprovePointRefund(refund.RefundKey, "inbox-schedule-approve", 99, "批准"); err != nil {
+		t.Fatal(err)
+	}
+	input := PointRefundInboxInput{EvidenceKey: "stable-evidence-schedule", RefundKey: refund.RefundKey, Provider: "wechat", EvidenceSource: "query", OperationToken: "schedule-token", ProviderRefundKey: refund.ProviderRefundKey, OrderKey: refund.OrderKey, ProviderTransactionID: refund.ProviderTransactionID, MerchantID: refund.ProviderMerchantID, AppID: refund.ProviderAppID, Outcome: "unknown", ProviderStatus: "RESOURCE_NOT_EXISTS", AmountFen: refund.AmountFen, TotalFen: refund.OriginalAmountFen, Currency: "CNY", Digest: "stable-digest", RetrySameKey: true, RecoveryAction: "apply", RecoveryNextAt: 800, RecoveryQueryFailures: 0}
+	first, duplicate, err := PersistPointRefundInboxReplaySafe(input)
+	if err != nil || duplicate || first.RecoveryAction != "apply" || first.RecoveryNextAt != 800 {
+		t.Fatalf("first durable retry decision failed: %+v duplicate=%t err=%v", first, duplicate, err)
+	}
+	changed := input
+	changed.RecoveryNextAt = 900
+	if _, _, err := PersistPointRefundInbox(changed); !errors.Is(err, ErrPointsConflict) {
+		t.Fatalf("direct same-key scheduling mutation was accepted: %v", err)
+	}
+	changedRetryDisposition := input
+	changedRetryDisposition.RetrySameKey, changedRetryDisposition.RecoveryAction = false, "query"
+	if _, _, err := PersistPointRefundInboxReplaySafe(changedRetryDisposition); !errors.Is(err, ErrPointsConflict) {
+		t.Fatalf("same evidence changed its idempotent retry permission: %v", err)
+	}
+	changedEvidence := input
+	changedEvidence.AmountFen++
+	if _, _, err := PersistPointRefundInboxReplaySafe(changedEvidence); err == nil {
+		t.Fatal("same evidence key accepted a changed refund amount")
+	}
+	replayed, duplicate, err := PersistPointRefundInboxReplaySafe(changed)
+	if err != nil || !duplicate || replayed.RecoveryAction != "apply" || replayed.RecoveryNextAt != 800 {
+		t.Fatalf("replay replaced first schedule decision: %+v duplicate=%t err=%v", replayed, duplicate, err)
+	}
+	_ = db
+}
+
+func TestPointRefundRequestUsesProviderReasonByteLimits(t *testing.T) {
+	t.Run("wechat rejects 81 UTF-8 bytes without reserving points", func(t *testing.T) {
+		db, cleanup, order := pointRefundFixture(t)
+		defer cleanup()
+		reason := strings.Repeat("汉", 27) // 81 bytes, though 27 characters.
+		if _, err := RequestPointRefund(PointRefundRequest{UserID: order.UserID, OrderKey: order.OrderKey, IdempotencyKey: "reason-wechat-too-long", RefundKey: "reason-wechat-refund", ProviderRefundKey: "reason-wx-key", AmountFen: 100, Reason: reason}); err == nil {
+			t.Fatal("WeChat reason beyond 80 UTF-8 bytes was accepted")
+		}
+		var account PointAccount
+		if err := db.First(&account, "user_id = ?", order.UserID).Error; err != nil {
+			t.Fatal(err)
+		}
+		var count int64
+		db.Model(&PointRefund{}).Where("order_key = ?", order.OrderKey).Count(&count)
+		if account.AvailableMicro != 1_200_000_000 || account.HeldMicro != 0 || count != 0 {
+			t.Fatalf("invalid reason changed the ledger: account=%+v refunds=%d", account, count)
+		}
+	})
+	t.Run("alipay accepts exactly 256 UTF-8 bytes", func(t *testing.T) {
+		db, cleanup, order := pointRefundFixture(t)
+		defer cleanup()
+		order.Channel, order.ProviderMerchantID, order.ProviderAppID, order.ProviderTransactionID = "alipay", "seller-1", "ali-app-1", "ali-trade-reason"
+		if err := db.Model(&PointPurchaseOrder{}).Where("order_key = ?", order.OrderKey).Updates(map[string]interface{}{"channel": order.Channel, "provider_merchant_id": order.ProviderMerchantID, "provider_app_id": order.ProviderAppID, "provider_transaction_id": order.ProviderTransactionID}).Error; err != nil {
+			t.Fatal(err)
+		}
+		reason := strings.Repeat("汉", 85) + "a" // 256 UTF-8 bytes.
+		if _, err := RequestPointRefund(PointRefundRequest{UserID: order.UserID, OrderKey: order.OrderKey, IdempotencyKey: "reason-alipay-valid", RefundKey: "reason-alipay-valid-refund", ProviderRefundKey: "reason-ali-valid", AmountFen: 100, Reason: reason}); err != nil {
+			t.Fatalf("exact Alipay byte limit rejected: %v", err)
+		}
+	})
+	t.Run("alipay rejects 258 UTF-8 bytes without reserving points", func(t *testing.T) {
+		db, cleanup, order := pointRefundFixture(t)
+		defer cleanup()
+		order.Channel, order.ProviderMerchantID, order.ProviderAppID, order.ProviderTransactionID = "alipay", "seller-1", "ali-app-1", "ali-trade-reason"
+		if err := db.Model(&PointPurchaseOrder{}).Where("order_key = ?", order.OrderKey).Updates(map[string]interface{}{"channel": order.Channel, "provider_merchant_id": order.ProviderMerchantID, "provider_app_id": order.ProviderAppID, "provider_transaction_id": order.ProviderTransactionID}).Error; err != nil {
+			t.Fatal(err)
+		}
+		reason := strings.Repeat("汉", 86)
+		if _, err := RequestPointRefund(PointRefundRequest{UserID: order.UserID, OrderKey: order.OrderKey, IdempotencyKey: "reason-alipay-too-long", RefundKey: "reason-alipay-refund", ProviderRefundKey: "reason-ali-key", AmountFen: 100, Reason: reason}); err == nil {
+			t.Fatal("Alipay reason beyond 256 UTF-8 bytes was accepted")
+		}
+		var account PointAccount
+		if err := db.First(&account, "user_id = ?", order.UserID).Error; err != nil {
+			t.Fatal(err)
+		}
+		if account.AvailableMicro != 1_200_000_000 || account.HeldMicro != 0 {
+			t.Fatalf("invalid reason changed the ledger: %+v", account)
+		}
+	})
+}
+
 func TestLateNonterminalRefundEvidenceCannotClearNewerOperationClaim(t *testing.T) {
 	db, cleanup, order := pointRefundFixture(t)
 	defer cleanup()
+	claimNow := time.Now().UTC().Unix()
 	refund, err := RequestPointRefund(refundRequest(order, "stale-worker-idem", "stale-worker-refund", "stale-worker-provider", 100))
 	if err != nil {
 		t.Fatal(err)
@@ -634,10 +780,13 @@ func TestLateNonterminalRefundEvidenceCannotClearNewerOperationClaim(t *testing.
 	if err := ApprovePointRefund(refund.RefundKey, "stale-worker-approve", 99, "批准"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ClaimPointRefundOperation(refund.RefundKey, "worker-a", 3_000, 5); err != nil {
+	if _, err := ClaimPointRefundOperation(refund.RefundKey, "worker-a", claimNow, 5); err != nil {
 		t.Fatal(err)
 	}
-	claimB, err := ClaimPointRefundOperation(refund.RefundKey, "worker-b", 3_005, 30)
+	// The replacement claim must wait until both the old lease and the
+	// persisted recovery backoff have elapsed.
+	claimBAt := claimNow + 65
+	claimB, err := ClaimPointRefundOperation(refund.RefundKey, "worker-b", claimBAt, 30)
 	if err != nil || claimB.Kind != "query" {
 		t.Fatalf("expected expired apply claim to become query claim: %+v %v", claimB, err)
 	}
@@ -650,7 +799,7 @@ func TestLateNonterminalRefundEvidenceCannotClearNewerOperationClaim(t *testing.
 	if err := db.First(&current, "refund_key = ?", refund.RefundKey).Error; err != nil {
 		t.Fatal(err)
 	}
-	if current.OperationToken != "worker-b" || current.OperationKind != "query" || current.OperationLeaseUntil != 3_035 {
+	if current.OperationToken != "worker-b" || current.OperationKind != "query" || current.OperationLeaseUntil != claimBAt+30 {
 		t.Fatalf("late old response cleared/replaced the newer claim: %+v", current)
 	}
 	queryResult := refundEvidence(refund, "stale-worker-query-pending", "pending", "wx-refund-stale", "stale-worker-query-digest")
@@ -787,7 +936,7 @@ func TestPointRefundUsesActualSQLiteImmediateDatabaseGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := deferredDB.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPurchaseOrder{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}); err != nil {
+	if err := deferredDB.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPurchaseOrder{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}, &PointRefundRecoveryCursor{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := deferredDB.Create(&PointsSchemaMigration{Version: pointsSchemaVersion, AppliedAt: time.Now().UTC()}).Error; err != nil {

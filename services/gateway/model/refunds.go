@@ -18,6 +18,7 @@ var (
 	ErrPointRefundUnavailable = errors.New("point refunds are unavailable on this database")
 	ErrPointRefundInFlight    = errors.New("another refund for this order is still in progress")
 	ErrPointRefundState       = errors.New("point refund state does not allow this operation")
+	ErrPointRefundNotDue      = errors.New("point refund recovery is not due")
 )
 
 type PointRefundRequest struct {
@@ -46,6 +47,10 @@ type PointRefundEvidenceInput struct {
 	TotalFen              int64
 	Currency              string
 	Digest                string
+	RecoveryAction        string
+	RecoveryNextAt        int64
+	RetrySameKey          bool
+	RecoveryQueryFailures int
 }
 
 type PointRefundInboxInput struct {
@@ -68,6 +73,10 @@ type PointRefundInboxInput struct {
 	Currency              string
 	ProviderOccurredAt    int64
 	Digest                string
+	RetrySameKey          bool
+	RecoveryAction        string
+	RecoveryNextAt        int64
+	RecoveryQueryFailures int
 }
 
 type PointRefundOperationClaim struct {
@@ -130,16 +139,23 @@ func claimPointRefundOperationOn(db *gorm.DB, refundKey, token string, nowUnix, 
 		if refund.OperationToken != "" && nowUnix < refund.OperationLeaseUntil {
 			return ErrPointRefundInFlight
 		}
+		if refund.RecoveryNextAt > nowUnix {
+			return ErrPointRefundNotDue
+		}
 		kind := ""
 		switch refund.State {
 		case "approved":
-			if refund.OperationClaimedAt != 0 && nowUnix >= refund.OperationLeaseUntil {
-				kind = "query"
-			} else {
+			if refund.RecoveryAction == "apply" || refund.RecoveryAction == "" && refund.RecoveryAttempts == 0 {
 				kind = "apply"
+			} else {
+				kind = "query"
 			}
 		case "submitting", "submitted", "unknown", "needs_manual_review":
-			kind = "query"
+			if refund.RecoveryAction == "apply" && refund.State != "needs_manual_review" {
+				kind = "apply"
+			} else {
+				kind = "query"
+			}
 		default:
 			return ErrPointRefundState
 		}
@@ -148,7 +164,13 @@ func claimPointRefundOperationOn(db *gorm.DB, refundKey, token string, nowUnix, 
 			state = "submitting"
 		}
 		leaseUntil := nowUnix + leaseSeconds
-		updates := map[string]interface{}{"operation_token": token, "operation_kind": kind, "operation_claimed_at": nowUnix, "operation_lease_until": leaseUntil, "state": state, "updated_at": time.Unix(nowUnix, 0).UTC()}
+		attempts := refund.RecoveryAttempts + 1
+		delay := pointRefundRecoveryDelay(refund.Channel, attempts)
+		if delay > int64(^uint64(0)>>1)-nowUnix {
+			return errors.New("refund recovery time overflow")
+		}
+		nextAt := nowUnix + delay
+		updates := map[string]interface{}{"operation_token": token, "operation_kind": kind, "operation_claimed_at": nowUnix, "operation_lease_until": leaseUntil, "state": state, "recovery_action": "query", "recovery_attempts": attempts, "recovery_next_at": nextAt, "updated_at": time.Unix(nowUnix, 0).UTC()}
 		updated := tx.Model(&PointRefund{}).Where("id = ? AND operation_token = ? AND operation_claimed_at = ? AND operation_lease_until = ?", refund.ID, refund.OperationToken, refund.OperationClaimedAt, refund.OperationLeaseUntil).Updates(updates)
 		if updated.Error != nil {
 			return updated.Error
@@ -157,6 +179,7 @@ func claimPointRefundOperationOn(db *gorm.DB, refundKey, token string, nowUnix, 
 			return ErrPointRefundInFlight
 		}
 		refund.OperationToken, refund.OperationKind, refund.OperationClaimedAt, refund.OperationLeaseUntil, refund.State = token, kind, nowUnix, leaseUntil, state
+		refund.RecoveryAction, refund.RecoveryAttempts, refund.RecoveryNextAt = "query", attempts, nextAt
 		result = PointRefundOperationClaim{Refund: refund, Kind: kind}
 		return nil
 	})
@@ -164,6 +187,93 @@ func claimPointRefundOperationOn(db *gorm.DB, refundKey, token string, nowUnix, 
 		return nil, err
 	}
 	return &result, nil
+}
+
+func pointRefundRecoveryDelay(channel string, attempts int) int64 {
+	if attempts < 1 {
+		attempts = 1
+	}
+	if channel == "wechat" {
+		delays := []int64{60, 300, 600, 1200, 1800}
+		if attempts > len(delays) {
+			return delays[len(delays)-1]
+		}
+		return delays[attempts-1]
+	}
+	delays := []int64{10, 30, 60, 120, 300}
+	if attempts > len(delays) {
+		return delays[len(delays)-1]
+	}
+	return delays[attempts-1]
+}
+
+func ListDuePointRefunds(afterID uint, nowUnix int64, limit int) ([]PointRefund, bool, error) {
+	if nowUnix <= 0 || limit <= 0 || limit > 500 {
+		return nil, false, errors.New("invalid refund recovery scan")
+	}
+	if err := pointRefundDBReady(DB); err != nil {
+		return nil, false, err
+	}
+	var rows []PointRefund
+	err := DB.Where("id > ? AND state IN ? AND (recovery_next_at = 0 OR recovery_next_at <= ?) AND (operation_token = '' OR operation_lease_until <= ?)", afterID, []string{"approved", "submitting", "submitted", "unknown"}, nowUnix, nowUnix).Order("id ASC").Limit(limit + 1).Find(&rows).Error
+	if err != nil {
+		return nil, false, err
+	}
+	hasMore := len(rows) > limit
+	if hasMore {
+		rows = rows[:limit]
+	}
+	return rows, hasMore, nil
+}
+
+func GetPointRefundRecoveryCursor(name string) (uint, error) {
+	if name != "refunds" && name != "inbox" {
+		return 0, errors.New("invalid refund recovery cursor")
+	}
+	if err := pointRefundDBReady(DB); err != nil {
+		return 0, err
+	}
+	var cursor PointRefundRecoveryCursor
+	err := DB.First(&cursor, "name = ?", name).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, nil
+	}
+	return cursor.CursorID, err
+}
+
+func AdvancePointRefundRecoveryCursor(name string, expected, next uint, reset bool) error {
+	if name != "refunds" && name != "inbox" || !reset && next < expected {
+		return errors.New("invalid refund recovery cursor advance")
+	}
+	return pointRefundTransaction(DB, func(tx *gorm.DB) error {
+		var current PointRefundRecoveryCursor
+		err := tx.First(&current, "name = ?", name).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			current = PointRefundRecoveryCursor{Name: name, CursorID: 0}
+		} else if err != nil {
+			return err
+		}
+		if reset {
+			if current.CursorID != expected {
+				return nil // another worker already moved the scan forward
+			}
+			next = 0
+		} else if next < current.CursorID {
+			return nil // never let a concurrent worker move the cursor backwards
+		}
+		row := PointRefundRecoveryCursor{Name: name, CursorID: next, UpdatedAt: time.Now().UTC()}
+		return tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "name"}}, DoUpdates: clause.Assignments(map[string]interface{}{"cursor_id": next, "updated_at": row.UpdatedAt})}).Create(&row).Error
+	})
+}
+
+func SetPointRefundRecoveryCursor(name string, cursorID uint) error {
+	if name != "refunds" && name != "inbox" {
+		return errors.New("invalid refund recovery cursor")
+	}
+	return pointRefundTransaction(DB, func(tx *gorm.DB) error {
+		cursor := PointRefundRecoveryCursor{Name: name, CursorID: cursorID, UpdatedAt: time.Now().UTC()}
+		return tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "name"}}, DoUpdates: clause.Assignments(map[string]interface{}{"cursor_id": cursorID, "updated_at": cursor.UpdatedAt})}).Create(&cursor).Error
+	})
 }
 
 func GetPointRefundByKey(refundKey string) (*PointRefund, error) {
@@ -177,6 +287,34 @@ func GetPointRefundByKey(refundKey string) (*PointRefund, error) {
 	return &refund, nil
 }
 
+func MarkPointRefundNeedsManualReview(refundKey, code string, now time.Time) error {
+	if refundKey == "" || (code != "invalid_reason" && code != "provider_configuration") {
+		return errors.New("invalid refund review marker")
+	}
+	return pointRefundTransaction(DB, func(tx *gorm.DB) error {
+		var refund PointRefund
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("refund_key = ?", refundKey).First(&refund).Error; err != nil {
+			return err
+		}
+		if refund.State == "succeeded" || refund.State == "definite_failed" || refund.State == "rejected" {
+			return nil
+		}
+		if refund.OperationToken != "" && now.UTC().Unix() < refund.OperationLeaseUntil {
+			return ErrPointRefundInFlight
+		}
+		updates := map[string]interface{}{"state": "needs_manual_review", "recovery_action": "query", "recovery_next_at": 0, "recovery_last_error_code": code, "updated_at": now.UTC()}
+		clearPointRefundOperation(updates)
+		result := tx.Model(&PointRefund{}).Where("id = ?", refund.ID).Updates(updates)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrPointRefundState
+		}
+		return nil
+	})
+}
+
 func GetPointRefundForProvider(provider, providerRefundKey, orderKey string) (*PointRefund, error) {
 	var refund PointRefund
 	if err := pointRefundDBReady(DB); err != nil {
@@ -188,19 +326,40 @@ func GetPointRefundForProvider(provider, providerRefundKey, orderKey string) (*P
 	return &refund, nil
 }
 
+func GetPointRefundInboxByEvidenceKey(evidenceKey string) (*PointRefundInbox, error) {
+	if evidenceKey == "" {
+		return nil, errors.New("refund evidence key is required")
+	}
+	if err := pointRefundDBReady(DB); err != nil {
+		return nil, err
+	}
+	var inbox PointRefundInbox
+	if err := DB.Where("evidence_key = ?", evidenceKey).First(&inbox).Error; err != nil {
+		return nil, err
+	}
+	return &inbox, nil
+}
+
 // PersistPointRefundInbox inserts only normalized verified evidence. It is
 // intentionally separate from ledger processing so a crash leaves replayable
 // work. Reuse of an evidence key with changed content is a conflict.
 func PersistPointRefundInbox(input PointRefundInboxInput) (*PointRefundInbox, bool, error) {
-	return persistPointRefundInboxOn(DB, input)
+	return persistPointRefundInboxOn(DB, input, false)
 }
 
-func persistPointRefundInboxOn(db *gorm.DB, input PointRefundInboxInput) (*PointRefundInbox, bool, error) {
+func PersistPointRefundInboxReplaySafe(input PointRefundInboxInput) (*PointRefundInbox, bool, error) {
+	return persistPointRefundInboxOn(DB, input, true)
+}
+
+func persistPointRefundInboxOn(db *gorm.DB, input PointRefundInboxInput, reuseSchedule bool) (*PointRefundInbox, bool, error) {
 	if input.EvidenceKey == "" || len(input.EvidenceKey) > 180 || input.RefundKey == "" || input.ProviderRefundKey == "" || input.OrderKey == "" || input.ProviderTransactionID == "" || input.MerchantID == "" || input.AppID == "" || input.AmountFen <= 0 || input.TotalFen <= 0 || input.Currency != "CNY" || input.Digest == "" || (input.Provider != "wechat" && input.Provider != "alipay") || (input.Outcome != "accepted" && input.Outcome != "succeeded" && input.Outcome != "definite_failed" && input.Outcome != "unknown" && input.Outcome != "abnormal") {
 		return nil, false, errors.New("invalid normalized refund inbox evidence")
 	}
 	if input.EvidenceSource != "apply" && input.EvidenceSource != "query" && input.EvidenceSource != "notification" {
 		return nil, false, errors.New("invalid refund evidence source")
+	}
+	if input.RecoveryAction != "" && input.RecoveryAction != "query" && input.RecoveryAction != "apply" || input.RetrySameKey && (input.EvidenceSource != "query" || input.Outcome != "unknown" || input.RecoveryAction != "apply") {
+		return nil, false, errors.New("invalid refund recovery disposition")
 	}
 	var result PointRefundInbox
 	duplicate := false
@@ -214,7 +373,7 @@ func persistPointRefundInboxOn(db *gorm.DB, input PointRefundInboxInput) (*Point
 		if refund.Channel != input.Provider || refund.ProviderRefundKey != input.ProviderRefundKey || refund.OrderKey != input.OrderKey || refund.ProviderTransactionID != input.ProviderTransactionID || refund.ProviderMerchantID != input.MerchantID || refund.ProviderAppID != input.AppID || refund.AmountFen != input.AmountFen || refund.OriginalAmountFen != input.TotalFen || refund.Currency != input.Currency {
 			return errors.New("verified inbox evidence does not match the frozen refund")
 		}
-		result = PointRefundInbox{EvidenceKey: input.EvidenceKey, RefundKey: input.RefundKey, Provider: input.Provider, EvidenceSource: input.EvidenceSource, OperationToken: input.OperationToken, ProviderEventID: input.ProviderEventID, ProviderRefundID: input.ProviderRefundID, ProviderRefundKey: input.ProviderRefundKey, OrderKey: input.OrderKey, ProviderTransactionID: input.ProviderTransactionID, MerchantID: input.MerchantID, AppID: input.AppID, Outcome: input.Outcome, ProviderStatus: input.ProviderStatus, AmountFen: input.AmountFen, TotalFen: input.TotalFen, Currency: input.Currency, ProviderOccurredAt: input.ProviderOccurredAt, Digest: input.Digest, State: "received", CreatedAt: time.Now().UTC()}
+		result = PointRefundInbox{EvidenceKey: input.EvidenceKey, RefundKey: input.RefundKey, Provider: input.Provider, EvidenceSource: input.EvidenceSource, OperationToken: input.OperationToken, ProviderEventID: input.ProviderEventID, ProviderRefundID: input.ProviderRefundID, ProviderRefundKey: input.ProviderRefundKey, OrderKey: input.OrderKey, ProviderTransactionID: input.ProviderTransactionID, MerchantID: input.MerchantID, AppID: input.AppID, Outcome: input.Outcome, ProviderStatus: input.ProviderStatus, AmountFen: input.AmountFen, TotalFen: input.TotalFen, Currency: input.Currency, ProviderOccurredAt: input.ProviderOccurredAt, Digest: input.Digest, RetrySameKey: input.RetrySameKey, RecoveryAction: input.RecoveryAction, RecoveryNextAt: input.RecoveryNextAt, RecoveryQueryFailures: input.RecoveryQueryFailures, State: "received", CreatedAt: time.Now().UTC()}
 		insert := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&result)
 		if insert.Error != nil {
 			return insert.Error
@@ -226,6 +385,13 @@ func persistPointRefundInboxOn(db *gorm.DB, input PointRefundInboxInput) (*Point
 		var prior PointRefundInbox
 		if err := tx.Where("evidence_key = ?", input.EvidenceKey).First(&prior).Error; err != nil {
 			return err
+		}
+		if reuseSchedule {
+			if !samePointRefundInboxEvidence(prior, input) || prior.RetrySameKey != input.RetrySameKey {
+				return ErrPointsConflict
+			}
+			result = prior // scheduling metadata is immutable after first insert
+			return nil
 		}
 		if !samePointRefundInbox(prior, input) {
 			return ErrPointsConflict
@@ -240,6 +406,10 @@ func persistPointRefundInboxOn(db *gorm.DB, input PointRefundInboxInput) (*Point
 }
 
 func samePointRefundInbox(old PointRefundInbox, input PointRefundInboxInput) bool {
+	return samePointRefundInboxEvidence(old, input) && old.RetrySameKey == input.RetrySameKey && old.RecoveryAction == input.RecoveryAction && old.RecoveryNextAt == input.RecoveryNextAt && old.RecoveryQueryFailures == input.RecoveryQueryFailures
+}
+
+func samePointRefundInboxEvidence(old PointRefundInbox, input PointRefundInboxInput) bool {
 	return old.RefundKey == input.RefundKey && old.Provider == input.Provider && old.EvidenceSource == input.EvidenceSource && old.OperationToken == input.OperationToken && old.ProviderEventID == input.ProviderEventID && old.ProviderRefundID == input.ProviderRefundID && old.ProviderRefundKey == input.ProviderRefundKey && old.OrderKey == input.OrderKey && old.ProviderTransactionID == input.ProviderTransactionID && old.MerchantID == input.MerchantID && old.AppID == input.AppID && old.Outcome == input.Outcome && old.ProviderStatus == input.ProviderStatus && old.AmountFen == input.AmountFen && old.TotalFen == input.TotalFen && old.Currency == input.Currency && old.ProviderOccurredAt == input.ProviderOccurredAt && old.Digest == input.Digest
 }
 
@@ -290,8 +460,15 @@ func MarkPointRefundInbox(inboxID uint, state, errorCode string, processedAt tim
 // uncertainty without inventing provider evidence or a WeChat refund ID.
 // Only the current claim token can clear the lease; stale workers are harmless.
 func RecordPointRefundOperationUnknown(refundKey, operationToken string, now time.Time) error {
+	return RecordPointRefundOperationUnknownSchedule(refundKey, operationToken, now, "query", time.Time{}, 0)
+}
+
+func RecordPointRefundOperationUnknownSchedule(refundKey, operationToken string, processedAt time.Time, nextAction string, nextAt time.Time, queryFailures int) error {
 	if refundKey == "" || operationToken == "" || len(operationToken) > 80 {
 		return errors.New("refund operation token is required")
+	}
+	if nextAction != "query" && nextAction != "apply" || queryFailures < 0 {
+		return errors.New("invalid refund recovery action")
 	}
 	return pointRefundTransaction(DB, func(tx *gorm.DB) error {
 		var refund PointRefund
@@ -311,7 +488,10 @@ func RecordPointRefundOperationUnknown(refundKey, operationToken string, now tim
 		if state != "needs_manual_review" {
 			state = "unknown"
 		}
-		updates := map[string]interface{}{"state": state, "updated_at": now.UTC()}
+		updates := map[string]interface{}{"state": state, "recovery_action": nextAction, "recovery_query_failures": queryFailures, "recovery_last_error_code": "provider_unconfirmed", "updated_at": processedAt.UTC()}
+		if nextAt.After(processedAt) {
+			updates["recovery_next_at"] = nextAt.UTC().Unix()
+		}
 		clearPointRefundOperation(updates)
 		return tx.Model(&PointRefund{}).Where("id = ? AND operation_token = ?", refund.ID, operationToken).Updates(updates).Error
 	})
@@ -356,6 +536,13 @@ func requestPointRefundOn(db *gorm.DB, req PointRefundRequest) (*PointRefund, er
 		}
 		if order.Channel != "wechat" && order.Channel != "alipay" || order.Currency != "CNY" || order.ProviderMerchantID == "" || order.ProviderAppID == "" || order.ProviderTransactionID == "" {
 			return errors.New("order does not have a complete refundable payment identity")
+		}
+		maxReasonBytes := 256
+		if order.Channel == "wechat" {
+			maxReasonBytes = 80
+		}
+		if len([]byte(req.Reason)) > maxReasonBytes {
+			return fmt.Errorf("refund reason exceeds the %d-byte %s protocol limit", maxReasonBytes, order.Channel)
 		}
 		if order.AmountFen <= 0 || order.AmountFen > int64(^uint64(0)>>1)/PointMicroPerPoint || order.PurchaseMicro != order.AmountFen*PointMicroPerPoint || req.AmountFen > order.AmountFen {
 			return errors.New("invalid original purchase amount")
@@ -562,7 +749,7 @@ func decidePointRefundOn(db *gorm.DB, refundKey, decisionKey string, actorID int
 			return err
 		}
 		if action == "approve" {
-			upd := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": "approved", "updated_at": now})
+			upd := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": "approved", "recovery_action": "apply", "recovery_next_at": 0, "recovery_attempts": 0, "recovery_last_error_code": "", "updated_at": now})
 			if upd.Error != nil {
 				return upd.Error
 			}
@@ -574,7 +761,7 @@ func decidePointRefundOn(db *gorm.DB, refundKey, decisionKey string, actorID int
 		if err := releasePointRefundTx(tx, &refund, "rejected", now); err != nil {
 			return err
 		}
-		if err := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": "rejected", "active_order_key": nil, "updated_at": now}).Error; err != nil {
+		if err := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": "rejected", "active_order_key": nil, "recovery_action": "", "recovery_next_at": 0, "recovery_query_failures": 0, "updated_at": now}).Error; err != nil {
 			return err
 		}
 		return nil
@@ -671,7 +858,8 @@ func recordPointRefundEvidenceOn(db *gorm.DB, input PointRefundEvidenceInput) er
 			if input.OperationToken != "" && refund.OperationToken != input.OperationToken {
 				return nil
 			}
-			updates := map[string]interface{}{"state": "submitted", "updated_at": now}
+			action, nextAt := refundRecoveryDisposition(input, refund, now)
+			updates := map[string]interface{}{"state": "submitted", "recovery_action": action, "recovery_next_at": nextAt, "recovery_query_failures": input.RecoveryQueryFailures, "recovery_last_error_code": "", "updated_at": now}
 			if input.OperationToken != "" && refund.OperationToken == input.OperationToken {
 				clearPointRefundOperation(updates)
 			}
@@ -688,7 +876,8 @@ func recordPointRefundEvidenceOn(db *gorm.DB, input PointRefundEvidenceInput) er
 			if input.OperationToken != "" && refund.OperationToken != input.OperationToken {
 				return nil
 			}
-			updates := map[string]interface{}{"state": "unknown", "updated_at": now}
+			action, nextAt := refundRecoveryDisposition(input, refund, now)
+			updates := map[string]interface{}{"state": "unknown", "recovery_action": action, "recovery_next_at": nextAt, "recovery_query_failures": input.RecoveryQueryFailures, "recovery_last_error_code": "", "updated_at": now}
 			if input.OperationToken != "" && refund.OperationToken == input.OperationToken {
 				clearPointRefundOperation(updates)
 			}
@@ -706,7 +895,7 @@ func recordPointRefundEvidenceOn(db *gorm.DB, input PointRefundEvidenceInput) er
 			if err := releasePointRefundTx(tx, &refund, "definite_failed", now); err != nil {
 				return err
 			}
-			return tx.Model(&PointRefund{}).Where("id = ?", refund.ID).Updates(map[string]interface{}{"state": "definite_failed", "active_order_key": nil, "operation_token": "", "operation_kind": "", "operation_claimed_at": 0, "operation_lease_until": 0, "updated_at": now}).Error
+			return tx.Model(&PointRefund{}).Where("id = ?", refund.ID).Updates(map[string]interface{}{"state": "definite_failed", "active_order_key": nil, "operation_token": "", "operation_kind": "", "operation_claimed_at": 0, "operation_lease_until": 0, "recovery_action": "", "recovery_next_at": 0, "recovery_query_failures": 0, "recovery_last_error_code": "", "updated_at": now}).Error
 		case "succeeded":
 			return finalizePointRefundTx(tx, &refund, now)
 		default:
@@ -724,6 +913,26 @@ func clearPointRefundOperation(updates map[string]interface{}) {
 	updates["operation_kind"] = ""
 	updates["operation_claimed_at"] = 0
 	updates["operation_lease_until"] = 0
+}
+
+func refundRecoveryDisposition(input PointRefundEvidenceInput, refund PointRefund, now time.Time) (string, int64) {
+	action := input.RecoveryAction
+	if input.RetrySameKey {
+		action = "apply"
+	}
+	if action != "apply" {
+		action = "query"
+	}
+	nextAt := input.RecoveryNextAt
+	if nextAt <= now.Unix() {
+		delay := pointRefundRecoveryDelay(refund.Channel, refund.RecoveryAttempts+1)
+		if delay > int64(^uint64(0)>>1)-now.Unix() {
+			nextAt = int64(^uint64(0) >> 1)
+		} else {
+			nextAt = now.Unix() + delay
+		}
+	}
+	return action, nextAt
 }
 
 func refundAllocationsTx(tx *gorm.DB, refundID uint) ([]PointRefundAllocation, error) {
@@ -903,7 +1112,7 @@ func finalizePointRefundTx(tx *gorm.DB, refund *PointRefund, now time.Time) erro
 			return ErrPointRefundState
 		}
 	}
-	refundUpdate := tx.Model(&PointRefund{}).Where("id = ? AND state IN ?", refund.ID, []string{"approved", "submitting", "submitted", "unknown", "needs_manual_review"}).Updates(map[string]interface{}{"state": "succeeded", "active_order_key": nil, "operation_token": "", "operation_kind": "", "operation_claimed_at": 0, "operation_lease_until": 0, "updated_at": now})
+	refundUpdate := tx.Model(&PointRefund{}).Where("id = ? AND state IN ?", refund.ID, []string{"approved", "submitting", "submitted", "unknown", "needs_manual_review"}).Updates(map[string]interface{}{"state": "succeeded", "active_order_key": nil, "operation_token": "", "operation_kind": "", "operation_claimed_at": 0, "operation_lease_until": 0, "recovery_action": "", "recovery_next_at": 0, "recovery_query_failures": 0, "recovery_last_error_code": "", "updated_at": now})
 	if refundUpdate.Error != nil {
 		return refundUpdate.Error
 	}

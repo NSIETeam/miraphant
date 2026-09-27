@@ -123,6 +123,55 @@ func TestWechatRefundQueryOutcomeAndIdentityMatrix(t *testing.T) {
 	}
 }
 
+func TestWechatRefundQueryMissingResourceRequiresFreshValidSignature(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		statusCode int
+		code       string
+		headerMode string
+		wantRetry  bool
+	}{
+		{"verified resource not found", http.StatusNotFound, "RESOURCE_NOT_EXISTS", "valid", true},
+		{"unsigned resource not found", http.StatusNotFound, "RESOURCE_NOT_EXISTS", "unsigned", false},
+		{"bad signature", http.StatusNotFound, "RESOURCE_NOT_EXISTS", "bad-signature", false},
+		{"wrong serial", http.StatusNotFound, "RESOURCE_NOT_EXISTS", "wrong-serial", false},
+		{"not found code on server error", http.StatusInternalServerError, "RESOURCE_NOT_EXISTS", "valid", false},
+		{"other not found code", http.StatusNotFound, "SYSTEM_ERROR", "valid", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			keys := newTestKeys(t)
+			request := refundRequestFixture()
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet || r.URL.Path != "/v3/refund/domestic/refunds/"+request.ProviderRefundKey {
+					t.Errorf("query did not use frozen provider refund key: %s %s", r.Method, r.URL.RequestURI())
+				}
+				body := []byte(fmt.Sprintf(`{"code":%q}`, tc.code))
+				if tc.headerMode != "unsigned" {
+					for key, values := range signedHeaders(t, keys.platform, body, time.Now()) {
+						for _, value := range values {
+							w.Header().Add(key, value)
+						}
+					}
+				}
+				switch tc.headerMode {
+				case "bad-signature":
+					w.Header().Set("Wechatpay-Signature", "invalid")
+				case "wrong-serial":
+					w.Header().Set("Wechatpay-Serial", "untrusted-platform")
+				}
+				w.WriteHeader(tc.statusCode)
+				_, _ = w.Write(body)
+			}))
+			defer server.Close()
+			keys.provider.baseURL = server.URL
+			result, err := keys.provider.QueryRefund(context.Background(), request)
+			if result.Outcome != payment.RefundUnknown || result.RetrySameKey != tc.wantRetry || (err == nil) != tc.wantRetry {
+				t.Fatalf("result=%+v err=%v; want unknown retry=%t", result, err, tc.wantRetry)
+			}
+		})
+	}
+}
+
 func TestWechatRefundNotificationUsesOfficialEnvelopeAndDecrypts(t *testing.T) {
 	keys := newTestKeys(t)
 	body, headers := signedRefundNotification(t, keys, "SUCCESS", "merchant-1", true, true)

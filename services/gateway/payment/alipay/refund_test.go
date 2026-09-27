@@ -165,6 +165,23 @@ func TestQueryRefundRejectsIdentityAndFenMismatches(t *testing.T) {
 	}
 }
 
+func TestQueryRefundMissingAmountFieldsRemainsUnknown(t *testing.T) {
+	keys := newTestKeys(t)
+	request := refundRequestFixture()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// A valid signature and matching identifiers are insufficient if the
+		// provider omits the amount fields needed to bind the query result.
+		node := []byte(fmt.Sprintf(`{"code":"10000","trade_no":%q,"out_trade_no":%q,"out_request_no":%q,"refund_status":"REFUND_SUCCESS"}`, request.TransactionID, request.OrderKey, request.ProviderRefundKey))
+		_, _ = w.Write(signAPIResponse(t, keys.alipay, "alipay.trade.fastpay.refund.query", node))
+	}))
+	defer server.Close()
+	keys.provider.baseURL = server.URL + "/gateway.do"
+	result, err := keys.provider.QueryRefund(context.Background(), request)
+	if err == nil || result.Outcome != payment.RefundUnknown || result.RetrySameKey {
+		t.Fatalf("missing amount fields were treated as usable/retry evidence: result=%+v err=%v", result, err)
+	}
+}
+
 func TestRefundProtocolErrorsStayUnknownAndRedirectIsNotFollowed(t *testing.T) {
 	keys := newTestKeys(t)
 	var targetHits int

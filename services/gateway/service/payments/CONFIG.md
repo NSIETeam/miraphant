@@ -23,11 +23,23 @@ Key files must be readable by the gateway process and must not be placed under
 the public website root. The adapters use fixed official provider endpoints;
 no endpoint or callback URL is accepted from a customer. The enabled lanes are
 WeChat Native and Alipay desktop page-pay. H5, JSAPI, Alipay mobile web,
-refunds, reconciliation, and real merchant acceptance remain separate work.
+refund HTTP endpoints, reconciliation, and real merchant acceptance remain
+separate work. Refund protocol adapters and the internal durable recovery
+service exist, but no public refund submission or approval route is enabled.
+
+Automatic refund recovery is disabled by default. Set
+`POINTS_REFUND_RECOVERY_ENABLED=true` to start the internal background worker.
+It processes approved refund operations and durable verified inbox records
+with persisted keyset cursors, same-refund-number retries, provider-specific
+backoff, and a fixed maximum of five provider calls per batch. It does not
+enable new refunds or accept refund requests. Keep provider configuration
+available for historical orders even when new purchases are paused. On
+shutdown, the worker is cancelled and awaited before the database is closed.
 
 ## Implemented HTTP entry points
 
-These routes require schema version 8, applied explicitly with `--migrate-points`.
+These routes require points schema version 11, applied explicitly with
+`--migrate-points`.
 Back up and stop the production service before an approved migration; startup
 does not apply the points migration automatically. Legacy orders with missing
 merchant/application snapshots remain unchanged and are quarantined if new
@@ -49,11 +61,20 @@ payment evidence cannot be matched safely.
   immutable package publication with business key and audit.
 - `POST /api/admin/points/payments/recover?after_id=0&limit=100`: current
   administrator plus CSRF; process already verified, durable inbox events.
+- `GET /api/admin/orders`, `/api/admin/orders/:key` and `GET /api/admin/audit`:
+  current administrator; paginated, filtered order/audit review with sensitive
+  provider and credential fields omitted.
 
 Recovery reports scanned, attempted, processed, quarantined, failed, skipped,
 `next_after_id` and `has_more`. Continue with the returned cursor while
 `has_more=true`. A completed scan is not proof that failed/skipped events were
 resolved: retain their records, fix the cause and start another scan from zero.
-Recovery performs no provider network calls and does not manufacture payment
-evidence. Administrator order search, provider reconciliation, payment status
-management and customer checkout pages are subsequent integration work.
+The HTTP payment recovery route only replays verified inbox records and makes
+no provider network calls. Refund worker operations are internal and preserve
+the exact refund number, amount, original transaction and merchant snapshot.
+Unknown outcomes keep the original points frozen; automatic recovery never
+creates a new refund number or releases a hold based on an absent query result.
+
+Provider reconciliation, payment status management, public refund HTTP routes
+and refund browser flows remain separate work. Points refunds have only been verified against the supported
+single-instance SQLite configuration; other database backends are not enabled.

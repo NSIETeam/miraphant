@@ -307,6 +307,17 @@ func (p *Provider) QueryRefund(ctx context.Context, request payment.RefundReques
 	path := "/v3/refund/domestic/refunds/" + url.PathEscape(request.ProviderRefundKey)
 	body, headers, _, err := p.call(ctx, http.MethodGet, path, nil)
 	if err != nil {
+		var httpErr *providerHTTPError
+		if errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusNotFound && len(body) > 0 && p.verifyResponse(headers, body) == nil {
+			var absent struct {
+				Code string `json:"code"`
+			}
+			if json.Unmarshal(body, &absent) == nil && absent.Code == "RESOURCE_NOT_EXISTS" {
+				result := wechatRefundBase(request, payment.RefundUnknown, absent.Code, "query")
+				result.RetrySameKey = true
+				return result, nil
+			}
+		}
 		return wechatRefundBase(request, payment.RefundUnknown, "", "query"), err
 	}
 	if err := p.verifyResponse(headers, body); err != nil {
@@ -516,9 +527,15 @@ func (p *Provider) call(ctx context.Context, method, requestURI string, body []b
 		return nil, nil, resp.StatusCode, errors.New("WeChat Pay response too large")
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, nil, resp.StatusCode, fmt.Errorf("WeChat Pay HTTP status %d", resp.StatusCode)
+		return data, resp.Header.Clone(), resp.StatusCode, &providerHTTPError{StatusCode: resp.StatusCode}
 	}
 	return data, resp.Header.Clone(), resp.StatusCode, nil
+}
+
+type providerHTTPError struct{ StatusCode int }
+
+func (e *providerHTTPError) Error() string {
+	return fmt.Sprintf("WeChat Pay HTTP status %d", e.StatusCode)
 }
 
 func (p *Provider) verifyResponse(headers http.Header, body []byte) error {

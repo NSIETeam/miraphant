@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -18,8 +20,13 @@ import (
 	"github.com/songquanpeng/one-api/router"
 	"github.com/songquanpeng/one-api/service/payments"
 	"net"
+	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"strings"
+	"syscall"
+	"time"
 )
 
 //go:embed web/build/*
@@ -73,7 +80,8 @@ func main() {
 		}
 		return
 	}
-	if config.PointsBillingEnabled || config.WeChatPayEnabled || config.AlipayConfigured {
+	recoveryEnabled := strings.EqualFold(strings.TrimSpace(os.Getenv("POINTS_REFUND_RECOVERY_ENABLED")), "true")
+	if config.PointsBillingEnabled || config.WeChatPayEnabled || config.AlipayConfigured || recoveryEnabled {
 		if err := model.RequirePointsSchema(); err != nil {
 			logger.FatalLog("points or payment processing is configured but its schema is not ready")
 		}
@@ -157,8 +165,32 @@ func main() {
 	} else if _, _, splitErr := net.SplitHostPort(address); splitErr != nil {
 		address = net.JoinHostPort(address, port)
 	}
-	err = server.Run(address)
+	shutdownCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+	refundWorker, err := payments.StartRefundRecoveryWorker(shutdownCtx, payments.RefundRecoveryOptions{Enabled: recoveryEnabled})
 	if err != nil {
-		logger.FatalLog("failed to start HTTP server: " + err.Error())
+		logger.FatalLog("failed to start refund recovery worker")
+	}
+	httpServer := &http.Server{Addr: address, Handler: server, ReadHeaderTimeout: 10 * time.Second}
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- httpServer.ListenAndServe() }()
+	select {
+	case <-shutdownCtx.Done():
+		// Stop provider calls and wait for durable unknown-state handling before
+		// shutting down HTTP and eventually closing the database.
+		refundWorker.Stop()
+		shutdown, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdown); err != nil {
+			logger.SysLog("HTTP server graceful shutdown timed out; closing active connections")
+			_ = httpServer.Close()
+		}
+	case err := <-serveErr:
+		refundWorker.Stop()
+		_ = httpServer.Close()
+		if !errors.Is(err, http.ErrServerClosed) {
+			_ = model.CloseDB()
+			logger.FatalLog("failed to start HTTP server: " + err.Error())
+		}
 	}
 }

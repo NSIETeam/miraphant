@@ -14,17 +14,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/payment"
+	"gorm.io/gorm"
 )
 
 const refundOperationLeaseSeconds int64 = 60
 const refundProviderTimeout = 20 * time.Second
 
 type RefundDispatchResult struct {
-	RefundKey string
-	Operation string
-	Outcome   payment.RefundOutcome
-	InboxID   uint
-	State     string
+	RefundKey      string
+	Operation      string
+	Outcome        payment.RefundOutcome
+	InboxID        uint
+	State          string
+	ProviderCalled bool
 }
 
 type RefundInboxReplayReport struct {
@@ -59,9 +61,9 @@ func refundProtocolRequest(refund *model.PointRefund) payment.RefundRequest {
 }
 
 // DispatchPointRefundOperation claims an approved refund durably before doing
-// network I/O. A normal approved request is submitted once; any expired claim
-// or later recovery is query-only. Unknown responses remain frozen and are
-// recorded for operational review.
+// network I/O. An initial approved request is submitted once. Expired claims
+// and scheduled recovery use the persisted query/apply disposition with the
+// original provider refund key; unknown responses remain frozen.
 func DispatchPointRefundOperation(ctx context.Context, refundKey string) (RefundDispatchResult, error) {
 	refund, err := model.GetPointRefundByKey(refundKey)
 	if err != nil {
@@ -69,6 +71,14 @@ func DispatchPointRefundOperation(ctx context.Context, refundKey string) (Refund
 	}
 	if err := validateRefundOrderBinding(refund); err != nil {
 		return RefundDispatchResult{}, err
+	}
+	maxReasonBytes := 256
+	if refund.Channel == "wechat" {
+		maxReasonBytes = 80
+	}
+	if len([]byte(refund.Reason)) > maxReasonBytes {
+		_ = model.MarkPointRefundNeedsManualReview(refundKey, "invalid_reason", time.Now().UTC())
+		return RefundDispatchResult{}, fmt.Errorf("stored refund reason exceeds the %d-byte %s protocol limit; retained for manual review", maxReasonBytes, refund.Channel)
 	}
 	provider, err := configuredRefundProvider(refund)
 	if err != nil {
@@ -83,6 +93,7 @@ func DispatchPointRefundOperation(ctx context.Context, refundKey string) (Refund
 	callCtx, cancel := context.WithTimeout(ctx, refundProviderTimeout)
 	defer cancel()
 	var result payment.RefundResult
+	dispatch := RefundDispatchResult{RefundKey: refundKey, Operation: claim.Kind, ProviderCalled: true}
 	if claim.Kind == "apply" {
 		result, err = provider.ApplyRefund(callCtx, request)
 	} else {
@@ -96,17 +107,21 @@ func DispatchPointRefundOperation(ctx context.Context, refundKey string) (Refund
 	if !resultMatchesRefund(result, &claim.Refund) {
 		result = refundResultFromSnapshot(&claim.Refund, payment.RefundUnknown, "identity_unconfirmed", claim.Kind)
 	}
+	dispatch.Outcome = result.Outcome
 	inbox, _, err := PersistRefundProviderResult(result, claim.Kind, nil, token)
 	if err != nil {
 		// A lost database write leaves the durable claim to expire. Recovery then
 		// queries the same provider refund key rather than issuing another apply.
-		return RefundDispatchResult{RefundKey: refundKey, Operation: claim.Kind, Outcome: payment.RefundUnknown}, err
+		dispatch.Outcome = payment.RefundUnknown
+		return dispatch, err
 	}
 	processed, err := ProcessPointRefundInbox(inbox.ID)
 	if err != nil {
-		return RefundDispatchResult{RefundKey: refundKey, Operation: claim.Kind, Outcome: result.Outcome, InboxID: inbox.ID, State: inbox.State}, err
+		dispatch.InboxID, dispatch.State = inbox.ID, inbox.State
+		return dispatch, err
 	}
-	return RefundDispatchResult{RefundKey: refundKey, Operation: claim.Kind, Outcome: result.Outcome, InboxID: inbox.ID, State: processed.State}, nil
+	dispatch.InboxID, dispatch.State = inbox.ID, processed.State
+	return dispatch, nil
 }
 
 func refundResultFromSnapshot(refund *model.PointRefund, outcome payment.RefundOutcome, status, source string) payment.RefundResult {
@@ -162,20 +177,78 @@ func PersistRefundProviderResult(result payment.RefundResult, source string, raw
 	if len(operationToken) > 0 {
 		claimToken = operationToken[0]
 	}
+	queryFailures := refund.RecoveryQueryFailures
+	if source == "query" {
+		if result.Status == "provider_unconfirmed" {
+			queryFailures++
+		} else {
+			queryFailures = 0
+		}
+	}
+	retrySameKey := result.RetrySameKey || source == "query" && refund.Channel == "alipay" && queryFailures >= 3 && result.Status == "provider_unconfirmed"
+	recoveryAction := "query"
+	if retrySameKey {
+		recoveryAction = "apply"
+	}
+	recoveryNextAt := refund.RecoveryNextAt
+	if recoveryNextAt <= 0 {
+		base := refund.OperationClaimedAt
+		if base <= 0 {
+			base = refund.CreatedAt.UTC().Unix()
+		}
+		recoveryNextAt = base + refundRetryDelay(refund.Channel, refund.RecoveryAttempts+1)
+	}
+	if source == "notification" {
+		base := result.ProviderOccurredAt.UTC().Unix()
+		if base <= 0 {
+			base = refund.CreatedAt.UTC().Unix()
+		}
+		recoveryNextAt = base + refundRetryDelay(refund.Channel, refund.RecoveryAttempts+1)
+	}
 	keyMaterial := result.ProviderEventID
 	if keyMaterial == "" {
 		keyMaterial = digest
 	}
 	keyHash := sha256.Sum256([]byte(refund.RefundKey + "\x00" + source + "\x00" + keyMaterial + "\x00" + claimToken))
 	evidenceKey := "rf:" + hex.EncodeToString(keyHash[:])
+	if prior, priorErr := model.GetPointRefundInboxByEvidenceKey(evidenceKey); priorErr == nil {
+		// A retry of the same durable evidence reuses its first scheduling
+		// disposition; the model still compares every immutable payload field.
+		retrySameKey, recoveryAction, recoveryNextAt = prior.RetrySameKey, prior.RecoveryAction, prior.RecoveryNextAt
+		queryFailures = prior.RecoveryQueryFailures
+	} else if !errors.Is(priorErr, gorm.ErrRecordNotFound) {
+		return nil, false, priorErr
+	}
 	outcome := string(result.Outcome)
 	input := model.PointRefundInboxInput{EvidenceKey: evidenceKey, RefundKey: refund.RefundKey, Provider: result.Provider,
 		EvidenceSource: source, OperationToken: claimToken, ProviderEventID: result.ProviderEventID, ProviderRefundID: result.ProviderRefundID,
 		ProviderRefundKey: result.ProviderRefundKey, OrderKey: result.OrderKey, ProviderTransactionID: result.TransactionID,
 		MerchantID: result.MerchantID, AppID: result.AppID, Outcome: outcome, ProviderStatus: safeProviderStatus(result.Status),
 		AmountFen: result.AmountFen, TotalFen: result.TotalFen, Currency: result.Currency,
-		ProviderOccurredAt: result.ProviderOccurredAt.UTC().Unix(), Digest: digest}
-	return model.PersistPointRefundInbox(input)
+		ProviderOccurredAt: result.ProviderOccurredAt.UTC().Unix(), Digest: digest, RetrySameKey: retrySameKey,
+		RecoveryAction: recoveryAction, RecoveryNextAt: recoveryNextAt, RecoveryQueryFailures: queryFailures}
+	return model.PersistPointRefundInboxReplaySafe(input)
+}
+
+func refundRetryDelay(channel string, attempts int) int64 {
+	if channel == "wechat" {
+		delays := []int64{60, 300, 600, 1200, 1800}
+		if attempts < 1 {
+			attempts = 1
+		}
+		if attempts > len(delays) {
+			return delays[len(delays)-1]
+		}
+		return delays[attempts-1]
+	}
+	delays := []int64{10, 30, 60, 120, 300}
+	if attempts < 1 {
+		attempts = 1
+	}
+	if attempts > len(delays) {
+		return delays[len(delays)-1]
+	}
+	return delays[attempts-1]
 }
 
 func safeProviderStatus(status string) string {
@@ -239,7 +312,16 @@ func ProcessPointRefundInbox(inboxID uint) (*model.PointRefundInbox, error) {
 		outcome = "pending"
 	}
 	if outcome == string(payment.RefundUnknown) && inbox.ProviderRefundID == "" && inbox.OperationToken != "" {
-		if err := model.RecordPointRefundOperationUnknown(inbox.RefundKey, inbox.OperationToken, time.Now().UTC()); err != nil {
+		now := time.Now().UTC()
+		action := inbox.RecoveryAction
+		if action == "" {
+			action = "query"
+		}
+		nextAt := time.Unix(inbox.RecoveryNextAt, 0).UTC()
+		if !nextAt.After(now) {
+			nextAt = now.Add(time.Duration(refundRetryDelay(inbox.Provider, 1)) * time.Second)
+		}
+		if err := model.RecordPointRefundOperationUnknownSchedule(inbox.RefundKey, inbox.OperationToken, now, action, nextAt, inbox.RecoveryQueryFailures); err != nil {
 			return nil, err
 		}
 		if err := model.MarkPointRefundInbox(inbox.ID, "processed", "", time.Now().UTC()); err != nil {
@@ -251,7 +333,9 @@ func ProcessPointRefundInbox(inboxID uint) (*model.PointRefundInbox, error) {
 	err := model.RecordPointRefundEvidence(model.PointRefundEvidenceInput{EvidenceKey: inbox.EvidenceKey, RefundKey: inbox.RefundKey,
 		Provider: inbox.Provider, OperationToken: inbox.OperationToken, Outcome: outcome, ProviderRefundID: inbox.ProviderRefundID, ProviderRefundKey: inbox.ProviderRefundKey,
 		OrderKey: inbox.OrderKey, ProviderTransactionID: inbox.ProviderTransactionID, MerchantID: inbox.MerchantID,
-		AppID: inbox.AppID, AmountFen: inbox.AmountFen, TotalFen: inbox.TotalFen, Currency: inbox.Currency, Digest: inbox.Digest})
+		AppID: inbox.AppID, AmountFen: inbox.AmountFen, TotalFen: inbox.TotalFen, Currency: inbox.Currency, Digest: inbox.Digest,
+		RecoveryAction: inbox.RecoveryAction, RecoveryNextAt: inbox.RecoveryNextAt, RetrySameKey: inbox.RetrySameKey,
+		RecoveryQueryFailures: inbox.RecoveryQueryFailures})
 	if err != nil {
 		return nil, err
 	}

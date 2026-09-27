@@ -341,6 +341,12 @@ func (p *Provider) QueryRefund(ctx context.Context, request payment.RefundReques
 		// Unknown/future status strings remain non-terminal.
 	}
 	result := alipayRefundBase(request, outcome, response.RefundStatus, "query")
+	if response.RefundStatus == "" {
+		// A signed, identity- and amount-matched query with no status is still
+		// unknown. Exact same-key retries are safe by Alipay's idempotency
+		// contract; this is not proof that the prior attempt was rejected.
+		result.RetrySameKey = true
+	}
 	return result, nil
 }
 

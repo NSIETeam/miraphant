@@ -108,6 +108,9 @@ type RefundResult struct {
 	ProviderEventID    string
 	ProviderOccurredAt time.Time
 	EvidenceSource     string
+	// RetrySameKey permits an exact idempotent resubmission after this result is
+	// durably recorded. It never means the provider proved non-acceptance.
+	RetrySameKey bool
 }
 
 // RefundProvider is a protocol-only interface. Implementations do not persist
