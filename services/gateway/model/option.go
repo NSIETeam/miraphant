@@ -15,6 +15,19 @@ type Option struct {
 	Value string `json:"value"`
 }
 
+// IsLegacyBillingOption identifies settings whose quota or currency semantics
+// are incompatible with the active points ledger.
+func IsLegacyBillingOption(key string) bool {
+	switch key {
+	case "QuotaForNewUser", "QuotaForInviter", "QuotaForInvitee", "QuotaRemindThreshold",
+		"PreConsumedQuota", "ModelRatio", "GroupRatio", "CompletionRatio", "TopUpLink",
+		"QuotaPerUnit", "DisplayInCurrencyEnabled", "DisplayTokenStatEnabled", "ApproximateTokenEnabled":
+		return true
+	default:
+		return false
+	}
+}
+
 func AllOption() ([]*Option, error) {
 	var options []*Option
 	var err error
@@ -102,23 +115,28 @@ func SyncOptions(frequency int) {
 }
 
 func UpdateOption(key string, value string) error {
-	if key == "SystemName" || key == "Logo" || key == "Footer" {
-		return errors.New("Miraphant brand settings are fixed by the application")
+	if config.PointsBillingEnabled && IsLegacyBillingOption(key) {
+		return errors.New("legacy billing settings are read-only while points billing is enabled")
 	}
-	if key == "Theme" && value != "default" {
-		return errors.New("only the Miraphant theme is available")
+	switch key {
+	case "Notice", "About", "HomePageContent", "SystemName", "Logo", "Footer", "Theme":
+		return errors.New("this setting is fixed by the Miraphant application")
 	}
 	// Save to database first
 	option := Option{
 		Key: key,
 	}
 	// https://gorm.io/docs/update.html#Save-All-Fields
-	DB.FirstOrCreate(&option, Option{Key: key})
+	if err := DB.FirstOrCreate(&option, Option{Key: key}).Error; err != nil {
+		return err
+	}
 	option.Value = value
 	// Save is a combination function.
 	// If save value does not contain primary key, it will execute Create,
 	// otherwise it will execute Update (with all fields).
-	DB.Save(&option)
+	if err := DB.Save(&option).Error; err != nil {
+		return err
+	}
 	// Update OptionMap
 	return updateOptionMap(key, value)
 }

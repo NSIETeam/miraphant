@@ -6,6 +6,7 @@ export { WalletPage, OrdersPage, OrderDetailPage, AdminPackagesPage, AdminPaymen
 export { AdminOrdersPage, AdminOrderDetailPage, AdminAuditPage } from './AdminPaymentReview';
 export { CustomerRefundPanel, AdminRefundsPage, AdminRefundDetailPage, RefundCapabilityManagementPage, RefundCapabilityRoute } from './Refunds';
 export { AdminReconciliationPage } from './Reconciliation';
+export { BrandStatusPage } from './Brand';
 
 const MICRO = 1000000;
 const formatPoints = (micro = 0) => (Number(micro || 0) / MICRO).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
@@ -156,7 +157,7 @@ export function HelpPage() {
 export function AdminHome() {
   const [prices, setPrices] = useState([]); const [pending, setPending] = useState([]); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false);
   useEffect(() => { Promise.all([API.get('/api/points/prices'), API.get('/api/admin/points/pending?limit=100')]).then(([priceRes, pendingRes]) => { setPrices(priceRes?.data?.prices || []); setPending(pendingRes?.data?.holds || []); }).catch(() => setFailed(true)).finally(() => setLoading(false)); }, []);
-  const cards = [['模型定价', '/admin/pricing', `${prices.length} 个生效模型`], ['客户积分', '/admin/users', '客户查询与带原因赠送'], ['用量核实', '/admin/pending', `${pending.length} 条待核实`], ['渠道状态', '/admin/channels', '管理模型接入'], ['套餐管理', '/admin/packages', '发布版本与查看历史'], ['支付设置', '/admin/payments', '渠道配置与开通准备'], ['充值订单', '/admin/orders', '筛选订单与查看核验记录'], ['退款工作台', '/admin/refunds', '按退款权限查看申请'], ['财务与对账权限', '/admin/refund-access', '平台管理员委派退款与对账能力'], ['支付对账', '/admin/reconciliation', '查看批次、差异和导入记录'], ['操作审计', '/admin/audit', '查看积分、套餐与核实操作'], ['品牌设置', '/admin/brand', '统一品牌配置']];
+  const cards = [['模型定价', '/admin/pricing', `${prices.length} 个生效模型`], ['客户积分', '/admin/users', '客户查询与带原因赠送'], ['用量核实', '/admin/pending', `${pending.length} 条待核实`], ['渠道状态', '/admin/channels', '管理模型接入'], ['套餐管理', '/admin/packages', '发布版本与查看历史'], ['支付设置', '/admin/payments', '渠道配置与开通准备'], ['充值订单', '/admin/orders', '筛选订单与查看核验记录'], ['退款工作台', '/admin/refunds', '按退款权限查看申请'], ['财务与对账权限', '/admin/refund-access', '平台管理员委派退款与对账能力'], ['支付对账', '/admin/reconciliation', '查看批次、差异和导入记录'], ['操作审计', '/admin/audit', '查看积分、套餐与核实操作'], ['品牌与状态', '/admin/brand', '查看运行状态与上游来源']];
   return <main className='platform-page'><PageTitle eyebrow='ADMIN' title='平台管理' intro='管理入口受服务端权限控制。积分调整和价格发布都会记录审计。' />{loading ? <LoadingState /> : failed ? <ErrorState title='管理数据暂时无法读取' detail='会话权限可能已变化。请重新登录后再试。' /> : <div className='admin-module-grid'>{cards.map(([title, path, detail]) => <Link to={path} className='admin-module' key={path}><span>{title}</span><strong>{detail}</strong><i>打开模块 →</i></Link>)}</div>}<div className='platform-alert platform-alert-info'><strong>退款处理说明</strong><span>退款申请、审核、单独提交和进度核实按当前账户能力开放。真实商户退款仍受服务端配置控制。</span></div></main>;
 }
 

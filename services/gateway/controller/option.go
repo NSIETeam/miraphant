@@ -15,6 +15,9 @@ func GetOptions(c *gin.Context) {
 	var options []*model.Option
 	config.OptionMapRWMutex.Lock()
 	for k, v := range config.OptionMap {
+		if k == "Notice" || k == "About" || k == "HomePageContent" || k == "SystemName" || k == "Logo" || k == "Footer" || k == "Theme" {
+			continue
+		}
 		if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") {
 			continue
 		}
@@ -40,6 +43,10 @@ func UpdateOption(c *gin.Context) {
 			"success": false,
 			"message": "无效的参数",
 		})
+		return
+	}
+	if config.PointsBillingEnabled && model.IsLegacyBillingOption(option.Key) {
+		c.JSON(http.StatusConflict, gin.H{"success": false, "message": "积分模式下旧额度与美元计费设置为只读"})
 		return
 	}
 	switch option.Key {
@@ -86,7 +93,7 @@ func UpdateOption(c *gin.Context) {
 	}
 	err = model.UpdateOption(option.Key, option.Value)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})

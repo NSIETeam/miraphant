@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Divider, Form, Grid, Header, Modal, Message } from 'semantic-ui-react';
-import { API, removeTrailingSlash, showError } from '../helpers';
+import { StrictAPI as API, removeTrailingSlash, showError, updateOption as putOption } from '../helpers';
 
 const SystemSetting = () => {
   let [inputs, setInputs] = useState({
@@ -34,31 +34,39 @@ const SystemSetting = () => {
     EmailDomainWhitelist: ''
   });
   const [originInputs, setOriginInputs] = useState({});
-  let [loading, setLoading] = useState(false);
+  let [loading, setLoading] = useState(true);
+  const [optionsReady, setOptionsReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [EmailDomainWhitelist, setEmailDomainWhitelist] = useState([]);
   const [restrictedDomainInput, setRestrictedDomainInput] = useState('');
   const [showPasswordWarningModal, setShowPasswordWarningModal] = useState(false);
 
   const getOptions = async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
     const res = await API.get('/api/option/');
-    const { success, message, data } = res.data;
-    if (success) {
+    const data = res?.data?.data;
+    if (res?.data?.success && Array.isArray(data)) {
       let newInputs = {};
       data.forEach((item) => {
         newInputs[item.key] = item.value;
       });
       setInputs({
         ...newInputs,
-        EmailDomainWhitelist: newInputs.EmailDomainWhitelist.split(',')
+        EmailDomainWhitelist: (newInputs.EmailDomainWhitelist || '').split(',').filter(Boolean)
       });
       setOriginInputs(newInputs);
 
-      setEmailDomainWhitelist(newInputs.EmailDomainWhitelist.split(',').map((item) => {
+      setEmailDomainWhitelist((newInputs.EmailDomainWhitelist || '').split(',').filter(Boolean).map((item) => {
         return { key: item, text: item, value: item };
       }));
+      setOptionsReady(true);
     } else {
-      showError(message);
+      throw new Error('设置响应格式无效');
     }
+    } catch (error) { setLoadError(true); showError(error); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -81,10 +89,8 @@ const SystemSetting = () => {
       default:
         break;
     }
-    const res = await API.put('/api/option/', {
-      key,
-      value
-    });
+    try {
+    const res = await putOption(key, value);
     const { success, message } = res.data;
     if (success) {
       if (key === 'EmailDomainWhitelist') {
@@ -96,7 +102,8 @@ const SystemSetting = () => {
     } else {
       showError(message);
     }
-    setLoading(false);
+    } catch (error) { showError(error); }
+    finally { setLoading(false); }
   };
 
   const handleInputChange = async (e, { name, value }) => {
@@ -259,7 +266,7 @@ const SystemSetting = () => {
   return (
     <Grid columns={1}>
       <Grid.Column>
-        <Form loading={loading}>
+        {loadError ? <Message negative>系统设置读取失败。请确认当前管理员权限后重试。<div><Button type='button' onClick={getOptions}>重试</Button></div></Message> : !optionsReady ? <div className='platform-state'>正在读取系统设置…</div> : <Form loading={loading}>
           <Header as='h3'>通用设置</Header>
           <Form.Group widths='equal'>
             <Form.Input
@@ -635,7 +642,7 @@ const SystemSetting = () => {
           <Form.Button onClick={submitTurnstile}>
             保存 Turnstile 设置
           </Form.Button>
-        </Form>
+        </Form>}
       </Grid.Column>
     </Grid>
   );

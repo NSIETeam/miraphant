@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Divider, Form, Grid, Header } from 'semantic-ui-react';
-import { API, showError, showSuccess, timestamp2string, verifyJSON } from '../helpers';
+import { Divider, Form, Grid, Header, Message } from 'semantic-ui-react';
+import { Link } from 'react-router-dom';
+import { API, StrictAPI as OptionAPI, showError, showSuccess, timestamp2string, verifyJSON, updateOption as putOption } from '../helpers';
 
 const OperationSetting = () => {
   let now = new Date();
@@ -26,13 +27,19 @@ const OperationSetting = () => {
     RetryTimes: 0
   });
   const [originInputs, setOriginInputs] = useState({});
-  let [loading, setLoading] = useState(false);
+  let [loading, setLoading] = useState(true);
+  const [optionsReady, setOptionsReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [pointsMode, setPointsMode] = useState(null);
   let [historyTimestamp, setHistoryTimestamp] = useState(timestamp2string(now.getTime() / 1000 - 30 * 24 * 3600)); // a month ago
 
   const getOptions = async () => {
-    const res = await API.get('/api/option/');
-    const { success, message, data } = res.data;
-    if (success) {
+    setLoading(true);
+    setLoadError(false);
+    try {
+    const [res, status] = await Promise.all([OptionAPI.get('/api/option/'), OptionAPI.get('/api/status')]);
+    const data = res?.data?.data;
+    if (res?.data?.success && Array.isArray(data)) {
       let newInputs = {};
       data.forEach((item) => {
         if (item.key === 'ModelRatio' || item.key === 'GroupRatio' || item.key === 'CompletionRatio') {
@@ -45,9 +52,14 @@ const OperationSetting = () => {
       });
       setInputs(newInputs);
       setOriginInputs(newInputs);
+      if (typeof status?.data?.data?.points_billing_enabled !== 'boolean') throw new Error('无法读取服务端计费模式');
+      setPointsMode(status.data.data.points_billing_enabled);
+      setOptionsReady(true);
     } else {
-      showError(message);
+      throw new Error('设置响应格式无效');
     }
+    } catch (error) { setLoadError(true); showError(error); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -59,17 +71,16 @@ const OperationSetting = () => {
     if (key.endsWith('Enabled')) {
       value = inputs[key] === 'true' ? 'false' : 'true';
     }
-    const res = await API.put('/api/option/', {
-      key,
-      value
-    });
+    try {
+    const res = await putOption(key, value);
     const { success, message } = res.data;
     if (success) {
       setInputs((inputs) => ({ ...inputs, [key]: value }));
     } else {
       showError(message);
     }
-    setLoading(false);
+    } catch (error) { showError(error); }
+    finally { setLoading(false); }
   };
 
   const handleInputChange = async (e, { name, value }) => {
@@ -157,20 +168,22 @@ const OperationSetting = () => {
   return (
     <Grid columns={1}>
       <Grid.Column>
-        <Form loading={loading}>
+        {loadError ? <Message negative>设置读取失败。请确认当前管理员权限后重试。<div><button type='button' className='platform-button secondary' onClick={getOptions}>重试</button></div></Message> : !optionsReady ? <div className='platform-state'>正在核对服务端计费模式与设置…</div> : <Form loading={loading}>
+          {pointsMode === true && <Message info>当前使用积分账本。旧美元额度、注册赠额与倍率设置已只读；已有历史值保留，不会换算成积分。<div className='brand-settings-links'><Link to='/admin/pricing'>查看生效价格</Link><Link to='/admin/packages'>查看充值套餐</Link><Link to='/console/wallet'>打开客户充值页</Link></div></Message>}
+          {pointsMode === null && <Message warning>正在核对服务端计费模式；旧额度和倍率设置暂不显示。</Message>}
           <Header as='h3'>
             通用设置
           </Header>
           <Form.Group widths={4}>
-            <Form.Input
-              label='充值链接'
+            {pointsMode === false && <Form.Input
+              label='旧版充值链接（美元计费）'
               name='TopUpLink'
               onChange={handleInputChange}
               autoComplete='new-password'
               value={inputs.TopUpLink}
               type='link'
               placeholder='例如发卡网站的购买链接'
-            />
+            />}
             <Form.Input
               label='聊天页面链接'
               name='ChatLink'
@@ -180,7 +193,7 @@ const OperationSetting = () => {
               type='link'
               placeholder='例如 ChatGPT Next Web 的部署地址'
             />
-            <Form.Input
+            {pointsMode === false && <Form.Input
               label='单位美元额度'
               name='QuotaPerUnit'
               onChange={handleInputChange}
@@ -189,7 +202,7 @@ const OperationSetting = () => {
               type='number'
               step='0.01'
               placeholder='一单位货币能兑换的额度'
-            />
+            />}
             <Form.Input
               label='失败重试次数'
               name='RetryTimes'
@@ -203,12 +216,12 @@ const OperationSetting = () => {
             />
           </Form.Group>
           <Form.Group inline>
-            <Form.Checkbox
+            {pointsMode === false && <Form.Checkbox
               checked={inputs.DisplayInCurrencyEnabled === 'true'}
               label='以货币形式显示额度'
               name='DisplayInCurrencyEnabled'
               onChange={handleInputChange}
-            />
+            />}
             <Form.Checkbox
               checked={inputs.DisplayTokenStatEnabled === 'true'}
               label='Billing 相关 API 显示令牌额度而非用户额度'
@@ -262,7 +275,7 @@ const OperationSetting = () => {
               min='0'
               placeholder='单位秒，当运行渠道全部测试时，超过此时间将自动禁用渠道'
             />
-            <Form.Input
+            {pointsMode === false && <Form.Input
               label='额度提醒阈值'
               name='QuotaRemindThreshold'
               onChange={handleInputChange}
@@ -271,7 +284,7 @@ const OperationSetting = () => {
               type='number'
               min='0'
               placeholder='低于此额度时将发送邮件提醒用户'
-            />
+            />}
           </Form.Group>
           <Form.Group inline>
             <Form.Checkbox
@@ -290,7 +303,7 @@ const OperationSetting = () => {
           <Form.Button onClick={() => {
             submitConfig('monitor').then();
           }}>保存监控设置</Form.Button>
-          <Divider />
+          {pointsMode === false && <><Divider />
           <Header as='h3'>
             额度设置
           </Header>
@@ -338,8 +351,8 @@ const OperationSetting = () => {
           </Form.Group>
           <Form.Button onClick={() => {
             submitConfig('quota').then();
-          }}>保存额度设置</Form.Button>
-          <Divider />
+          }}>保存额度设置</Form.Button></>}
+          {pointsMode === false && <><Divider />
           <Header as='h3'>
             倍率设置
           </Header>
@@ -378,8 +391,8 @@ const OperationSetting = () => {
           </Form.Group>
           <Form.Button onClick={() => {
             submitConfig('ratio').then();
-          }}>保存倍率设置</Form.Button>
-        </Form>
+          }}>保存倍率设置</Form.Button></>}
+        </Form>}
       </Grid.Column>
     </Grid>
   );

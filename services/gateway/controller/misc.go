@@ -14,11 +14,23 @@ import (
 )
 
 func GetStatus(c *gin.Context) {
+	topUpLink := config.TopUpLink
+	quotaPerUnit := config.QuotaPerUnit
+	displayInCurrency := config.DisplayInCurrencyEnabled
+	if config.PointsBillingEnabled {
+		topUpLink = ""
+		quotaPerUnit = 0
+		displayInCurrency = false
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data": gin.H{
 			"version":                     common.Version,
+			"theme":                       config.Theme,
+			"points_billing_enabled":      config.PointsBillingEnabled,
+			"password_login":              config.PasswordLoginEnabled,
+			"registration_enabled":        config.RegisterEnabled,
 			"start_time":                  common.StartTime,
 			"email_verification":          config.EmailVerificationEnabled,
 			"github_oauth":                config.GitHubOAuthEnabled,
@@ -32,10 +44,10 @@ func GetStatus(c *gin.Context) {
 			"server_address":              config.ServerAddress,
 			"turnstile_check":             config.TurnstileCheckEnabled,
 			"turnstile_site_key":          config.TurnstileSiteKey,
-			"top_up_link":                 config.TopUpLink,
+			"top_up_link":                 topUpLink,
 			"chat_link":                   config.ChatLink,
-			"quota_per_unit":              config.QuotaPerUnit,
-			"display_in_currency":         config.DisplayInCurrencyEnabled,
+			"quota_per_unit":              quotaPerUnit,
+			"display_in_currency":         displayInCurrency,
 			"oidc":                        config.OidcEnabled,
 			"oidc_client_id":              config.OidcClientId,
 			"oidc_well_known":             config.OidcWellKnown,

@@ -23,7 +23,7 @@ import {
   ConsolePage, CustomerRoute, HelpPage, KeysPage, LegacyRedirect, NotFoundPage,
   PlatformHome, PricingPage, ProfilePage, UnavailableAdminPage, UsagePage,
   WalletPage, AdminRefundsPage, AdminRefundDetailPage, RefundCapabilityManagementPage,
-  RefundCapabilityRoute, AdminReconciliationPage,
+  RefundCapabilityRoute, AdminReconciliationPage, BrandStatusPage,
 } from './pages/Platform';
 
 const About = lazy(() => import('./pages/About'));
@@ -109,7 +109,7 @@ function App() {
       <Route path='/admin/reconciliation' element={<RefundCapabilityRoute anyOf={['reconciliation.read']} moduleLabel='支付对账'>{(capabilities) => <AdminReconciliationPage capabilities={capabilities} />}</RefundCapabilityRoute>} />
       <Route path='/admin/reconciliation/:batchKey' element={<RefundCapabilityRoute anyOf={['reconciliation.read']} moduleLabel='支付对账'>{(capabilities) => <AdminReconciliationPage capabilities={capabilities} />}</RefundCapabilityRoute>} />
       <Route path='/admin/audit' element={<AdminRoute><AdminAuditPage /></AdminRoute>} />
-      <Route path='/admin/brand' element={<AdminRoute><UnavailableAdminPage title='品牌设置' detail='平台名称与主题已统一为 Miraphant，客服联系方式可在支付与客服模块接通后配置。' /></AdminRoute>} />
+      <Route path='/admin/brand' element={<AdminRoute><BrandStatusPage /></AdminRoute>} />
       <Route path='/admin/setting' element={<AdminRoute><Setting /></AdminRoute>} />
       <Route path='/admin/users/edit/:id' element={<AdminRoute><EditUser /></AdminRoute>} />
       <Route path='/admin/users/add' element={<AdminRoute><AddUser /></AdminRoute>} />

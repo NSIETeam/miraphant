@@ -411,6 +411,22 @@ button { cursor: pointer; }
 .recon-import-provider-note { padding: 11px 12px; border-radius: 8px; background: #f3f6f2; color: #536156; font-size: 11px; line-height: 1.65; }
 .platform-text-button { padding: 0; color: var(--brand); font-size: 11px; font-weight: 650; border: 0; background: transparent; cursor: pointer; }
 .platform-text-button:hover { text-decoration: underline; }
+.brand-overview { display: grid; grid-template-columns: minmax(210px, .55fr) 1.45fr; gap: 24px; align-items: stretch; }
+.brand-mark-card { display: flex; min-height: 210px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: #f5f7f2; }
+.brand-mark-card img { width: min(100%, 240px); height: 100px; object-fit: contain; }
+.brand-mark-card strong { color: var(--brand); font-size: 20px; }
+.brand-mark-card span { color: var(--muted); font-size: 11px; }
+.brand-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.brand-status-grid > div { display: flex; min-width: 0; flex-direction: column; justify-content: center; gap: 8px; padding: 17px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.brand-status-grid span { color: var(--muted); font-size: 11px; }
+.brand-status-grid strong { color: var(--brand-dark); font-size: 14px; overflow-wrap: anywhere; }
+.brand-provenance { margin-top: 18px; }
+.brand-provenance h2 { margin: 7px 0; color: var(--brand-dark); font-size: 19px; }
+.brand-provenance p { max-width: 760px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.brand-provenance .platform-actions { flex-wrap: wrap; margin-top: 16px; }
+.brand-status-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.brand-settings-summary p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.brand-settings-links { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 17px; }
 
 @media (max-width: 1120px) and (min-width: 761px) {
   .platform-nav { gap: clamp(7px, 1.15vw, 13px); }
@@ -502,6 +518,14 @@ button { cursor: pointer; }
   .recon-modal-backdrop { align-items: flex-end; padding: 0; }
   .recon-modal { width: 100%; max-height: 92vh; border-radius: 14px 14px 0 0; }
   .recon-tabs { overflow-x: auto; }
+  .brand-overview { grid-template-columns: 1fr; gap: 12px; }
+  .brand-mark-card { min-height: 170px; }
+  .brand-status-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .brand-status-grid > div { padding: 12px; }
+  .brand-status-grid strong { font-size: 12px; }
+  .brand-status-links { grid-template-columns: 1fr; }
+  .brand-settings-links { align-items: stretch; flex-direction: column; }
+  .brand-settings-links .platform-button { width: 100%; text-align: center; }
   .platform-footer-inner { width: calc(100% - 32px); align-items: flex-start; flex-direction: column; justify-content: center; padding: 19px 0; }
   .footer-links { gap: 14px; }
 }

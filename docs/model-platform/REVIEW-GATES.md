@@ -624,3 +624,19 @@ Luna 冻结交接后，父复核独立密钥配置、真实会话与 reconciliat
 - 服务端在受理后返回该次 request_key。只有失败结果审计成功落库才可返回 outcome=failed 与稳定错误码；结果审计写入失败须明确 unknown。成功响应同样返回请求编号。
 - 前端只依赖准确响应或同 request_key 的审计，不得将其他请求的失败当成当前结果。断网或没有编号时保留未知提示。新增窄 HTTP 断言应证明返回编号对应持久化审计；还须重新构建和浏览器复核失败弹窗。
 - 独立账单密钥配置测试父代理本次重跑 race/count=3 通过（1.720s），仅既有 macOS 链接警告；该未跟踪测试待随本轮 UI/契约提交纳入。
+
+### 对账页面提交及自动检查（2026-09-28）
+
+- `bfe821645af773cd570781f5450f770e25efc90d` 已推送 PR #2；CI [36354935368](https://github.com/NSIETeam/miraphant/actions/runs/36354935368) completed/success，head SHA 精确匹配。静态 staging 检查、积分 HTTP/账务/relay、支付协议检查、前端及 Go 构建通过。
+- 自动检查不替代真实商户、支付宝解析和生产发布验收。
+- 品牌节点方案已批准交 Luna 实施：固定官方 SVG 派生资源、实际品牌状态页、移除当前默认页面不消费的旧配置入口、积分模式服务端拒绝旧计费设置写入、全部 option 读写使用当前 DB root 会话且写入需 CSRF。所有 option 写入调用方须同步更新；非积分历史配置不转换。公开 origin 固定为既定 `https://api.miraphant.com`。
+
+### 2026-09-28 品牌节点交接与父任务审核
+
+- 固定 Miraphant 原始 SVG；衍生 favicon、触屏图标与分享图，生成脚本校验固定源文件 SHA-256。分享图保持比例并留白。
+- `/admin/brand` 已替换占位，展示真实服务端版本、主题、积分开关及来源；Miraphant 发行版链接与上游声明分开保留。
+- 设置接口核验当前数据库 root 身份；修改要求同源 CSRF。积分模式拒绝旧美元额度、赠额、倍率与外部充值链接写入；不转换历史值。
+- Luna 窄检查 `go test ./controller -run 'TestBrandOption|TestStatusReportsServerPointsMode'` 通过（0.732s）；覆盖会话、撤权、停用、CSRF、来源及旧模式兼容。
+- 父任务默认前端构建及 Go 编译成功；前端仍有既有 lint 警告。产物 `main.bdb32f1a.js` / `main.0bcfa790.css`。
+- 隔离示例数据库、本地端口、支付外连阻断下：root 登录、品牌状态页、运营设置旧字段隐藏及三个积分入口完成浏览器抽查；品牌页桌面与 390×844 截图目视通过。测试服务和临时数据库已清理。
+- 抽查二进制 SHA-256：`95d90cf2d607bad5a803f5d167a3741dd0f27c990fdc8adb03dddfc4647a37fb`。这不代表真实商户联调、生产发布或全部错误状态验收完成。
