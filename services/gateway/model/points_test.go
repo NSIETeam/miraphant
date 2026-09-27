@@ -30,7 +30,7 @@ func openPointsTestDB(t *testing.T, path string) *gorm.DB {
 	if err = db.AutoMigrate(&Token{}); err != nil {
 		t.Fatal(err)
 	}
-	if err = db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointTokenBudget{}, &PointPurchaseOrder{}); err != nil {
+	if err = db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}); err != nil {
 		t.Fatal(err)
 	}
 	return db
@@ -88,6 +88,113 @@ func TestPointArithmeticExactHalfUp(t *testing.T) {
 	}
 	if _, err := CalculatePointUsage(1, 2, 0, PointPriceVersion{}); err == nil {
 		t.Fatal("cached input greater than prompt must fail")
+	}
+}
+
+func TestPointsSchemaUpgradesVersionOne(t *testing.T) {
+	oldDB, oldSQLite := DB, common.UsingSQLite
+	t.Cleanup(func() { DB, common.UsingSQLite = oldDB, oldSQLite })
+	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "upgrade.db")), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	DB, common.UsingSQLite = db, true
+	if err := db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointTokenBudget{}, &PointPurchaseOrder{}); err != nil {
+		t.Fatal(err)
+	}
+	// Simulate the known v1 schema by removing fields/tables added in v3.
+	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "provider_request_id"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "provider_response_id"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "prompt_tokens"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "cached_prompt_tokens"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "completion_tokens"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "reasoning_tokens"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrator().DropTable(&PointAdminAudit{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointsSchemaMigration{Version: 1, AppliedAt: time.Now().UTC()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointAccount{UserID: 91, AvailableMicro: 700, SpentMicro: 30}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointLot{UserID: 91, BusinessKey: "v1-lot", Kind: "grant", InitialMicro: 730, AvailableMicro: 700, ConsumedMicro: 30}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointLedger{UserID: 91, BusinessKey: "v1-ledger", Kind: "settle", AvailableDelta: 700, SpentDelta: 30, AvailableAfter: 700, SpentAfter: 30, Reason: "pre-upgrade record"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatal(err)
+	}
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatalf("repeated migration failed: %v", err)
+	}
+	var current PointsSchemaMigration
+	if err := db.First(&current, "version = ?", pointsSchemaVersion).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !db.Migrator().HasTable(&PointAdminAudit{}) || !db.Migrator().HasColumn(&PointHoldAttempt{}, "provider_response_id") {
+		t.Fatal("schema upgrade omitted newly required audit or provider evidence fields")
+	}
+	var account PointAccount
+	var lot PointLot
+	var ledger PointLedger
+	if err := db.First(&account, "user_id = ?", 91).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&lot, "business_key = ?", "v1-lot").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&ledger, "business_key = ?", "v1-ledger").Error; err != nil {
+		t.Fatal(err)
+	}
+	if account.AvailableMicro != 700 || account.SpentMicro != 30 || lot.AvailableMicro != 700 || lot.ConsumedMicro != 30 || ledger.AvailableAfter != 700 || ledger.SpentAfter != 30 {
+		t.Fatalf("v1 data changed across upgrade: account=%+v lot=%+v ledger=%+v", account, lot, ledger)
+	}
+	var migrationCount int64
+	db.Model(&PointsSchemaMigration{}).Where("version = ?", pointsSchemaVersion).Count(&migrationCount)
+	if migrationCount != 1 {
+		t.Fatalf("expected one v3 marker, got %d", migrationCount)
+	}
+	sqlDB, _ := db.DB()
+	_ = sqlDB.Close()
+}
+
+func TestAdjustmentReplayIsIdempotentAndChecksArguments(t *testing.T) {
+	db, cleanup := withPointsFixture(t, 0, 100, true)
+	defer cleanup()
+	if err := db.AutoMigrate(&User{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&User{Id: 41, Username: "grant-target", Password: "fixture", AccessToken: "grant-target-token", AffCode: "grant-target-code", Role: RoleCommonUser, Status: UserStatusEnabled}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := AdjustPoints(5, 41, 123456, "grant-1", "support adjustment"); err != nil {
+		t.Fatal(err)
+	}
+	if err := AdjustPoints(5, 41, 123456, "grant-1", "support adjustment"); err != nil {
+		t.Fatalf("identical replay failed: %v", err)
+	}
+	if err := AdjustPoints(5, 41, 123457, "grant-1", "support adjustment"); !errors.Is(err, ErrPointsConflict) {
+		t.Fatalf("changed replay should conflict, got %v", err)
+	}
+	var account PointAccount
+	_ = DB.First(&account, "user_id = ?", 41)
+	if account.AvailableMicro != 123456 {
+		t.Fatalf("replayed grant credited twice: %+v", account)
 	}
 }
 

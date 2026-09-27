@@ -5,6 +5,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/blacklist"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/common/network"
 	"github.com/songquanpeng/one-api/model"
@@ -44,6 +45,19 @@ func authHelper(c *gin.Context, minRole int) {
 			c.Abort()
 			return
 		}
+	}
+	if config.PointsBillingEnabled {
+		userID, ok := id.(int)
+		if !ok || userID <= 0 {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "积分模式管理操作必须使用用户登录会话"})
+			return
+		}
+		var current model.User
+		if err := model.DB.Select("id", "role", "status", "username").First(&current, "id = ?", userID).Error; err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "用户当前权限不可用"})
+			return
+		}
+		username, role, status = current.Username, current.Role, current.Status
 	}
 	if status.(int) == model.UserStatusDisabled || blacklist.IsUserBanned(id.(int)) {
 		c.JSON(http.StatusOK, gin.H{

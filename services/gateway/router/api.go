@@ -30,6 +30,26 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/oauth/wechat/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), auth.WeChatBind)
 		apiRouter.GET("/oauth/email/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), controller.EmailBind)
 		apiRouter.POST("/topup", middleware.AdminAuth(), controller.AdminTopUp)
+		publicPointsRoute := apiRouter.Group("/points")
+		publicPointsRoute.Use(middleware.PointsBillingAvailable())
+		publicPointsRoute.GET("/prices", controller.PointsPrices)
+		pointsRoute := apiRouter.Group("/points")
+		pointsRoute.Use(middleware.PointsBillingAvailable(), middleware.PointsUserAuth())
+		{
+			pointsRoute.GET("/csrf", controller.PointsCSRF)
+			pointsRoute.GET("/wallet", controller.PointsWallet)
+			pointsRoute.POST("/estimate", middleware.CriticalRateLimit(), controller.PointsEstimate)
+			pointsRoute.GET("/usage", controller.PointsUsage)
+			pointsRoute.PUT("/tokens/:id/budget", middleware.PointsCSRF(), controller.SetPointsTokenBudget)
+		}
+		pointsAdmin := apiRouter.Group("/admin/points")
+		pointsAdmin.Use(middleware.PointsBillingAvailable(), middleware.PointsAdminAuth())
+		{
+			pointsAdmin.POST("/prices", middleware.PointsCSRF(), controller.AdminPublishPointPrice)
+			pointsAdmin.POST("/adjustments", middleware.PointsCSRF(), controller.AdminGrantPoints)
+			pointsAdmin.GET("/pending", controller.AdminPointPending)
+			pointsAdmin.POST("/pending/:key/resolve", middleware.PointsCSRF(), controller.AdminResolvePointHold)
+		}
 
 		userRoute := apiRouter.Group("/user")
 		{

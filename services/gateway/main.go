@@ -49,6 +49,11 @@ func main() {
 		}
 		return
 	}
+	if config.PointsBillingEnabled {
+		if err := model.RequirePointsSchema(); err != nil {
+			logger.FatalLog("points billing is enabled but its schema is not ready: " + err.Error())
+		}
+	}
 
 	var err error
 	err = model.CreateRootAccountIfNeed()
