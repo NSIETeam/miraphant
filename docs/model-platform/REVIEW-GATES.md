@@ -157,3 +157,13 @@
 提交 `9bb6abc17115f9649896e9db9732434c8980acf9` 的 [CI 36316561184](https://github.com/NSIETeam/miraphant/actions/runs/36316561184) 已全部通过：HTTP/账本定向验证、静态 allowlist、三个主题及 Linux 网关构建。无部署步骤。
 
 官方 v0.6.10 Linux 发布资产与生产旧二进制 SHA-256 相同，资产中 vcs.revision 对应纳管基线；资产标记 vcs.modified=true 的证据及边界见 [生产基线](PRODUCTION-BASELINE.md)。这补足旧版发布来源，不放行新计费或真实收款。
+
+### Relay 草稿兼容性审核（未放行）
+
+HTTP 检查点后，主 agent 审查尚未提交的 relay/SSE 草稿，要求修正：按客户模型别名锁定公开价目；重建白名单上游请求并请求流式 usage；检查 usage 必需字段存在性；精确处理 `[DONE]` 与流式错误；数据库错误脱敏；本地请求 ID 与供应商请求 ID 分开保存。
+
+进一步发现共享 `relay/model.Usage` 新增自定义 `UnmarshalJSON` 会被匿名嵌入该类型的旧响应结构继承，导致父级字段不再解析。仓库外最小 Go 程序用带 choices 和嵌套 usage 的正常响应验证，结果为 `err=nil, choices=0, prompt=0, total=0`。已要求将必需字段解析限定于 OpenAI 积分路径，并补兼容性回归证据。该问题存在于开发草稿，未提交、未部署；后续复审通过前不得放行 relay。
+
+修订后主 agent 再次执行同一匿名嵌入实验，结果恢复为 `choices=1, prompt=3, total=5`；定向 `./relay/controller ./relay/adaptor/openai -run 'TestPoints|Test.*Usage'` 通过。该结果只覆盖当时已有普通响应、精确结算、重放和解析回归用例，不代表全部 relay 通过。
+
+继续发现 controller 内的 `MaxBytesReader` 设置晚于 TokenAuth 的 `GetRequestBody` 全量读取和缓存，因而不能证明限制入口请求大小。已要求在解压后、鉴权读取 body 前实施限制，并通过真实路由验证大请求不产生冻结或上游调用。全站品牌的实际旧入口与页面验收要求另见 [ROUTE-ACCEPTANCE.md](ROUTE-ACCEPTANCE.md)。
