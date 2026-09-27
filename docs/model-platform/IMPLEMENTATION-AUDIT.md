@@ -205,3 +205,10 @@ schema v13 新增导入审计，运行配置与 `/api/admin/reconciliation` 已�
 - `471fac5` 已完成上述品牌占位、图标派生与旧计费设置入口整改；其 CI 36356244084 完成且通过。较早“品牌节点正在实施”的记录属于当时状态。
 - `85d58a8` 修正支付宝账单下载缺少 `secure="true"` 参数的问题，父独立支付宝/账单包 race 检查通过。该修复不补齐支付宝 CSV/ZIP 解析。
 - 历史额度离线盘点工具已由 Luna 实现并通过父审核，契约见 [LEGACY-INVENTORY.md](LEGACY-INVENTORY.md)。10 项合成检查及独立 CLI 证明了本次覆盖的只读性、报告精度和敏感字段边界。它不执行余额转换或生产迁移，也未读取真实备份。
+
+### 2026-09-28 余额兼容与运营恢复复核
+
+- `6df89ce` 的离线盘点 CI 36357164732 已完成并通过。
+- `f4711cc` 修复积分模式旧 billing API 的美元/旧额度输出、用户编辑的旧额度输入，以及两个无效旧计费开关。父级定向 race 和隔离浏览器证据见 REVIEW-GATES.md；它不改变模型 API 的 token 字段，也不转换历史余额。
+- “运营恢复/调度待核对”并非全部缺失：`main.go` 已启动可配置的退款恢复 worker，`service/payments/refund_recovery_worker.go` 包含持久化游标和停止等待；充值通知的人工恢复入口为 `POST /api/admin/points/payments/recover`，复用 `RetryReceivedPaymentEventsDetailed`。该接口只重放已验签持久化记录，不向支付渠道发请求。
+- 当前默认管理页面未调用上述充值恢复入口，不能把恢复接口存在当成管理页面已交付。赠送积分、价格和套餐页面的未知响应/刷新恢复边界还在本轮源码复核中，未据此宣称完整运营验收。
