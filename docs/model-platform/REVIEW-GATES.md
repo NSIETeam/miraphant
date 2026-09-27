@@ -408,3 +408,11 @@ Luna 已停止编辑。父检查迁移、跨连接 claim、迟到 token、人工
 父最终广回归全部通过：与 CI 相同的积分/接口/relay/model 筛选（controller 1.382s、router 1.281s、model 2.834s、relay/controller 2.808s、relay/adaptor/openai 1.690s），以及完整支付协议和服务包（alipay 4.280s、wechat 0.789s、service/payments 0.802s）。稳定节点独立竞态检测 `go test -race ./model ./service/payments -run 'Test(PointRefundOperationClaim|LateNonterminalRefund|UnknownRecovery|PointsSchemaV9|RefundDispatch|WeChatVerifiedRefund|RefundInbox|VerifiedSuccess|QueryTimeout)' -count=1 -timeout=120s` 通过（model 1.793s、service/payments 2.127s）；仅 macOS 既有链接器 warning，退出码 0。新增模型测试前缀已纳入 CI，diff 格式检查通过。
 
 允许提交 v10 迁移、持久 claim、规范化 inbox 和显式服务函数。本节点的服务集成使用合成 verifier，真实签名/AES-GCM由前序协议测试覆盖；未声称真实渠道联调。未实现公共 HTTP、自动调度、查无结果后的安全同号续发/人工处理入口、细分授权及退款页面。未知结果仍冻结，后续必须完成上述恢复与运营入口后才可放行真实退款。
+
+提交 `7b3415bf2f78c27e99ff0334274ab59aebb78b86` 已推送，父独立确认 [CI 36337542663](https://github.com/NSIETeam/miraphant/actions/runs/36337542663) 为 completed/success：积分接口/relay/账本、支付协议及服务测试、前端主题和 Go 网关构建、静态发布隔离均通过。仅覆盖持久编排节点，下一节点的同号续发与自动恢复仍在实现。
+
+## 同号续发与自动恢复早审（实现中）
+
+父对照官方退款文档确认微信查无退款单应使用原单原参数重试，支付宝同 out_request_no 保证只退款一次；协议证据与重试策略须分开，缺失退款状态不能伪造未受理证据或释放冻结。自动恢复默认关闭，需持久退避、跨进程 claim、批次外呼上限及显式停止等待；主程序必须先停止 worker 再关闭数据库。
+
+源码检查发现申请原因允许 512 字节，而微信适配器限制 80 字节、支付宝限制 256 字节；已要求冻结前按渠道校验，历史非法请求进入人工处理并停止自动外呼，不能改变原参数后重试。上述修订仍待实现和定向验收。
