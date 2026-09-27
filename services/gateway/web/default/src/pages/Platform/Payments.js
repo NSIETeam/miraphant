@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { StrictAPI as API } from '../../helpers';
 import { UserContext } from '../../context/User';
+import { CustomerRefundPanel } from './Refunds';
 
 const MICRO = 1000000;
 const formatPoints = (micro = 0) => (Number(micro || 0) / MICRO).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
@@ -318,6 +319,7 @@ export function OrderDetailPage({ checkoutMode = false }) {
     <OrderStatusActions order={order} onChanged={updateOrder} onError={handleActionError} />
     {checkoutUnavailable && order.state !== 'pending' && <div className='platform-alert platform-alert-info'>此订单目前没有可用的付款页面，可查看最新状态或返回订单列表。</div>}
     {order.state === 'credited' && <div className='platform-alert platform-alert-success'><strong>积分已到账</strong><span>本笔订单增加 {formatPoints(order.purchase_micro + order.bonus_micro)} 积分。</span><Link to='/console/wallet'>查看钱包 →</Link></div>}
+    {['credited', 'refunded'].includes(order.state) && <CustomerRefundPanel order={order} />}
     <div className='checkout-help-note'>若付款后状态暂未更新，请点击“核对付款状态”。请勿重复付款；如长时间未到账，请联系平台客服并提供订单号。</div>
   </main>;
 }

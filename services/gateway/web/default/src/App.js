@@ -22,7 +22,8 @@ import {
   AdminPackagesPage, AdminPaymentsPage, OrderDetailPage, OrdersPage,
   ConsolePage, CustomerRoute, HelpPage, KeysPage, LegacyRedirect, NotFoundPage,
   PlatformHome, PricingPage, ProfilePage, UnavailableAdminPage, UsagePage,
-  WalletPage,
+  WalletPage, AdminRefundsPage, AdminRefundDetailPage, RefundCapabilityManagementPage,
+  RefundCapabilityRoute,
 } from './pages/Platform';
 
 const About = lazy(() => import('./pages/About'));
@@ -102,7 +103,9 @@ function App() {
       <Route path='/admin/payments' element={<AdminRoute><AdminPaymentsPage /></AdminRoute>} />
       <Route path='/admin/orders/:orderId' element={<AdminRoute><AdminOrderDetailPage /></AdminRoute>} />
       <Route path='/admin/orders' element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
-      <Route path='/admin/refunds' element={<AdminRoute><UnavailableAdminPage title='退款审核' /></AdminRoute>} />
+      <Route path='/admin/refunds' element={<RefundCapabilityRoute anyOf={['refund.read']}><AdminRefundsPage /></RefundCapabilityRoute>} />
+      <Route path='/admin/refunds/:refundKey' element={<RefundCapabilityRoute anyOf={['refund.read']}><AdminRefundDetailPage /></RefundCapabilityRoute>} />
+      <Route path='/admin/refund-access' element={<RefundCapabilityRoute anyOf={['capability.manage']}><RefundCapabilityManagementPage /></RefundCapabilityRoute>} />
       <Route path='/admin/reconciliation' element={<AdminRoute><UnavailableAdminPage title='支付对账' /></AdminRoute>} />
       <Route path='/admin/audit' element={<AdminRoute><AdminAuditPage /></AdminRoute>} />
       <Route path='/admin/brand' element={<AdminRoute><UnavailableAdminPage title='品牌设置' detail='平台名称与主题已统一为 Miraphant，客服联系方式可在支付与客服模块接通后配置。' /></AdminRoute>} />

@@ -1,7 +1,7 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/User';
-import { API, showError } from '../helpers';
+import { API, StrictAPI, showError } from '../helpers';
 
 const publicLinks = [
   { label: '首页', to: '/' },
@@ -12,11 +12,21 @@ const publicLinks = [
 const Header = () => {
   const [userState, userDispatch] = useContext(UserContext);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [refundCapabilities, setRefundCapabilities] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
   const user = userState.user || (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
+  const currentUserID = user?.id;
+  useEffect(() => {
+    let active = true;
+    if (!currentUserID) { setRefundCapabilities([]); return undefined; }
+    StrictAPI.get('/api/refund-auth/self').then((response) => {
+      if (active) setRefundCapabilities(Array.isArray(response?.data?.capabilities) ? response.data.capabilities : []);
+    }).catch(() => { if (active) setRefundCapabilities([]); });
+    return () => { active = false; };
+  }, [currentUserID]);
   const links = user
-    ? [...publicLinks, { label: '控制台', to: '/console' }, { label: '积分与充值', to: '/console/wallet' }, { label: '充值订单', to: '/console/orders' }, { label: '访问密钥', to: '/console/keys' }, { label: '个人资料', to: '/console/profile' }, ...(user.role >= 10 ? [{ label: '管理', to: '/admin' }] : [])]
+    ? [...publicLinks, { label: '控制台', to: '/console' }, { label: '积分与充值', to: '/console/wallet' }, { label: '充值订单', to: '/console/orders' }, { label: '访问密钥', to: '/console/keys' }, { label: '个人资料', to: '/console/profile' }, ...(user.role >= 10 ? [{ label: '管理', to: '/admin' }] : refundCapabilities.includes('refund.read') ? [{ label: '退款工作台', to: '/admin/refunds' }] : [])]
     : publicLinks;
 
   const logout = async () => {
