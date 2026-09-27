@@ -145,7 +145,6 @@ const OperationSetting = () => {
   };
 
   const deleteHistoryLogs = async () => {
-    console.log(inputs);
     const res = await API.delete(`/api/log/?target_timestamp=${Date.parse(historyTimestamp) / 1000}`);
     const { success, message, data } = res.data;
     if (success) {
