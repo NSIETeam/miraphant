@@ -170,6 +170,11 @@ var PointsMaxInputBytes = env.Int("POINTS_MAX_INPUT_BYTES", 131072)
 var PointsMaxOutputTokens = env.Int("POINTS_MAX_OUTPUT_TOKENS", 8192)
 var PointsRelayTimeout = env.Int("POINTS_RELAY_TIMEOUT", 120)
 
+// PointRefundOperationsEnabled gates issuing/using step-up tickets for refund
+// actions. Capability grants remain available to the exact root account while
+// this switch is off so permissions can be prepared ahead of launch.
+var PointRefundOperationsEnabled = env.Bool("POINTS_REFUND_OPERATIONS_ENABLED", false)
+
 // Payment credentials are loaded from server environment or server-owned files.
 // These do not follow the new-order toggle: historical callbacks and recovery
 // remain verifiable after new orders are disabled.

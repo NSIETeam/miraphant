@@ -112,6 +112,10 @@ func PaymentCallbackRateLimit() func(c *gin.Context) {
 	return rateLimitFactory(600, 60, "PAYCB")
 }
 
+func RefundStepUpIPRateLimit() func(c *gin.Context) {
+	return rateLimitFactory(10, 60*60, "REFUNDSTEPIP")
+}
+
 // PaymentUserWriteRateLimit bounds network-backed payment operations per user.
 func PaymentUserWriteRateLimit() func(c *gin.Context) {
 	const limit = 60

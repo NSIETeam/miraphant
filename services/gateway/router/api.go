@@ -52,6 +52,19 @@ func SetApiRouter(router *gin.Engine) {
 			paymentOpsAdmin.GET("/orders/:key", controller.AdminPaymentOrder)
 			paymentOpsAdmin.GET("/audit", controller.AdminPaymentAudit)
 		}
+		refundAuth := apiRouter.Group("/refund-auth")
+		refundAuth.Use(middleware.RefundSessionAuth())
+		{
+			refundAuth.GET("/csrf", controller.RefundAuthorizationCSRF)
+			refundAuth.GET("/self", controller.RefundAuthorizationSelf)
+			refundAuth.POST("/step-up", middleware.RefundManagerAuth(), middleware.CriticalRateLimit(), middleware.RefundStepUpIPRateLimit(), middleware.RefundStepUpUserRateLimit(), middleware.RefundStepUpBodyLimit(), middleware.PointsCSRF(), controller.IssueRefundAuthorizationStepUp)
+		}
+		refundAuthAdmin := apiRouter.Group("/admin/refund-auth")
+		refundAuthAdmin.Use(middleware.RefundSessionAuth(), middleware.RefundManagerAuth())
+		{
+			refundAuthAdmin.GET("/users/:id/grants", controller.AdminRefundCapabilityGrants)
+			refundAuthAdmin.POST("/grants", middleware.RefundStepUpBodyLimit(), middleware.PointsCSRF(), controller.ChangeRefundCapabilities)
+		}
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)

@@ -65,6 +65,9 @@ func Login(c *gin.Context) {
 // setup session & cookies and then return user info
 func SetupLogin(user *model.User, c *gin.Context) {
 	session := sessions.Default(c)
+	// Rotate the per-login binding used by sensitive refund authorization.
+	// Existing cookies without this value must sign in again before step-up.
+	session.Set("refund_auth_session", random.GetUUID())
 	session.Set("id", user.Id)
 	session.Set("username", user.Username)
 	session.Set("role", user.Role)

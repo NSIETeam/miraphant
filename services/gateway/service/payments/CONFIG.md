@@ -78,3 +78,37 @@ creates a new refund number or releases a hold based on an absent query result.
 Provider reconciliation, payment status management, public refund HTTP routes
 and refund browser flows remain separate work. Points refunds have only been verified against the supported
 single-instance SQLite configuration; other database backends are not enabled.
+
+## Refund authorization foundation
+
+Refund authorization tables use the normal database startup migration and are
+separate from the explicitly applied points/payment schema. Refund actions stay
+closed unless `POINTS_REFUND_OPERATIONS_ENABLED=true`. With that switch off,
+the exact role-100 root account may prepare or revoke delegated refund
+capabilities after local-password step-up, but no refund action ticket can be
+issued. Role 10 receives no financial capability by default. Only root can
+manage grants; delegated grants are limited to `refund.read`, `refund.review`,
+`refund.submit`, `refund.reconcile`, and `refund.audit`.
+
+Sensitive verification is a short-lived one-time ticket bound to the actor,
+current login session, action and exact request scope. The database stores only
+its digest. Each account needs an existing local password; this is password
+reverification, not MFA. OAuth-only accounts without a local password cannot
+perform these sensitive actions. The current email/reset flow does not persist
+a durable verified-email marker, so it is not used to enable a local password
+for an OAuth-only account. No recovery shortcut is provided here. Step-up
+issuance is limited to five attempts per user per minute, independently of
+the IP-based limit.
+
+Capability grants are bound to the recipient's current credential identity and
+auth epoch. Password, email, OAuth identity or account-state changes invalidate
+the grant until root explicitly grants it again. Grant and revoke records keep
+actor, target, capability set, reason and time; they never contain passwords,
+step-up tickets, provider payloads or credential fingerprints.
+
+The current foundation exposes `GET /api/refund-auth/self` and `/csrf`,
+`POST /api/refund-auth/step-up` for root grant/revoke re-verification,
+`GET /api/admin/refund-auth/users/:id/grants`, and
+`POST /api/admin/refund-auth/grants`. It does not expose refund request,
+approval, provider submission, or ticket-consumption routes. Refund action
+tickets are consumed only inside a later refund business transaction.

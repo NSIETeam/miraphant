@@ -48,6 +48,7 @@ type User struct {
 	Group            string `json:"group" gorm:"type:varchar(32);default:'default'"`
 	AffCode          string `json:"aff_code" gorm:"type:varchar(32);column:aff_code;uniqueIndex"`
 	InviterId        int    `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
+	RefundAuthEpoch  int64  `json:"-" gorm:"not null;default:1"`
 }
 
 func GetMaxUserId() int {
@@ -181,12 +182,62 @@ func (user *User) Update(updatePassword bool) error {
 	} else if user.Status == UserStatusEnabled {
 		blacklist.UnbanUser(user.Id)
 	}
-	if config.PointsBillingEnabled {
-		err = DB.Model(user).Omit("quota").Updates(user).Error
-	} else {
-		err = DB.Model(user).Updates(user).Error
-	}
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		var current User
+		if err := tx.Select("id", "password", "email", "github_id", "wechat_id", "lark_id", "oidc_id", "role", "status").First(&current, "id = ?", user.Id).Error; err != nil {
+			return err
+		}
+		identityChanged := userAuthIdentityChanges(current, *user)
+		query := tx.Model(user)
+		if config.PointsBillingEnabled {
+			query = query.Omit("quota", "refund_auth_epoch")
+		} else {
+			query = query.Omit("refund_auth_epoch")
+		}
+		if err := query.Updates(user).Error; err != nil {
+			return err
+		}
+		if identityChanged {
+			result := tx.Model(&User{}).Where("id = ?", user.Id).UpdateColumn("refund_auth_epoch", gorm.Expr("refund_auth_epoch + 1"))
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != 1 {
+				return gorm.ErrRecordNotFound
+			}
+		}
+		return nil
+	})
 	return err
+}
+
+// User.Update uses GORM struct updates, which omit zero values. Compare the
+// effective authentication fields against the transaction's current row so a
+// stale profile write cannot either rewind the epoch or needlessly revoke
+// grants and step-up tickets.
+func userAuthIdentityChanges(current, update User) bool {
+	if update.Password != "" && current.Password != update.Password {
+		return true
+	}
+	if update.Email != "" && current.Email != update.Email {
+		return true
+	}
+	if update.GitHubId != "" && current.GitHubId != update.GitHubId {
+		return true
+	}
+	if update.WeChatId != "" && current.WeChatId != update.WeChatId {
+		return true
+	}
+	if update.LarkId != "" && current.LarkId != update.LarkId {
+		return true
+	}
+	if update.OidcId != "" && current.OidcId != update.OidcId {
+		return true
+	}
+	if update.Role != 0 && current.Role != update.Role {
+		return true
+	}
+	return update.Status != 0 && current.Status != update.Status
 }
 
 func (user *User) Delete() error {
@@ -199,7 +250,19 @@ func (user *User) Delete() error {
 	blacklist.BanUser(user.Id)
 	user.Username = fmt.Sprintf("deleted_%s", random.GetUUID())
 	user.Status = UserStatusDeleted
-	err := DB.Model(user).Updates(user).Error
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(user).Omit("refund_auth_epoch").Updates(user).Error; err != nil {
+			return err
+		}
+		result := tx.Model(&User{}).Where("id = ?", user.Id).UpdateColumn("refund_auth_epoch", gorm.Expr("refund_auth_epoch + 1"))
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return gorm.ErrRecordNotFound
+		}
+		return nil
+	})
 	return err
 }
 
@@ -316,7 +379,16 @@ func ResetUserPasswordByEmail(email string, password string) error {
 	if err != nil {
 		return err
 	}
-	err = DB.Model(&User{}).Where("email = ?", email).Update("password", hashedPassword).Error
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&User{}).Where("email = ?", email).Update("password", hashedPassword)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return tx.Model(&User{}).Where("email = ?", email).UpdateColumn("refund_auth_epoch", gorm.Expr("refund_auth_epoch + 1")).Error
+	})
 	return err
 }
 
