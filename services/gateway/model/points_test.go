@@ -563,3 +563,21 @@ func TestReviewedUsageAboveHoldRequiresAtomicBudgetTopUp(t *testing.T) {
 		t.Fatalf("reviewed topup did not settle exact usage: hold=%+v account=%+v", holdAfter, account)
 	}
 }
+
+// Offline recovery exits before initializing the optional log database.
+func TestOfflineRecoveryCloseDBWithoutLogDB(t *testing.T) {
+	oldDB, oldLogDB := DB, LOG_DB
+	t.Cleanup(func() { DB, LOG_DB = oldDB, oldLogDB })
+	db := openPointsTestDB(t, filepath.Join(t.TempDir(), "close.db"))
+	DB, LOG_DB = db, nil
+	if err := CloseDB(); err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sqlDB.Ping(); err == nil {
+		t.Fatal("main database remained open")
+	}
+}

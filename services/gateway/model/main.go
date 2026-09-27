@@ -225,6 +225,9 @@ func setDBConns(db *gorm.DB) *sql.DB {
 }
 
 func closeDB(db *gorm.DB) error {
+	if db == nil {
+		return nil
+	}
 	sqlDB, err := db.DB()
 	if err != nil {
 		return err

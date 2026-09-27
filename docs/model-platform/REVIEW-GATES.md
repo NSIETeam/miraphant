@@ -202,3 +202,9 @@ HTTP 检查点后，主 agent 审查尚未提交的 relay/SSE 草稿，要求修
 主 agent 完成最后一轮定向验证：controller 0.972s、router 2.030s、model 1.809s、relay/controller 3.087s、openai 2.437s 全部通过；middleware 的边界由真实 router 用例覆盖。本次新增离线恢复同批重放不得处理后来请求的回归检查，并在数据库事务重试时重置结果计数。恢复仅将 held 标记为 pending，资金仍冻结，不估算扣款、不自动返还；同批不同原因拒绝。命令要求操作员先停服务，仅支持当前单实例 SQLite。
 
 v1 升级模拟现额外删除并验证 v4 的 local_request_id 列，保留原账户、批次及流水。离线命令即使未启用积分计费，也必须检查当前 schema 版本。该检查点允许提交默认关闭的 OpenAI 兼容纯文本聊天积分接线、流式用量结算、旧额度保护和恢复工具；不是整个 G1、真实支付或生产发布的放行。旧 quota 列在积分模式保留为冻结历史，并未实现积分余额的兼容投影。MySQL/PostgreSQL、真实供应商和生产迁移尚未验证。
+
+### 独立 CLI 检查补修及进程复验
+
+主 agent 在提交 8bdfb72 后，使用该源码编译的真实入口重新跑普通／SSE／取消／超时全链路，全部通过（二进制 SHA-256 `f4b7dcd43098cc86c6de5ae7a0627b87dc58fd78d501e048700cc0d1d38d8bca`）。另外以独立 SQLite fixture 执行恢复 CLI，发现事务完成后退出阶段调用未初始化的 LOG_DB 导致 panic。原模型用例不覆盖进程退出，此缺陷未部署。
+
+修复 closeDB 的 nil 句柄处理，添加恢复路径关闭主数据库的回归用例；主 agent 运行 `TestOfflineRecovery|TestPointsSchema` 通过（0.733s）。重编译后实际 CLI 验证：正常退出、held 转 pending、账户金额不变、同批不处理后来请求、原因冲突拒绝、关闭计费开关仍拒绝缺少当前 schema 的恢复。二进制 SHA-256 `401ad5a7586b5159dbd37b484c078bfa41ed142cdacfb1ec8f47fd280746d711`。全部为本地合成数据与临时服务，已清理；生产未触及。
