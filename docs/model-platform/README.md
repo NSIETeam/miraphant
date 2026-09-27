@@ -16,7 +16,7 @@
 - ZCode 历史记录称注册、兑换码充值、令牌创建已配置；当前用户余额、渠道、密钥和实际模型调用尚未重新验收。
 - 支付商户尚未开通。用户已选择微信支付＋支付宝，要求包含申请准备。
 
-上线域名继续使用 `api.miraphant.com`，模型 API 继续保留 `/v1`。页面规划见 [界面与接口规格](interfaces.md)，计费配置见 [积分方案](points.md) 和 [机器可读草案](pricing-draft.json)。
+上线域名继续使用 `api.miraphant.com`，模型 API 继续保留 `/v1`。页面规划见 [界面与接口规格](interfaces.md)，计费配置见 [积分方案](points.md) 和 [机器可读草案](pricing-draft.json)。退款实现候选契约见 [退款账务与支付契约](refunds.md)，其中商业规则仍需开通收款前确认。
 
 ## 2. Miraphant 品牌
 
