@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/User';
 import { StrictAPI as API, copy, showError, showSuccess } from '../../helpers';
+export { WalletPage, OrdersPage, OrderDetailPage, AdminPackagesPage, AdminPaymentsPage } from './Payments';
 
 const MICRO = 1000000;
 const formatPoints = (micro = 0) => (Number(micro || 0) / MICRO).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
@@ -97,21 +98,6 @@ export function ConsolePage() {
   </main>;
 }
 
-export function WalletPage() {
-  const [wallet, setWallet] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(false);
-  const load = () => API.get('/api/points/wallet').then((res) => setWallet(res?.data)).catch(() => setError(true)).finally(() => setLoading(false));
-  useEffect(() => { load(); }, []);
-  return <main className='platform-page'><PageTitle eyebrow='WALLET' title='积分与充值' intro='积分余额按来源分类展示。支付商户尚未开通，因此目前不能创建真实充值订单。' />
-    {loading ? <LoadingState /> : error ? <ErrorState title='钱包暂时不可用' detail='积分计费可能尚未启用，或服务端暂时无法访问。' /> : <>
-      <section className='wallet-feature'><div><span>可用积分</span><strong>{formatPoints(wallet?.available_micro)}</strong><p>冻结 {formatPoints(wallet?.held_micro)} · 已消耗 {formatPoints(wallet?.spent_micro)}</p></div><div className='wallet-pay-status'><span className='status-dot muted' /> 充值功能尚未开放</div></section>
-      <div className='wallet-source-grid'><div><span>购买积分 · 当前可用</span><strong>{formatPoints(wallet?.purchased_available_micro)}</strong><small>累计到账 {formatPoints(wallet?.purchased_total_micro)}</small></div><div><span>赠送积分 · 当前可用</span><strong>{formatPoints(wallet?.gifted_available_micro)}</strong><small>累计到账 {formatPoints(wallet?.gifted_total_micro)}</small></div><div><span>迁移积分 · 当前可用</span><strong>{formatPoints(wallet?.migrated_available_micro)}</strong><small>历史来源单独记录</small></div></div>
-      <section className='wallet-packages'><div className='platform-panel-head'><div><div className='platform-eyebrow'>PLANNED PACKAGES</div><h2>充值档位草案</h2></div><span className='soft-tag'>暂未开放购买</span></div><p>规划换算为 ¥1 = 100 积分。以下金额档位尚未上架，支付商户开通并完成验收后才可下单。</p><div className='package-grid'>{[['¥10', '1,000 积分'], ['¥50', '5,000 积分'], ['¥100', '10,000 积分'], ['¥500', '50,000 积分']].map(([price, points]) => <div key={price}><strong>{price}</strong><span>{points}</span><button disabled>暂未开放</button></div>)}</div></section>
-      <div className='platform-alert platform-alert-info'><strong>微信支付与支付宝尚未接入</strong><span>平台不会模拟支付成功，也不会创建无效订单。支付开通后，充值档位、订单与退款状态会在此展示。</span></div>
-      <section className='platform-panel'><div className='platform-panel-head'><div><div className='platform-eyebrow'>REDEMPTION</div><h2>兑换码</h2></div></div><EmptyState title='兑换码充值暂不可用' detail='当前兑换入口尚未切换到积分账本，请勿使用旧版额度兑换功能。' /></section>
-    </>}
-  </main>;
-}
-
 function UsageTable({ rows }) {
   if (!rows?.length) return <EmptyState title='还没有用量记录' detail='请求完成后，账单会显示在这里。' />;
   return <div className='platform-table-wrap'><table className='platform-table'><thead><tr><th>时间</th><th>模型</th><th>状态</th><th>积分</th><th>版本</th></tr></thead><tbody>{rows.map((row) => <tr key={row.request_id}><td>{formatDate(row.created_at)}</td><td>{row.model_id || '—'}</td><td><span className={`state-chip state-${row.state}`}>{stateLabel(row.state)}</span></td><td>{formatPoints(row.usage_micro)}{row.state === 'pending' || row.state === 'needs_review' ? <small> · 冻结 {formatPoints(row.budget_micro)}</small> : ''}</td><td>{row.price_version || '—'}</td></tr>)}</tbody></table></div>;
@@ -167,7 +153,7 @@ export function HelpPage() {
 export function AdminHome() {
   const [prices, setPrices] = useState([]); const [pending, setPending] = useState([]); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false);
   useEffect(() => { Promise.all([API.get('/api/points/prices'), API.get('/api/admin/points/pending?limit=100')]).then(([priceRes, pendingRes]) => { setPrices(priceRes?.data?.prices || []); setPending(pendingRes?.data?.holds || []); }).catch(() => setFailed(true)).finally(() => setLoading(false)); }, []);
-  const cards = [['模型定价', '/admin/pricing', `${prices.length} 个生效模型`], ['客户积分', '/admin/users', '客户查询与带原因赠送'], ['用量核实', '/admin/pending', `${pending.length} 条待核实`], ['渠道状态', '/admin/channels', '管理模型接入'], ['套餐管理', '/admin/packages', '当前未上架'], ['支付设置', '/admin/payments', '商户未开通'], ['充值订单', '/admin/orders', '当前无订单服务'], ['退款审核', '/admin/refunds', '当前未开通'], ['支付对账', '/admin/reconciliation', '当前未开通'], ['操作审计', '/admin/audit', '部分积分调整已记录'], ['品牌设置', '/admin/brand', '统一品牌配置']];
+  const cards = [['模型定价', '/admin/pricing', `${prices.length} 个生效模型`], ['客户积分', '/admin/users', '客户查询与带原因赠送'], ['用量核实', '/admin/pending', `${pending.length} 条待核实`], ['渠道状态', '/admin/channels', '管理模型接入'], ['套餐管理', '/admin/packages', '发布版本与查看历史'], ['支付设置', '/admin/payments', '渠道配置与开通准备'], ['充值订单', '/admin/orders', '管理查单待接入'], ['退款审核', '/admin/refunds', '当前未开通'], ['支付对账', '/admin/reconciliation', '当前未开通'], ['操作审计', '/admin/audit', '部分积分调整已记录'], ['品牌设置', '/admin/brand', '统一品牌配置']];
   return <main className='platform-page'><PageTitle eyebrow='ADMIN' title='平台管理' intro='管理入口受服务端权限控制。积分调整和价格发布都会记录审计。' />{loading ? <LoadingState /> : failed ? <ErrorState title='管理数据暂时无法读取' detail='会话权限可能已变化。请重新登录后再试。' /> : <div className='admin-module-grid'>{cards.map(([title, path, detail]) => <Link to={path} className='admin-module' key={path}><span>{title}</span><strong>{detail}</strong><i>打开模块 →</i></Link>)}</div>}<div className='platform-alert platform-alert-info'><strong>运营能力状态</strong><span>支付商户、套餐、退款、财务与客服细分角色尚未接入。页面不会展示模拟订单或成功付款。</span></div></main>;
 }
 

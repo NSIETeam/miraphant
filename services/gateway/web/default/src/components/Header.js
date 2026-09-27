@@ -16,7 +16,7 @@ const Header = () => {
   const location = useLocation();
   const user = userState.user || (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
   const links = user
-    ? [...publicLinks, { label: '控制台', to: '/console' }, { label: '积分与充值', to: '/console/wallet' }, { label: '访问密钥', to: '/console/keys' }, { label: '个人资料', to: '/console/profile' }, ...(user.role >= 10 ? [{ label: '管理', to: '/admin' }] : [])]
+    ? [...publicLinks, { label: '控制台', to: '/console' }, { label: '积分与充值', to: '/console/wallet' }, { label: '充值订单', to: '/console/orders' }, { label: '访问密钥', to: '/console/keys' }, { label: '个人资料', to: '/console/profile' }, ...(user.role >= 10 ? [{ label: '管理', to: '/admin' }] : [])]
     : publicLinks;
 
   const logout = async () => {

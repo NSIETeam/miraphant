@@ -54,6 +54,94 @@ func PaymentPackages(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"packages": out, "currency": "CNY", "points_per_yuan": 100})
 }
 
+// PaymentOptions is customer-scoped so it can explain whether the current
+// account can create an order without exposing merchant credentials.
+func PaymentOptions(c *gin.Context) {
+	packagesList, err := model.ListActivePointPackages()
+	if err != nil {
+		paymentHTTPError(c, http.StatusInternalServerError, "could not load purchase options")
+		return
+	}
+	hasModel := false
+	if config.PointsBillingEnabled && len(packagesList) > 0 {
+		hasModel, err = payments.HasBillableModel(c.GetInt(ctxkey.Id))
+		if err != nil {
+			paymentHTTPError(c, http.StatusInternalServerError, "could not load purchase options")
+			return
+		}
+	}
+	channels := make([]gin.H, 0, 2)
+	configuredCount := 0
+	for _, name := range []string{"wechat", "alipay"} {
+		runtime, configured := payments.ProviderFor(name)
+		configured = configured && runtime.Provider != nil && runtime.Identity.MerchantID != "" && runtime.Identity.AppID != ""
+		if configured {
+			configuredCount++
+		}
+		label, scene := "微信支付", "微信扫码支付（电脑端）"
+		if name == "alipay" {
+			label, scene = "支付宝", "支付宝网页支付（电脑端）"
+		}
+		channels = append(channels, gin.H{"channel": name, "label": label, "scene": scene, "configured": configured, "available": configured && config.PaymentNewOrdersEnabled && config.PointsBillingEnabled && hasModel && len(packagesList) > 0})
+	}
+	available := config.PaymentNewOrdersEnabled && config.PointsBillingEnabled && configuredCount > 0 && hasModel && len(packagesList) > 0
+	reason := ""
+	switch {
+	case !config.PaymentNewOrdersEnabled:
+		reason = "平台暂未开放新充值。"
+	case !config.PointsBillingEnabled:
+		reason = "积分计费尚未启用，暂不能充值。"
+	case len(packagesList) == 0:
+		reason = "目前没有可购买的充值套餐。"
+	case configuredCount == 0:
+		reason = "支付渠道尚未完成商户开通。"
+	case !hasModel:
+		reason = "当前账户暂时没有可用的已发布模型。"
+	}
+	out := make([]gin.H, 0, len(packagesList))
+	for _, p := range packagesList {
+		out = append(out, gin.H{"package_id": p.PackageID, "version": p.Version, "name": p.Name, "amount_fen": p.AmountFen, "currency": p.Currency, "purchase_micro": p.PurchaseMicro, "bonus_micro": p.BonusMicro, "bonus_validity_secs": p.BonusValiditySecs})
+	}
+	c.JSON(http.StatusOK, gin.H{"packages": out, "channels": channels, "purchase_available": available, "reason": reason, "points_per_yuan": 100, "currency": "CNY", "mobile_payment_available": false})
+}
+
+func AdminPaymentStatus(c *gin.Context) {
+	wechat, wechatOK := payments.ProviderFor("wechat")
+	alipay, alipayOK := payments.ProviderFor("alipay")
+	ready := func(ok bool, runtime payments.RuntimeProvider) bool {
+		return ok && runtime.Provider != nil && runtime.Identity.MerchantID != "" && runtime.Identity.AppID != ""
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"new_orders_enabled":     config.PaymentNewOrdersEnabled,
+		"points_billing_enabled": config.PointsBillingEnabled,
+		"providers": []gin.H{
+			{"channel": "wechat", "label": "微信支付", "configured": ready(wechatOK, wechat), "scene": "Native 电脑扫码"},
+			{"channel": "alipay", "label": "支付宝", "configured": ready(alipayOK, alipay), "scene": "电脑网站支付"},
+		},
+		"mobile_scenes_enabled": false,
+		"credentials_source":    "仅由网关服务器环境变量和受限文件加载；不会显示或回传密钥。",
+		"requirements":          []string{"完成微信支付／支付宝商户签约及回调验收", "为网关配置商户证书、应用身份和回调地址", "启用积分计费并发布套餐", "发布至少一个当前用户组可用的模型价格和渠道", "逐一验收桌面支付后再开启新充值"},
+	})
+}
+
+func AdminPointPackages(c *gin.Context) {
+	records, err := model.ListPointPackagesForAdmin()
+	if err != nil {
+		paymentHTTPError(c, http.StatusInternalServerError, "could not load package history")
+		return
+	}
+	rows := make([]gin.H, 0, len(records))
+	for _, item := range records {
+		p := item.Package
+		row := gin.H{"package_id": p.PackageID, "version": p.Version, "name": p.Name, "amount_fen": p.AmountFen, "currency": p.Currency, "purchase_micro": p.PurchaseMicro, "bonus_micro": p.BonusMicro, "bonus_validity_secs": p.BonusValiditySecs, "active": item.Active, "created_by": p.CreatedBy, "created_at": p.CreatedAt}
+		if item.Audit != nil {
+			row["audit"] = gin.H{"actor_user_id": item.Audit.ActorUserID, "business_key": item.Audit.BusinessKey, "created_at": item.Audit.CreatedAt, "details": item.Audit.Details}
+		}
+		rows = append(rows, row)
+	}
+	c.JSON(http.StatusOK, gin.H{"packages": rows})
+}
+
 func CreatePointPackage(c *gin.Context) {
 	var req struct {
 		PackageID         string `json:"package_id"`
@@ -84,16 +172,37 @@ func CreatePointPackage(c *gin.Context) {
 }
 
 func PointPurchaseOrders(c *gin.Context) {
-	rows, err := model.ListPointPurchaseOrdersForUser(c.GetInt(ctxkey.Id), 50)
+	limit := 20
+	if parsed, err := strconv.Atoi(c.Query("limit")); err == nil && parsed > 0 && parsed <= 100 {
+		limit = parsed
+	}
+	var beforeID uint
+	if cursor := strings.TrimSpace(c.Query("cursor")); cursor != "" {
+		parsed, err := strconv.ParseUint(cursor, 10, 64)
+		if err != nil || parsed == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order cursor"})
+			return
+		}
+		beforeID = uint(parsed)
+	}
+	rows, err := model.ListPointPurchaseOrdersPage(c.GetInt(ctxkey.Id), beforeID, limit+1)
 	if err != nil {
 		paymentHTTPError(c, http.StatusInternalServerError, "could not load orders")
 		return
 	}
-	out := make([]pointOrderView, 0, len(rows))
+	out := make([]pointOrderView, 0, limit)
+	more := len(rows) > limit
+	if more {
+		rows = rows[:limit]
+	}
 	for _, row := range rows {
 		out = append(out, toPointOrderView(row))
 	}
-	c.JSON(http.StatusOK, gin.H{"orders": out})
+	nextCursor := ""
+	if more && len(rows) > 0 {
+		nextCursor = strconv.FormatUint(uint64(rows[len(rows)-1].ID), 10)
+	}
+	c.JSON(http.StatusOK, gin.H{"orders": out, "next_cursor": nextCursor})
 }
 
 func PointPurchaseOrder(c *gin.Context) {
@@ -109,6 +218,30 @@ func PointPurchaseOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, toPointOrderView(order))
 }
 
+// PointPurchaseOrderCheckout only returns previously persisted checkout data.
+// A page refresh can never trigger a provider call or create another payment.
+func PointPurchaseOrderCheckout(c *gin.Context) {
+	order, err := model.GetPointPurchaseOrderForUser(c.GetInt(ctxkey.Id), c.Param("key"))
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		return
+	}
+	if err != nil {
+		paymentHTTPError(c, http.StatusInternalServerError, "could not load checkout")
+		return
+	}
+	if order.State != "pending" || order.ExpiresAt == nil || *order.ExpiresAt <= time.Now().UTC().Unix() || order.ProviderCreateState != "ready" || order.CheckoutSnapshot == "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "checkout is no longer available", "order": toPointOrderView(order)})
+		return
+	}
+	var checkout payment.Checkout
+	if json.Unmarshal([]byte(order.CheckoutSnapshot), &checkout) != nil || (checkout.Kind == "qr" && checkout.CodeURL == "") || (checkout.Kind == "form" && (checkout.GatewayURL == "" || len(checkout.Fields) == 0)) {
+		paymentHTTPError(c, http.StatusServiceUnavailable, "saved checkout data is unavailable")
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"order": toPointOrderView(order), "checkout": checkout})
+}
+
 func CreatePointPurchaseOrder(c *gin.Context) {
 	var req struct {
 		PackageID string `json:"package_id"`
@@ -119,37 +252,7 @@ func CreatePointPurchaseOrder(c *gin.Context) {
 		return
 	}
 	if err := model.RequirePointsSchema(); err != nil {
-		paymentHTTPError(c, http.StatusServiceUnavailable, "payment service is not ready")
-		return
-	}
-	runtime, ok := payments.ProviderFor(req.Channel)
-	if !ok || runtime.Provider == nil || runtime.Identity.MerchantID == "" || runtime.Identity.AppID == "" {
-		paymentHTTPError(c, http.StatusServiceUnavailable, "payment channel is unavailable")
-		return
-	}
-	activePackages, err := model.ListActivePointPackages()
-	if err != nil {
-		paymentHTTPError(c, http.StatusInternalServerError, "could not validate packages")
-		return
-	}
-	found := false
-	for _, p := range activePackages {
-		if p.PackageID == req.PackageID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "package is unavailable"})
-		return
-	}
-	hasModel, err := payments.HasBillableModel(c.GetInt(ctxkey.Id))
-	if err != nil {
-		paymentHTTPError(c, http.StatusInternalServerError, "could not validate model availability")
-		return
-	}
-	if !hasModel {
-		paymentHTTPError(c, http.StatusServiceUnavailable, "no priced model is currently available")
+		paymentHTTPErrorCode(c, http.StatusServiceUnavailable, "payment_schema_unavailable", "payment service is not ready")
 		return
 	}
 	idempotencyKey := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
@@ -165,11 +268,8 @@ func CreatePointPurchaseOrder(c *gin.Context) {
 			return
 		}
 		runtime, ok := payments.ProviderFor(previous.Channel)
-		if !ok || runtime.Provider == nil || runtime.Identity.MerchantID != previous.ProviderMerchantID || runtime.Identity.AppID != previous.ProviderAppID {
-			paymentHTTPError(c, http.StatusServiceUnavailable, "the frozen payment identity is unavailable")
-			return
-		}
-		if previous.State == "pending" && previous.CheckoutSnapshot != "" && previous.ExpiresAt != nil && *previous.ExpiresAt > time.Now().UTC().Unix() {
+		identityMatches := ok && runtime.Provider != nil && runtime.Identity.MerchantID == previous.ProviderMerchantID && runtime.Identity.AppID == previous.ProviderAppID
+		if identityMatches && previous.State == "pending" && previous.CheckoutSnapshot != "" && previous.ExpiresAt != nil && *previous.ExpiresAt > time.Now().UTC().Unix() {
 			var checkout payment.Checkout
 			if json.Unmarshal([]byte(previous.CheckoutSnapshot), &checkout) != nil {
 				paymentHTTPError(c, http.StatusServiceUnavailable, "saved checkout data is unavailable")
@@ -186,7 +286,37 @@ func CreatePointPurchaseOrder(c *gin.Context) {
 		return
 	}
 	if !config.PointsBillingEnabled || !config.PaymentNewOrdersEnabled {
-		paymentHTTPError(c, http.StatusServiceUnavailable, "new purchases are unavailable")
+		paymentHTTPErrorCode(c, http.StatusServiceUnavailable, "new_orders_unavailable", "new purchases are unavailable")
+		return
+	}
+	runtime, ok := payments.ProviderFor(req.Channel)
+	if !ok || runtime.Provider == nil || runtime.Identity.MerchantID == "" || runtime.Identity.AppID == "" {
+		paymentHTTPErrorCode(c, http.StatusServiceUnavailable, "payment_channel_unavailable", "payment channel is unavailable")
+		return
+	}
+	activePackages, err := model.ListActivePointPackages()
+	if err != nil {
+		paymentHTTPError(c, http.StatusInternalServerError, "could not validate packages")
+		return
+	}
+	found := false
+	for _, p := range activePackages {
+		if p.PackageID == req.PackageID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": "package_unavailable", "error": "package is unavailable"})
+		return
+	}
+	hasModel, err := payments.HasBillableModel(c.GetInt(ctxkey.Id))
+	if err != nil {
+		paymentHTTPError(c, http.StatusInternalServerError, "could not validate model availability")
+		return
+	}
+	if !hasModel {
+		paymentHTTPErrorCode(c, http.StatusServiceUnavailable, "no_billable_model", "no priced model is currently available")
 		return
 	}
 	order, err := model.CreatePointPurchaseOrder(model.CreatePointPurchaseOrderRequest{UserID: userID, PackageID: req.PackageID, Channel: req.Channel, MerchantID: runtime.Identity.MerchantID, AppID: runtime.Identity.AppID, IdempotencyKey: idempotencyKey})
@@ -564,4 +694,8 @@ func AdminRecoverPaymentEvents(c *gin.Context) {
 
 func paymentHTTPError(c *gin.Context, status int, message string) {
 	c.AbortWithStatusJSON(status, gin.H{"error": message})
+}
+
+func paymentHTTPErrorCode(c *gin.Context, status int, code, message string) {
+	c.AbortWithStatusJSON(status, gin.H{"code": code, "error": message})
 }

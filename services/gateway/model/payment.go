@@ -242,6 +242,72 @@ func ListPointPurchaseOrdersForUser(userID int, limit int) ([]PointPurchaseOrder
 	return orders, err
 }
 
+// ListPointPurchaseOrdersPage uses a descending database ID cursor so customer
+// order history remains complete without offset scans or a fixed first page.
+func ListPointPurchaseOrdersPage(userID int, beforeID uint, limit int) ([]PointPurchaseOrder, error) {
+	// The HTTP layer asks for one extra row to determine whether a cursor is
+	// available, so allow a limit of 101 here (100 visible + 1 probe).
+	if limit <= 0 || limit > 101 {
+		limit = 30
+	}
+	query := DB.Where("user_id = ?", userID)
+	if beforeID > 0 {
+		query = query.Where("id < ?", beforeID)
+	}
+	var orders []PointPurchaseOrder
+	err := query.Order("id DESC").Limit(limit).Find(&orders).Error
+	return orders, err
+}
+
+type PointPackageAdminRecord struct {
+	Package PointPackage
+	Active  bool
+	Audit   *PointAdminAudit
+}
+
+// ListPointPackagesForAdmin returns immutable published versions, their active
+// status, and the append-only publication audit entry for traceability.
+func ListPointPackagesForAdmin() ([]PointPackageAdminRecord, error) {
+	var packages []PointPackage
+	if err := DB.Where("published = ?", true).Order("package_id ASC, created_at DESC, version DESC").Find(&packages).Error; err != nil {
+		return nil, err
+	}
+	var activeRows []PointActivePackage
+	if err := DB.Find(&activeRows).Error; err != nil {
+		return nil, err
+	}
+	active := make(map[string]string, len(activeRows))
+	for _, row := range activeRows {
+		active[row.PackageID] = row.Version
+	}
+	var audits []PointAdminAudit
+	if err := DB.Where("action = ?", "package_publish").Order("id DESC").Find(&audits).Error; err != nil {
+		return nil, err
+	}
+	auditByVersion := make(map[string]PointAdminAudit, len(audits))
+	for _, audit := range audits {
+		var details struct {
+			PackageID string `json:"package_id"`
+			Version   string `json:"version"`
+		}
+		if json.Unmarshal([]byte(audit.Details), &details) == nil && details.PackageID != "" && details.Version != "" {
+			key := details.PackageID + "\x00" + details.Version
+			if _, exists := auditByVersion[key]; !exists {
+				auditByVersion[key] = audit
+			}
+		}
+	}
+	records := make([]PointPackageAdminRecord, 0, len(packages))
+	for _, pkg := range packages {
+		record := PointPackageAdminRecord{Package: pkg, Active: active[pkg.PackageID] == pkg.Version}
+		if audit, exists := auditByVersion[pkg.PackageID+"\x00"+pkg.Version]; exists {
+			record.Audit = &audit
+		}
+		records = append(records, record)
+	}
+	return records, nil
+}
+
 func MarkPointPurchaseOrderPending(orderKey string) error {
 	return pointsTransaction(func(tx *gorm.DB) error {
 		var order PointPurchaseOrder

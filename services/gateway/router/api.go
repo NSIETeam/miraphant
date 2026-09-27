@@ -28,16 +28,20 @@ func SetApiRouter(router *gin.Engine) {
 		paymentUser := apiRouter.Group("/payments")
 		paymentUser.Use(middleware.PointsUserAuth())
 		{
+			paymentUser.GET("/options", controller.PaymentOptions)
 			paymentUser.GET("/csrf", controller.PaymentsCSRF)
 			paymentUser.POST("/orders", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.CreatePointPurchaseOrder)
 			paymentUser.GET("/orders", controller.PointPurchaseOrders)
 			paymentUser.GET("/orders/:key", controller.PointPurchaseOrder)
+			paymentUser.GET("/orders/:key/checkout", controller.PointPurchaseOrderCheckout)
 			paymentUser.POST("/orders/:key/query", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.PointPurchaseOrderQuery)
 			paymentUser.POST("/orders/:key/close", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.PointPurchaseOrderClose)
 		}
 		paymentAdmin := apiRouter.Group("/admin/points/payments")
 		paymentAdmin.Use(middleware.PointsAdminAuth())
 		{
+			paymentAdmin.GET("/status", controller.AdminPaymentStatus)
+			paymentAdmin.GET("/packages", controller.AdminPointPackages)
 			paymentAdmin.POST("/packages", middleware.PointsCSRF(), controller.CreatePointPackage)
 			paymentAdmin.POST("/recover", middleware.PointsCSRF(), controller.AdminRecoverPaymentEvents)
 		}

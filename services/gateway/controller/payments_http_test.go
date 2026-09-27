@@ -182,6 +182,18 @@ func TestPaymentOrdersRouterCSRFIdempotencyAndQueryOrderBinding(t *testing.T) {
 		t.Fatalf("package creator not persisted: %+v err=%v", pkg, err)
 	}
 	customerCookie := env.Login(41)
+	options := env.Request(http.MethodGet, "/api/payments/options", customerCookie, "", 0, nil)
+	if options.Code != http.StatusOK || !strings.Contains(options.Body.String(), `"purchase_available":true`) || !strings.Contains(options.Body.String(), `"mobile_payment_available":false`) {
+		t.Fatalf("customer purchase options status=%d body=%s", options.Code, options.Body.String())
+	}
+	adminPackages := env.Request(http.MethodGet, "/api/admin/points/payments/packages", adminCookie, "", 0, nil)
+	if adminPackages.Code != http.StatusOK || !strings.Contains(adminPackages.Body.String(), `"active":true`) || !strings.Contains(adminPackages.Body.String(), `"business_key":"package_publish:publish-http-v1"`) {
+		t.Fatalf("admin package history status=%d body=%s", adminPackages.Code, adminPackages.Body.String())
+	}
+	adminStatus := env.Request(http.MethodGet, "/api/admin/points/payments/status", adminCookie, "", 0, nil)
+	if adminStatus.Code != http.StatusOK || strings.Contains(adminStatus.Body.String(), identity.MerchantID) || strings.Contains(adminStatus.Body.String(), identity.AppID) {
+		t.Fatalf("admin payment status exposed identity or failed: %d %s", adminStatus.Code, adminStatus.Body.String())
+	}
 	csrf := env.Request(http.MethodGet, "/api/payments/csrf", customerCookie, "", 0, nil)
 	if csrf.Code != http.StatusOK || !strings.Contains(csrf.Body.String(), "csrf_token") {
 		t.Fatalf("payments csrf status=%d body=%s", csrf.Code, csrf.Body.String())
@@ -193,6 +205,14 @@ func TestPaymentOrdersRouterCSRFIdempotencyAndQueryOrderBinding(t *testing.T) {
 	first := env.Request(http.MethodPost, "/api/payments/orders", customerCookie, `{"package_id":"starter-http","channel":"wechat"}`, 41, map[string]string{"Idempotency-Key": "checkout-http-1"})
 	if first.Code != http.StatusCreated {
 		t.Fatalf("first order status=%d body=%s", first.Code, first.Body.String())
+	}
+	// A committed order remains recoverable by its idempotency key even if
+	// later catalog or model changes disable new orders for this account.
+	if err := env.DB.Where("package_id = ?", "starter-http").Delete(&dbmodel.PointActivePackage{}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := env.DB.Model(&dbmodel.Ability{}).Where("channel_id = ?", 901).Update("enabled", false).Error; err != nil {
+		t.Fatal(err)
 	}
 	var firstBody struct {
 		Order    pointOrderJSON   `json:"order"`
@@ -212,6 +232,17 @@ func TestPaymentOrdersRouterCSRFIdempotencyAndQueryOrderBinding(t *testing.T) {
 	if order.ProviderMerchantID != identity.MerchantID || order.ProviderAppID != identity.AppID || order.ProviderCreateState != "ready" {
 		t.Fatalf("order snapshot not saved: %+v", order)
 	}
+	checkout := env.Request(http.MethodGet, "/api/payments/orders/"+firstBody.Order.OrderKey+"/checkout", customerCookie, "", 0, nil)
+	if checkout.Code != http.StatusOK || !strings.Contains(checkout.Body.String(), "weixin://fixture") || provider.creates.Load() != 1 {
+		t.Fatalf("saved checkout read status=%d create calls=%d body=%s", checkout.Code, provider.creates.Load(), checkout.Body.String())
+	}
+	if err := env.DB.Model(&dbmodel.PointPurchaseOrder{}).Where("order_key = ?", firstBody.Order.OrderKey).Update("expires_at", time.Now().Add(-time.Minute).Unix()).Error; err != nil {
+		t.Fatal(err)
+	}
+	expiredCheckout := env.Request(http.MethodGet, "/api/payments/orders/"+firstBody.Order.OrderKey+"/checkout", customerCookie, "", 0, nil)
+	if expiredCheckout.Code != http.StatusConflict || provider.creates.Load() != 1 {
+		t.Fatalf("expired checkout status=%d create calls=%d body=%s", expiredCheckout.Code, provider.creates.Load(), expiredCheckout.Body.String())
+	}
 	if got := env.Request(http.MethodGet, "/api/payments/orders/"+firstBody.Order.OrderKey, env.Login(42), "", 0, nil).Code; got != http.StatusNotFound {
 		t.Fatalf("other customer order status=%d", got)
 	}
@@ -229,6 +260,63 @@ func TestPaymentOrdersRouterCSRFIdempotencyAndQueryOrderBinding(t *testing.T) {
 		t.Fatalf("mismatched query stored %d events", events)
 	}
 }
+
+func TestPaymentOrderCursorAndCheckoutOwnership(t *testing.T) {
+	env := paymentHTTPFixture(t, false)
+	for _, key := range []string{"cursor-order-1", "cursor-order-2", "cursor-order-3"} {
+		if err := env.DB.Create(&dbmodel.PointPurchaseOrder{OrderKey: key, UserID: 41, Channel: "wechat", Currency: "CNY", AmountFen: 100, PurchaseMicro: 100 * dbmodel.PointMicroPerPoint, State: "pending", ExpiresAt: ptrUnix(time.Now().Add(time.Hour).Unix())}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	cookie := env.Login(41)
+	first := env.Request(http.MethodGet, "/api/payments/orders?limit=1", cookie, "", 0, nil)
+	if first.Code != http.StatusOK {
+		t.Fatalf("first page status=%d body=%s", first.Code, first.Body.String())
+	}
+	var page struct {
+		Orders     []pointOrderJSON `json:"orders"`
+		NextCursor string           `json:"next_cursor"`
+	}
+	if err := json.Unmarshal(first.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Orders) != 1 || page.NextCursor == "" {
+		t.Fatalf("first page missing cursor: %+v", page)
+	}
+	firstKey := page.Orders[0].OrderKey
+	second := env.Request(http.MethodGet, "/api/payments/orders?limit=1&cursor="+page.NextCursor, cookie, "", 0, nil)
+	if second.Code != http.StatusOK {
+		t.Fatalf("second page status=%d body=%s", second.Code, second.Body.String())
+	}
+	if err := json.Unmarshal(second.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Orders) != 1 || page.Orders[0].OrderKey == "" || page.Orders[0].OrderKey == firstKey {
+		t.Fatalf("second page invalid: %+v", page)
+	}
+	if got := env.Request(http.MethodGet, "/api/payments/orders/cursor-order-1/checkout", env.Login(42), "", 0, nil).Code; got != http.StatusNotFound {
+		t.Fatalf("other customer checkout status=%d", got)
+	}
+	if got := env.Request(http.MethodGet, "/api/payments/orders?limit=1&cursor=not-a-cursor", cookie, "", 0, nil).Code; got != http.StatusBadRequest {
+		t.Fatalf("invalid cursor status=%d", got)
+	}
+	for i := 0; i < 102; i++ {
+		order := dbmodel.PointPurchaseOrder{OrderKey: fmt.Sprintf("cursor-large-%03d", i), UserID: 41, Channel: "alipay", Currency: "CNY", AmountFen: 100, PurchaseMicro: 100 * dbmodel.PointMicroPerPoint, State: "pending", ExpiresAt: ptrUnix(time.Now().Add(time.Hour).Unix())}
+		if err := env.DB.Create(&order).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	largeFirst := env.Request(http.MethodGet, "/api/payments/orders?limit=100", cookie, "", 0, nil)
+	if largeFirst.Code != http.StatusOK || json.Unmarshal(largeFirst.Body.Bytes(), &page) != nil || len(page.Orders) != 100 || page.NextCursor == "" {
+		t.Fatalf("large first page status=%d count=%d cursor=%q body=%s", largeFirst.Code, len(page.Orders), page.NextCursor, largeFirst.Body.String())
+	}
+	largeSecond := env.Request(http.MethodGet, "/api/payments/orders?limit=100&cursor="+page.NextCursor, cookie, "", 0, nil)
+	if largeSecond.Code != http.StatusOK || json.Unmarshal(largeSecond.Body.Bytes(), &page) != nil || len(page.Orders) != 5 || page.NextCursor != "" {
+		t.Fatalf("large final page status=%d count=%d cursor=%q body=%s", largeSecond.Code, len(page.Orders), page.NextCursor, largeSecond.Body.String())
+	}
+}
+
+func ptrUnix(value int64) *int64 { return &value }
 
 func seedPaymentSale(t *testing.T, env paymentHTTPTestEnv, identity payments.MerchantIdentity) {
 	t.Helper()

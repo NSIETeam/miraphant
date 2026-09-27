@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useContext, useEffect } from 'react';
+import React, { lazy, Suspense, useCallback, useContext, useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Loading from './components/Loading';
 import RegisterForm from './components/RegisterForm';
@@ -18,6 +18,7 @@ import LarkOAuth from './components/LarkOAuth';
 import PersonalSetting from './components/PersonalSetting';
 import {
   AdminHome, AdminPendingPage, AdminPricingPage, AdminRoute, AdminUsersPage,
+  AdminPackagesPage, AdminPaymentsPage, OrderDetailPage, OrdersPage,
   ConsolePage, CustomerRoute, HelpPage, KeysPage, LegacyRedirect, NotFoundPage,
   PlatformHome, PricingPage, ProfilePage, UnavailableAdminPage, UsagePage,
   WalletPage,
@@ -26,53 +27,54 @@ import {
 const About = lazy(() => import('./pages/About'));
 
 function App() {
-  const [userState, userDispatch] = useContext(UserContext);
-  const [statusState, statusDispatch] = useContext(StatusContext);
+  const [, userDispatch] = useContext(UserContext);
+  const [, statusDispatch] = useContext(StatusContext);
 
-  const loadUser = () => {
+  const loadUser = useCallback(() => {
     let user = localStorage.getItem('user');
     if (user) {
-      let data = JSON.parse(user);
-      userDispatch({ type: 'login', payload: data });
+      try {
+        let data = JSON.parse(user);
+        if (data && Number.isFinite(Number(data.id)) && Number.isFinite(Number(data.role))) userDispatch({ type: 'login', payload: data });
+        else localStorage.removeItem('user');
+      } catch (_) {
+        localStorage.removeItem('user');
+        userDispatch({ type: 'logout' });
+      }
     }
-  };
-  const loadStatus = async () => {
-    const res = await API.get('/api/status');
-    const { success, data } = res.data;
-    if (success) {
+  }, [userDispatch]);
+  const loadStatus = useCallback(async () => {
+    try {
+      const res = await API.get('/api/status');
+      if (!res?.data?.success || !res?.data?.data) {
+        showError('无法正常连接至服务器！');
+        return;
+      }
+      const data = res.data.data;
       localStorage.setItem('status', JSON.stringify(data));
       statusDispatch({ type: 'set', payload: data });
-      localStorage.setItem('system_name', data.system_name);
-      localStorage.setItem('logo', data.logo);
-      localStorage.setItem('footer_html', data.footer_html);
+      localStorage.setItem('system_name', data.system_name || 'Miraphant');
+      localStorage.setItem('logo', data.logo || '/miraphant.svg');
+      localStorage.setItem('footer_html', data.footer_html || '');
       localStorage.setItem('quota_per_unit', data.quota_per_unit);
       localStorage.setItem('display_in_currency', data.display_in_currency);
-      if (data.chat_link) {
-        localStorage.setItem('chat_link', data.chat_link);
-      } else {
-        localStorage.removeItem('chat_link');
+      if (data.chat_link) localStorage.setItem('chat_link', data.chat_link);
+      else localStorage.removeItem('chat_link');
+      if (data.version !== process.env.REACT_APP_VERSION && data.version !== 'v0.0.0' && process.env.REACT_APP_VERSION !== '') {
+        showNotice(`新版本可用：${data.version}，请刷新页面`);
       }
-      if (
-        data.version !== process.env.REACT_APP_VERSION &&
-        data.version !== 'v0.0.0' &&
-        process.env.REACT_APP_VERSION !== ''
-      ) {
-        showNotice(
-          `新版本可用：${data.version}，请使用快捷键 Shift + F5 刷新页面`
-        );
-      }
-    } else {
+    } catch (_) {
       showError('无法正常连接至服务器！');
     }
-  };
+  }, [statusDispatch]);
 
   useEffect(() => {
     loadUser();
-    loadStatus().then();
+    loadStatus();
     document.title = 'Miraphant 模型平台';
     const linkElement = document.querySelector("link[rel~='icon']");
     if (linkElement) linkElement.href = '/miraphant.svg';
-  }, []);
+  }, [loadStatus, loadUser]);
 
   return (
     <Routes>
@@ -85,9 +87,9 @@ function App() {
       <Route path='/console/keys' element={<CustomerRoute><KeysPage /></CustomerRoute>} />
       <Route path='/console/profile' element={<CustomerRoute><ProfilePage /></CustomerRoute>} />
       <Route path='/console/profile/bindings' element={<CustomerRoute><div className='platform-page'><PersonalSetting hideAccountDeletion /></div></CustomerRoute>} />
-      <Route path='/checkout/:orderId' element={<CustomerRoute><UnavailableAdminPage title='充值订单暂不可用' detail='支付商户尚未开通，当前没有可查询的真实订单。' /></CustomerRoute>} />
-      <Route path='/console/orders' element={<CustomerRoute><UnavailableAdminPage title='充值订单暂不可用' detail='支付与订单服务尚未开通。' /></CustomerRoute>} />
-      <Route path='/console/orders/:orderId' element={<CustomerRoute><UnavailableAdminPage title='充值订单暂不可用' detail='支付与订单服务尚未开通。' /></CustomerRoute>} />
+      <Route path='/checkout/:orderId' element={<CustomerRoute><OrderDetailPage checkoutMode /></CustomerRoute>} />
+      <Route path='/console/orders' element={<CustomerRoute><OrdersPage /></CustomerRoute>} />
+      <Route path='/console/orders/:orderId' element={<CustomerRoute><OrderDetailPage /></CustomerRoute>} />
       <Route path='/admin' element={<AdminRoute><AdminHome /></AdminRoute>} />
       <Route path='/admin/pricing' element={<AdminRoute><AdminPricingPage /></AdminRoute>} />
       <Route path='/admin/users' element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
@@ -95,8 +97,8 @@ function App() {
       <Route path='/admin/channels' element={<AdminRoute><Channel /></AdminRoute>} />
       <Route path='/admin/channels/edit/:id' element={<AdminRoute><EditChannel /></AdminRoute>} />
       <Route path='/admin/channels/add' element={<AdminRoute><EditChannel /></AdminRoute>} />
-      <Route path='/admin/packages' element={<AdminRoute><UnavailableAdminPage title='充值套餐' /></AdminRoute>} />
-      <Route path='/admin/payments' element={<AdminRoute><UnavailableAdminPage title='支付设置' /></AdminRoute>} />
+      <Route path='/admin/packages' element={<AdminRoute><AdminPackagesPage /></AdminRoute>} />
+      <Route path='/admin/payments' element={<AdminRoute><AdminPaymentsPage /></AdminRoute>} />
       <Route path='/admin/orders' element={<AdminRoute><UnavailableAdminPage title='充值订单' /></AdminRoute>} />
       <Route path='/admin/refunds' element={<AdminRoute><UnavailableAdminPage title='退款审核' /></AdminRoute>} />
       <Route path='/admin/reconciliation' element={<AdminRoute><UnavailableAdminPage title='支付对账' /></AdminRoute>} />
