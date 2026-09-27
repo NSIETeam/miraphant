@@ -121,3 +121,15 @@
 上轮的费用单位、非法小数、空支付事件唯一键、重复未知通知、终态保护、独立裁决记录、有效期时区及释放流水问题已在修订中处理。有效期使用 Unix 秒；同一释放逻辑固定一次当前时间。
 
 此记录只放行默认关闭的基础代码检查点，不宣称完整 G1：仍须真实 relay 接线、usage 来源适配、旧额度所有写路径收拢、迁移决策及补账恢复、HTTP 权限边界；MySQL/PostgreSQL 未进行运行验证。客户页面、真实支付适配、退款和对账尚未实施。SQL 累加的极值边界、生产价目绑定及调用上限需要在启用前继续审查。
+
+### G2 准备性品牌检查
+
+当前源码中 `web/default/public/index.html`、`web/air/public/index.html`、`web/berry/public/index.html` 仍使用 One API 标题；旧主题 Logo/favicon 尚未替换。`common/config/config.go` 默认 SystemName/Logo 与生产数据库 option 均需一并迁移，单改静态图标不能覆盖实际显示。
+
+官方原始矢量源 `/Users/king/Desktop/Miraphant.svg` 重新计算 SHA-256 为 `5f69642734d961b4616e35bfae63385030688a253763549edeca72babb791e63`。官网已有灰色 mark 与该文件字节不同，不能直接把灰色 mark 当作原始矢量源。官网 `index.html` 的 OG、Twitter 和 JSON-LD 引用 `logo.svg`，但当前跟踪文件中没有该文件；品牌接线时需改成实际发布路径。
+
+下一阶段应正式支持统一 Miraphant 界面，并为旧 default/air 根路由、berry `/panel/*` 制定授权后的兼容跳转。保留上游许可证和必要开源声明；客户余额用积分，访问凭证用访问密钥，API usage 协议字段保持兼容。
+
+### G1 基础 Linux 构建及持续验证
+
+提交 `558a2f8fee0fc0ba37098c0fdde667665a40bed2` 的 [CI 36314775493](https://github.com/NSIETeam/miraphant/actions/runs/36314775493) 静态打包和 Linux 网关构建通过。该运行尚未执行积分专项；主 agent 将已有七项账本定向用例加入后续 CI，避免只有编译检查而不检查账务行为。新 workflow 的执行结果需要另查，不能回填为本次运行已有的证据。
