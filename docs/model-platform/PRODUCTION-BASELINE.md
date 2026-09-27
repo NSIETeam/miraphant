@@ -33,7 +33,9 @@
 
 这证明当前快照能以原二进制启动，不等于新版迁移兼容、生产切换或发生新交易后的恢复验证通过。
 
-公开上游 v0.6.10 release 的资产元数据未提供 digest；当前记录的运行二进制哈希尚未与官方 release 实际文件比对。版本字符串不能单独证明构建来源完全一致。
+主 agent 随后下载 [上游 v0.6.10 的 Linux 资产 one-api](https://github.com/songquanpeng/one-api/releases/download/v0.6.10/one-api) 到隔离工作目录，仅计算哈希并读取 Go 构建元数据，没有执行下载文件。文件大小 67948352 字节，SHA-256 为 `e891ff7c9502ecf1dfe9c02062a2c945286a05b01134e857c2343d7f0db2ca18`，与生产二进制完全相同。构建元数据报告 Linux/amd64、`vcs.revision=3915ce9814b8261a1ab13ed93adec58b463cd75c`，对应纳管的上游提交。
+
+发布资产同时标记 `vcs.modified=true`：已确认生产运行文件等同官方发布资产、基准 Git 提交一致；不据此宣称纯净源码重建能够得到逐字节相同的原始二进制。新 Miraphant 产物仍须记录自身提交、未提交改动状态和哈希。
 
 本地为 Apple Silicon；本地编译成功不能证明 Linux x86_64 发布包可用。正式替换前必须构建并在隔离环境验证目标架构包、记录其源码提交与 SHA-256。
 
