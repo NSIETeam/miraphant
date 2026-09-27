@@ -133,3 +133,7 @@ v0.6.10 的 `AdminTopUp` 直接增加额度，再记录日志，没有支付订�
 - [支付宝网站支付产品](https://b.alipay.com/signing/productScene.htm?navKey=wysk&sceneId=wysk)
 
 本文不包含已生效的商业报价、生产密钥或已上线功能声明。
+
+## 仓库内正版品牌资产
+
+正式矢量源已纳入 [`images/miraphant.svg`](../../images/miraphant.svg)，SHA-256 为 `5f69642734d961b4616e35bfae63385030688a253763549edeca72babb791e63`，与已核对的公司原始文件逐字节一致。网关主题、favicon 和网站分享图由此来源派生并记录用途；纳入源文件不代表所有现有页面已完成替换。

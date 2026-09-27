@@ -133,3 +133,9 @@
 ### G1 基础 Linux 构建及持续验证
 
 提交 `558a2f8fee0fc0ba37098c0fdde667665a40bed2` 的 [CI 36314775493](https://github.com/NSIETeam/miraphant/actions/runs/36314775493) 静态打包和 Linux 网关构建通过。该运行尚未执行积分专项；主 agent 将已有七项账本定向用例加入后续 CI，避免只有编译检查而不检查账务行为。新 workflow 的执行结果需要另查，不能回填为本次运行已有的证据。
+
+### HTTP 接口初次复审（证据不足，未放行）
+
+主 agent 独立运行 controller/router/middleware/model 定向验证，controller 0.457s、model 1.151s 通过，router/middleware 无独立测试。阅读用例后确认 HTTP 部分仅检查空钱包、普通客户后台拒绝、公开价格、缺 CSRF 和功能关闭；尚未证明成功入账、定价估算、资源所有者、真实撤权及原有 schema 升级。已要求 Luna 补齐实际业务链路后再交付。
+
+钱包累计入账与当前余额必须采用不同字段，历史迁移来源不能自动归类为赠送。此节点未提交业务代码，也未上线。
