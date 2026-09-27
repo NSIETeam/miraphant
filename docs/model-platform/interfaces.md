@@ -74,6 +74,12 @@ Cookie 登录的写操作具备 CSRF 防护；退款操作另需动作绑定的�
 
 当前退款授权使用独立 capability：role 100 精确匹配时拥有平台能力，role 10 不自动获得财务权限。客服只读授权仅可读取；审批权限只能把申请推进到 `review_approved`，必须另由具备 `refund.submit` 的人员确认提交。`review_approved` 不进入自动恢复派发。审批、拒绝、提交分别绑定独立票据、业务键和原因；重复提交同一已完成业务键可恢复既有结果，不重复消费资金或生成渠道退款号。
 
+## 旧余额查询接口的兼容边界
+
+积分模式下，`/dashboard/billing/subscription`、`/v1/dashboard/billing/subscription`、`/dashboard/billing/usage`、`/v1/dashboard/billing/usage` 不再提供旧额度或美元语义的数据：通过原模型密钥认证后返回 HTTP 409，`error.code` 为 `legacy_billing_disabled`。未认证请求仍由原认证层拒绝。不得将积分填入 `*_usd` 字段，也不返回假零余额。
+
+客户应登录 `/console/wallet` 查看积分；`/api/points/wallet` 使用自身现有的账户登录鉴权，不能把旧 billing 路径的模型密钥视作钱包会话。模型请求与模型 token/usage 计量字段继续保留协议兼容。关闭积分模式后，这四个旧接口继续使用原有契约。
+
 ## 页面验收
 
 每个页面覆盖桌面／手机、未登录／普通客户／财务／管理员、加载／空／错误状态。确认历史 One API 与 ClawMaster 商业品牌残留、Logo 比例、浏览器标题、清缓存后初次加载及邮件文案。

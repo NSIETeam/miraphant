@@ -169,7 +169,7 @@ const OperationSetting = () => {
     <Grid columns={1}>
       <Grid.Column>
         {loadError ? <Message negative>设置读取失败。请确认当前管理员权限后重试。<div><button type='button' className='platform-button secondary' onClick={getOptions}>重试</button></div></Message> : !optionsReady ? <div className='platform-state'>正在核对服务端计费模式与设置…</div> : <Form loading={loading}>
-          {pointsMode === true && <Message info>当前使用积分账本。旧美元额度、注册赠额与倍率设置已只读；已有历史值保留，不会换算成积分。<div className='brand-settings-links'><Link to='/admin/pricing'>查看生效价格</Link><Link to='/admin/packages'>查看充值套餐</Link><Link to='/console/wallet'>打开客户充值页</Link></div></Message>}
+          {pointsMode === true && <Message info>当前使用积分账本。旧美元额度、注册赠额、倍率及旧 Billing 显示设置已只读；已有历史值保留，不会换算成积分。<div className='brand-settings-links'><Link to='/admin/pricing'>查看生效价格</Link><Link to='/admin/packages'>查看充值套餐</Link><Link to='/console/wallet'>打开客户充值页</Link></div></Message>}
           {pointsMode === null && <Message warning>正在核对服务端计费模式；旧额度和倍率设置暂不显示。</Message>}
           <Header as='h3'>
             通用设置
@@ -222,18 +222,20 @@ const OperationSetting = () => {
               name='DisplayInCurrencyEnabled'
               onChange={handleInputChange}
             />}
-            <Form.Checkbox
-              checked={inputs.DisplayTokenStatEnabled === 'true'}
-              label='Billing 相关 API 显示令牌额度而非用户额度'
-              name='DisplayTokenStatEnabled'
-              onChange={handleInputChange}
-            />
-            <Form.Checkbox
-              checked={inputs.ApproximateTokenEnabled === 'true'}
-              label='使用近似的方式估算 token 数以减少计算量'
-              name='ApproximateTokenEnabled'
-              onChange={handleInputChange}
-            />
+            {pointsMode === false && <>
+              <Form.Checkbox
+                checked={inputs.DisplayTokenStatEnabled === 'true'}
+                label='Billing 相关 API 显示令牌额度而非用户额度'
+                name='DisplayTokenStatEnabled'
+                onChange={handleInputChange}
+              />
+              <Form.Checkbox
+                checked={inputs.ApproximateTokenEnabled === 'true'}
+                label='使用近似的方式估算 token 数以减少计算量'
+                name='ApproximateTokenEnabled'
+                onChange={handleInputChange}
+              />
+            </>}
           </Form.Group>
           <Form.Button onClick={() => {
             submitConfig('general').then();

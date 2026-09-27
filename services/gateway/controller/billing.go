@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
@@ -8,7 +10,21 @@ import (
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 )
 
+func rejectLegacyBillingInPointsMode(c *gin.Context) bool {
+	if !config.PointsBillingEnabled {
+		return false
+	}
+	c.JSON(http.StatusConflict, gin.H{"error": gin.H{
+		"code":    "legacy_billing_disabled",
+		"message": "积分模式不提供旧版美元计费信息，请在积分钱包查看账户余额。",
+	}})
+	return true
+}
+
 func GetSubscription(c *gin.Context) {
+	if rejectLegacyBillingInPointsMode(c) {
+		return
+	}
 	var remainQuota int64
 	var usedQuota int64
 	var err error
@@ -63,6 +79,9 @@ func GetSubscription(c *gin.Context) {
 }
 
 func GetUsage(c *gin.Context) {
+	if rejectLegacyBillingInPointsMode(c) {
+		return
+	}
 	var quota int64
 	var err error
 	var token *model.Token
