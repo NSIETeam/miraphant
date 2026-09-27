@@ -1,17 +1,25 @@
 # Miraphant 网关源码纳管与实现审计
 
 审计日期：2026-09-27
-状态：P0 可行性实证完成；等待主 agent 审核后进入实现
+状态：P0 源码纳管及本地构建完成；等待主 agent 审核。生产切换和积分/支付功能仍未实施。
 范围：核对规格与 OneAPI v0.6.10 上游代码，确定源码治理方式、功能改造落点和阻塞。本文不代表网关已接入、支付已开通或任何功能已上线。
 
 ## 核验结论
 
 - 当前 `NSIETeam/miraphant` 仓库（分支 `docs/miraphant-points-payments`，HEAD `6e99183`）是静态官网和产品规格，没有 Go 服务源码、支付 SDK、网关部署定义或数据库迁移。仓库内未发现 `AGENTS.md`。
-- 上游 `songquanpeng/one-api` 的 `v0.6.10` 标签可复现，指向 commit `3915ce9814b8261a1ab13ed93adec58b463cd75c`。源码已只读检出到任务工作区 `work/one-api-reference`，没有加入官网仓库。
+- 上游 `songquanpeng/one-api` 的 `v0.6.10` 标签可复现，指向 commit `3915ce9814b8261a1ab13ed93adec58b463cd75c`。本阶段已将完整源码基线纳入本仓库 `services/gateway/`，保留 LICENSE 并在 `services/gateway/UPSTREAM.md` 记录出处及差异。
 - OneAPI 的模型中转、现有用户会话、模型渠道和访问密钥可复用；品牌替换、独立客户钱包、可靠积分结算、微信／支付宝订单与退款需要新增服务端和数据层，不能只靠配置或改静态页面完成。
 - `/api/topup` 是管理员 API：`controller/user.go::AdminTopUp` 直接增加用户 quota，再另写充值日志；它没有支付单号、幂等键、回调校验或事务性账本。客户已有 `/api/user/topup` 是兑换码兑换，不能借名承载支付回调或自动重试。
 - 现有模型调用先通过 Redis 和 DB 分别扣用户与令牌 quota，最终结算由 goroutine 异步执行；`usage == nil` 时不结算也不释放冻结额度。它不满足规格要求的预扣／结算幂等、数据库单一事务或积分单一账本。
 - 支付商户未开通。微信和支付宝实现必须是真实渠道适配，配置与收款总开关默认关闭；没有商户凭证时只可开发关闭状态、校验路径和人工构造的签名测试，不得伪造成功通知或虚构实付结果。
+
+## P0 纳管和构建执行状态
+
+- `services/gateway/` 已纳入上游 tag 的 545 个文件，逐个做 SHA-256 比对，内容差异为 0；上游 LICENSE 与 tag 字节一致。导入源码排除 `.git`、node_modules、构建输出、数据库、日志、缓存和运行数据；构建后 `node_modules` 已清理，`web/build/` 仅保留为 Git 忽略的本地 embed 构建输出。三主题 `package.json` 保持原样；因上游 tag 无 npm 锁文件，按其依赖声明生成并纳入三个 lockfile，后续构建走 `npm ci`。
+- [services/gateway/BUILDING.md](../../services/gateway/BUILDING.md) 和 `services/gateway/scripts/build-local.sh` 提供独立构建方式。实际构建使用 Go `1.25.1 darwin/arm64`、Node `24.20.0`、npm `11.19.0`；default、berry、air 均显示 `Compiled successfully`，Go 网关编译成功，`--version` 返回 `miraphant-v0.6.10+3915ce9`。本地二进制 SHA-256：`d25d46429c9541124e21f194f2cb8816b3f4e41f58583e6d439efe3253cabdb2`，产物写入仓库外 `work/miraphant-gateway-build/`；前端嵌入资源位于被 Git 忽略的 `services/gateway/web/build/`。这只证明 macOS/arm64 本地构建，CI 的 Linux/amd64 构建尚未运行，不能作为生产目标架构验收。
+- npm 安装输出含上游旧依赖弃用提示、安装脚本提示；三个主题仍然全部通过编译。air 主题另有约 989 KB gzip 前主 JS bundle 的 CRA 体积提示，未阻断构建。
+- `scripts/build-pages.py` 将 51 个跟踪中的官网页面和依赖资源复制到仓库外的干净 staging 目录。构建两次均通过；临时夹验证了仓库祖先、未标记目录、输出 symlink、指向仓库的父 symlink 和 allowlist 中的源 symlink 均拒绝删除/复制，旧的标记产物可安全刷新。新建 `.github/workflows/build-check.yml` 只做静态 staging 和 Go/前端构建检查，不部署，也未改线上 Pages 配置。
+- 线上实际部署、数据库和一致性备份见 [PRODUCTION-BASELINE.md](PRODUCTION-BASELINE.md)。当前运行版本字符串是 `v0.6.10`，但生产二进制哈希尚未与上游 release 文件逐字节比对；生产架构为 Linux/x86_64，本地成功不证明生产可运行。主 agent 的隔离恢复验证不构成新版本部署或切流验收。
 
 ## 可行性与来源治理建议
 
@@ -107,12 +115,16 @@
 
 ## 阻塞与验收门
 
-1. **生产源码/部署归属待证**：版本号 v0.6.10 不足以识别镜像 digest、线上补丁或数据库版本。获取构建和部署资料、恢复方案前不得声称已纳管线上网关，也不得切流。源码纳管后须验证 Pages artifact 只含清单内官网静态资源，`services/gateway/`、运行配置、数据库和日志不对公众静态发布。
+1. **生产构建来源与切换待证**：运行状态、数据库、备份和隔离恢复已记录在 [PRODUCTION-BASELINE.md](PRODUCTION-BASELINE.md)；生产运行二进制哈希尚未与官方 release 文件或可复现 Linux/x86_64 构建比对。完成目标架构产物验证和发布审阅前不得切流。源码纳管后须验证 Pages artifact 只含清单内官网静态资源，`services/gateway/`、运行配置、数据库和日志不对公众静态发布。
 2. **余额迁移决策待业务确认**：旧 quota 到 CNY/积分的历史换算无默认等价关系；需来源清单和经确认的迁移版本，来源不明项隔离待处理。
 3. **支付开通待商户办理**：正式主体、结算账户、API 凭证、域名审核、产品开通状态均需通过商户流程确认；未完成时微信/支付宝与充值全局开关保持关闭。
 4. **价格发布待成本验证**：`pricing-draft.json` 是建议值、无模型绑定；每个可售模型需核验真实计量方式和成本后发布价格版本。
 5. **按规格执行的验收**：新代码还须覆盖通知并发重放、金额/签名/商户不匹配、服务中断和通知丢失、关单竞态、同一逻辑模型请求重复结算、流式中断、无 usage、余额不足、退款与消费并发、角色越权、价格切换、旧余额迁移和备份恢复。无真实商户账户不能宣称真实收款、真实退款或双渠道验收通过。
 
-## 本次实证边界
+## P0 阶段边界
 
-本次工作只核对仓库、产品规格及公开的 OneAPI v0.6.10 源码，并新增本审计文件。未连接线上管理后台或生产主机，未读取凭据，未修改线上系统，未修改网关功能源码，未创建网关仓库，未提交或推送代码。上游源码工作副本位于 `work/one-api-reference`，供本任务本地审阅，不属于官网 PR。
+本阶段新增上游源码基线、构建说明、锁文件、独立构建入口、静态站点 allowlist staging 和只做构建检查的 CI。没有实现积分账本、支付功能或生产部署，也没有修改线上服务或线上 Pages 配置；未提交或推送。本地构建为 macOS/arm64，Linux/x86_64 CI 与生产发布检查尚待主 agent 后续审核。线上当前服务、SQLite 备份和隔离恢复证据见 [PRODUCTION-BASELINE.md](PRODUCTION-BASELINE.md)。
+
+## 首次审计阶段边界（历史记录）
+
+首次审计只核对官网仓库、产品规格和公开的 OneAPI v0.6.10 源码，并新增本文件；当时未纳管服务源码。其余实现、生产验证和商户验收边界以后续阶段状态为准。
