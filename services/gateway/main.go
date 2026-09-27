@@ -81,7 +81,7 @@ func main() {
 		return
 	}
 	recoveryEnabled := strings.EqualFold(strings.TrimSpace(os.Getenv("POINTS_REFUND_RECOVERY_ENABLED")), "true")
-	if config.PointsBillingEnabled || config.WeChatPayEnabled || config.AlipayConfigured || recoveryEnabled {
+	if config.PointsBillingEnabled || config.WeChatPayEnabled || config.AlipayConfigured || config.PointReconciliationSourceKeyID != "" || config.PointReconciliationSourceKeyBase64 != "" || recoveryEnabled {
 		if err := model.RequirePointsSchema(); err != nil {
 			logger.FatalLog("points or payment processing is configured but its schema is not ready")
 		}

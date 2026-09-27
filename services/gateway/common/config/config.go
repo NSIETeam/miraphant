@@ -197,3 +197,8 @@ var AlipayPrivateKeyFile = env.String("ALIPAY_PRIVATE_KEY_FILE", "")
 var AlipayPublicKeyFile = env.String("ALIPAY_PUBLIC_KEY_FILE", "")
 var AlipayNotifyURL = env.String("ALIPAY_NOTIFY_URL", "")
 var AlipayReturnURL = env.String("ALIPAY_RETURN_URL", "")
+
+// Reconciliation source encryption is independent from session and payment
+// secrets. Import is disabled unless both values are explicitly configured.
+var PointReconciliationSourceKeyID = env.String("POINTS_RECONCILIATION_SOURCE_KEY_ID", "")
+var PointReconciliationSourceKeyBase64 = env.String("POINTS_RECONCILIATION_SOURCE_KEY_BASE64", "")

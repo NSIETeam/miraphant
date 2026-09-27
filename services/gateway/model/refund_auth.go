@@ -18,12 +18,15 @@ import (
 )
 
 const (
-	RefundCapabilityRead      = "refund.read"
-	RefundCapabilityReview    = "refund.review"
-	RefundCapabilitySubmit    = "refund.submit"
-	RefundCapabilityReconcile = "refund.reconcile"
-	RefundCapabilityAudit     = "refund.audit"
-	RefundCapabilityManage    = "capability.manage"
+	RefundCapabilityRead           = "refund.read"
+	RefundCapabilityReview         = "refund.review"
+	RefundCapabilitySubmit         = "refund.submit"
+	RefundCapabilityReconcile      = "refund.reconcile"
+	RefundCapabilityAudit          = "refund.audit"
+	RefundCapabilityManage         = "capability.manage"
+	ReconciliationCapabilityRead   = "reconciliation.read"
+	ReconciliationCapabilityImport = "reconciliation.import"
+	ReconciliationCapabilityNote   = "reconciliation.note"
 
 	RefundStepUpGrant  = "capability.grant"
 	RefundStepUpRevoke = "capability.revoke"
@@ -32,6 +35,7 @@ const (
 var delegatedRefundCapabilities = map[string]struct{}{
 	RefundCapabilityRead: {}, RefundCapabilityReview: {}, RefundCapabilitySubmit: {},
 	RefundCapabilityReconcile: {}, RefundCapabilityAudit: {},
+	ReconciliationCapabilityRead: {}, ReconciliationCapabilityImport: {}, ReconciliationCapabilityNote: {},
 }
 
 var ErrRefundAuthUnavailable = errors.New("refund authorization is unavailable")
@@ -224,7 +228,8 @@ func RefundCapabilitiesForUser(userID int) ([]string, error) {
 		return []string{}, nil
 	}
 	if user.Role == RoleRootUser {
-		return []string{RefundCapabilityRead, RefundCapabilityReview, RefundCapabilitySubmit, RefundCapabilityReconcile, RefundCapabilityAudit, RefundCapabilityManage}, nil
+		return []string{RefundCapabilityRead, RefundCapabilityReview, RefundCapabilitySubmit, RefundCapabilityReconcile, RefundCapabilityAudit, RefundCapabilityManage,
+			ReconciliationCapabilityRead, ReconciliationCapabilityImport, ReconciliationCapabilityNote}, nil
 	}
 	var grants []RefundCapabilityGrant
 	if err := DB.Where("user_id = ? AND revoked_at IS NULL", userID).Order("capability ASC").Find(&grants).Error; err != nil {

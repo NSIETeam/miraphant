@@ -138,6 +138,42 @@ func PaymentUserWriteRateLimit() func(c *gin.Context) {
 	}
 }
 
+// ReconciliationImportRateLimit is a low per-operator budget for network and
+// database intensive statement downloads.
+func ReconciliationImportRateLimit() func(c *gin.Context) {
+	const limit = 30
+	const duration = int64(60 * 60)
+	if !common.RedisEnabled {
+		inMemoryRateLimiter.Init(config.RateLimitKeyExpirationDuration)
+	}
+	return func(c *gin.Context) {
+		id := c.GetInt(ctxkey.Id)
+		if id <= 0 {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		key := strconv.Itoa(id)
+		if common.RedisEnabled {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			count, err := common.RDB.Eval(ctx, `local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]); end; return n`, []string{"rateLimit:RECONIMPORT" + key}, duration).Int()
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "暂时无法校验导入频率"})
+				return
+			}
+			if count > limit {
+				c.Header("Retry-After", strconv.FormatInt(duration, 10))
+				c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "导入次数已达上限，请稍后重试"})
+			}
+		} else {
+			if !inMemoryRateLimiter.Request("RECONIMPORT"+key, limit, duration) {
+				c.Header("Retry-After", strconv.FormatInt(duration, 10))
+				c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "导入次数已达上限，请稍后重试"})
+			}
+		}
+	}
+}
+
 func memoryRateLimiterForKey(c *gin.Context, maxRequestNum int, duration int64, key string) {
 	if !inMemoryRateLimiter.Request(key, maxRequestNum, duration) {
 		c.Status(http.StatusTooManyRequests)

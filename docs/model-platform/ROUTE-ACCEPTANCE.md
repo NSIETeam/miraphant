@@ -174,3 +174,19 @@
 ### 终态提示修正复核
 
 Luna 将申请响应提示改为读取返回状态：成功显示“退款已完成”，拒绝或明确失败显示冻结已释放，其他状态提示查看进度。父审查修改并独立运行 default 生产构建成功，主包 `main.db7114e9.js`；仅有既有 ESLint 警告。本次未重复执行浏览器故障注入，不扩大前述验收范围。
+
+
+## 品牌与旧设置剩余收口范围（源码复核，2026-09-28）
+
+当前 `model/option.go` 已固定 SystemName=Miraphant、Logo=/miraphant.svg、Footer 为空，并拒绝写入这三个旧品牌项；邮件标题读取固定 SystemName。Header/Footer 与客户端名称也已使用 Miraphant，因此旧后台仍显示可编辑的名称/Logo/页脚表单是不准确的产品状态，需要改为品牌展示与实际可配置的客服信息入口。上游 MIT 声明继续保留。
+
+下一轮品牌页面需覆盖：
+
+- `/admin/brand` 当前占位页，改为真实品牌资料及客服配置状态；后台首页不能继续宣称不存在的统一配置能力。
+- `/admin/setting` 仍引用 OtherSetting 和 OperationSetting；前者旧品牌写入必然被服务器拒绝，后者仍暴露 TopUpLink、QuotaPerUnit 与旧倍率等。积分模式需清楚引导至现有价格版本、套餐与钱包，保留实际有效的认证/邮件系统设置，并在服务端禁止造成计费入口分裂的旧参数修改。
+- `public/index.html` 的 noscript 仍为英文；浏览器图标仅 SVG，品牌资源派生及分享元数据仍需明确覆盖。
+- `/api/option` 当前沿用 RootAuth，修改入口未在路由绑定新管理端的 CSRF 防护。设置迁移需与最新数据库角色/会话及 CSRF 边界一致，不能仅隐藏前端表单。
+
+这是源码证据及待实现清单，尚未进行这一轮浏览器验收，不能记为上述路由完成。
+
+父进一步检查静态资源：`public/logo.png` 仍为旧 OpenAI 结形图（已本地查看），`favicon.ico` 也仍作为旧文件存在。即使 HTML 引用新 SVG，浏览器默认 favicon 请求及旧缓存路径仍需兼容替换。官方 SVG 与 `images/miraphant.svg` 摘要均为 `5f69642734d961b4616e35bfae63385030688a253763549edeca72babb791e63`，衍生图应从该源生成。OtherSetting 的“检查更新”仍指向上游 One API releases；Miraphant 分支应使用自身发布说明，避免管理者把上游版本当作当前积分系统的可直接升级版本。

@@ -584,3 +584,21 @@ Luna 已停止编辑并交接协议文档、下载/解析代码与用例。父�
 Luna 冻结交接后，父复核退款缺失分类、加密与重开库幂等用例，并独立执行 `go test -race ./model ./payment/... ./service/payments -count=1 -timeout=120s`：model 21.025s、alipay 7.040s、bill 2.428s、wechat 3.424s、service/payments 4.807s 全通过，只有既有 macOS 链接器警告。controller/router/middleware/relay 的 CI 同口径定向回归也通过；`git diff --check` 通过。
 
 允许提交 schema v12 与不可变对账批次、来源密文、逐行证据、差异及追加操作记录。原文重解析匹配、退款双标识、精确入账事件日期、分页以及重复导入已覆盖。仅支持当前 SQLite 后端；缺少可靠退款发起时间时不推断渠道退款缺账；支付宝保持 unsupported_format。全历史候选扫描的性能限制已在协议文档注明。此节点没有运行配置、HTTP 或管理 UI，也没有真实商户账单验收。下一节点接线服务端配置与授权管理接口。
+
+父确认对账存储提交 `3591b14f3b907fbfc238c8b8bafa0de1b9491920` 的 CI [36351182955](https://github.com/NSIETeam/miraphant/actions/runs/36351182955) completed/success，gateway-build 与 static-staging 均通过。该结果不覆盖随后开发中的配置/管理 HTTP。
+
+
+## 对账管理 HTTP 开发早审（未放行）
+
+Luna 已开始独立源密钥配置、reconciliation.read/import/note 能力及 schema v13 导入审计表。父检查开发中服务层，发现下载 context 尚未传到数据库事务；要求新增 context 导入入口，取消/超时不得继续无界写事务。成功批次与导入审计不能在两个无关联事务中先后写入，否则批次成功后审计写入失败或进程崩溃会丢失操作者。已要求同事务关联，或先持久化不可变尝试记录并追加终态；取消时失败审计需独立有界收尾。等待实现及故障用例，目前没有 HTTP 节点验收结论。
+
+父复核审计事务化补丁，发现导入末尾旧错误 fallback 仅凭同源批次存在就返回成功，会吞掉新增审计失败或 context 取消。已要求带审计入口保留失败，或核实同请求终态证据后才返回成功；补同源批次已存在、审计触发器失败及取消用例。开发中问题尚未放行。
+
+
+## 对账配置与管理 HTTP 稳定节点：允许提交
+
+Luna 冻结交接后，父复核独立密钥配置、真实会话与 reconciliation.read/import/note 能力、CSRF/请求限额、导入串行门闩及超时、批次和终态审计同事务、started 记录及独立 5 秒失败收尾。带审计导入不再用旧同源 fallback 吞掉审计错误；v12→v13 用例直接比较原有密文、nonce 和 key ID。只读人员可以查批次，但导入/备注被拒绝；撤销 read 后请求立即拒绝。数据库故障使用安全的服务器错误响应。
+
+父独立执行 `go test -race ./controller ./model ./service/payments -run 'Test(AdminReconciliation|Reconciliation)' -count=3 -timeout=120s` 全通过：controller 12.033s、model 5.354s、service/payments 2.977s。CI 同口径 controller/router/middleware/model/relay 定向回归也全通过；只有既有 macOS 链接器警告，`git diff --check` 通过。
+
+允许提交此 HTTP 节点。管理 UI 尚未接线；导入路由使用合成服务端下载结果测试，真实签名下载适配器的证据仍来自前一协议测试节点，并非实商户联调。支付宝解析、渠道实账、生产迁移与发布仍未完成。限流当前固定每人每小时 30 次、单进程导入串行；不是多实例分布式任务调度。

@@ -1,8 +1,8 @@
 # Reconciliation storage and matching boundary
 
-This document describes the first SQLite reconciliation storage layer. It does
-not enable bill downloads, imports through HTTP, automatic point changes, or
-merchant operations.
+This document describes the SQLite reconciliation store and its authorized
+admin API. It does not enable automatic point changes or declare a batch
+reconciled merely because it was downloaded and imported.
 
 ## Batch evidence
 
@@ -13,16 +13,15 @@ scope/date/format creates a new import version; earlier batches and findings
 remain unchanged. Batch, normalized rows, and initial findings commit in one
 SQLite transaction.
 
-The original bill is encrypted with AES-256-GCM using a caller-supplied,
-explicit source key ID and 32-byte server key. The batch identity is
-authenticated as additional data. The key must be separate from login/session
-secrets and must not be generated at startup. An absent or invalid key prevents
-import. There is no plaintext fallback. This node does not yet wire a runtime
-configuration loader or HTTP import route. Metadata and list queries omit
-ciphertext. Internal decryption verifies the key ID and source SHA-256; no
-public raw-file access route is part of this node. Key rotation, authorized
-raw-file access, retention, and deletion policy still require operational
-design.
+The original bill is encrypted with AES-256-GCM using the explicit source key
+ID and 32-byte server key configured by `POINTS_RECONCILIATION_SOURCE_KEY_ID`
+and `POINTS_RECONCILIATION_SOURCE_KEY_BASE64`. The batch identity is
+authenticated as additional data. The key is separate from login/session
+secrets and is never generated at startup. An absent or invalid key prevents
+imports. There is no plaintext fallback. Metadata, list, detail and HTTP
+responses omit ciphertext. No raw-file export route is provided. Historical
+source decryption after key rotation, retention, and deletion still need an
+operational policy.
 
 Normalized line records retain source line number and digest, provider IDs,
 status, currency, and separate gross, settlement, discount, refund, fee, and
@@ -68,6 +67,37 @@ not yet indexed or paged by provider event date; do not run imports concurrently
 or treat this first node as suitable for unbounded historical backfills. A
 later service should narrow that query using the verified event's persisted
 normalized date without using order create/update timestamps.
+
+## Authorized admin API
+
+The routes are mounted below `/api/admin/reconciliation`. They use the actual
+login session and current database capability check, independently of the
+legacy role-10 administrator gate and the points billing switch. Root role 100
+receives `reconciliation.read`, `reconciliation.import`, and
+`reconciliation.note`. Other users need those exact delegated capabilities;
+refund permissions do not imply reconciliation access.
+
+- `GET /status`, `/batches`, `/batches/:key`, `/batches/:key/rows`,
+  `/batches/:key/differences`, `/differences/:id/actions`, and
+  `/import-attempts` require `reconciliation.read`.
+- `POST /import` requires `reconciliation.import`, same-origin CSRF, an 8 KiB
+  request limit, and a 30-per-hour per-user limit. The body accepts only
+  `provider` and `bill_date`. The URL, merchant, app, bill rows and verification
+  flags always come from the server's configured adapter. A single process
+  import gate and a 90-second request context bound work.
+- `POST /differences/:id/actions` requires `reconciliation.note`, CSRF and the
+  same bounded request size. It appends a note/query/reference record only;
+  replaying an action key with different actor, finding, action, reason or
+  business reference conflicts.
+
+Accepted import attempts first persist an actor/provider/date `started` audit
+row before provider I/O. Successful import and its final audit row commit in
+the same transaction as the batch and findings. Failed attempts append a
+sanitized fixed error code using a separate bounded database context. A failed
+database write never returns an import success response. Provider errors,
+download URLs, keys, and raw source bytes are not returned or stored in the
+attempt audit. Imported Alipay files are explicitly `unsupported_format` until
+an authoritative parser is available.
 
 ## Supported formats
 

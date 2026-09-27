@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -133,6 +134,31 @@ type PointReconciliationAction struct {
 	CreatedAt    time.Time
 }
 
+// PointReconciliationImportAudit records accepted import attempts without
+// retaining provider payloads, download URLs, or transport/database errors.
+type PointReconciliationImportAudit struct {
+	ID           uint      `gorm:"primaryKey"`
+	RequestKey   string    `gorm:"size:64;not null;uniqueIndex:idx_recon_import_request_phase"`
+	Phase        string    `gorm:"size:12;not null;uniqueIndex:idx_recon_import_request_phase"` // started, result
+	ActorUserID  int       `gorm:"not null;index"`
+	Provider     string    `gorm:"size:16;not null;index"`
+	BillDate     string    `gorm:"size:10;not null;index"`
+	MerchantID   string    `gorm:"size:80;not null;default:''"`
+	AppID        string    `gorm:"size:80;not null;default:''"`
+	BatchID      *uint     `gorm:"index"`
+	SourceSHA256 string    `gorm:"size:64;not null;default:''"`
+	Outcome      string    `gorm:"size:16;not null;index"` // imported, replayed, failed
+	ErrorCode    string    `gorm:"size:40;not null;default:''"`
+	CreatedAt    time.Time `gorm:"not null;index"`
+}
+
+func (*PointReconciliationImportAudit) BeforeUpdate(*gorm.DB) error {
+	return errors.New("reconciliation import audits are append-only")
+}
+func (*PointReconciliationImportAudit) BeforeDelete(*gorm.DB) error {
+	return errors.New("reconciliation import audits are append-only")
+}
+
 func (*PointReconciliationAction) BeforeUpdate(*gorm.DB) error {
 	return errors.New("reconciliation actions are append-only")
 }
@@ -212,6 +238,18 @@ type reconciliationIdentity struct {
 }
 
 func ImportPointReconciliationBill(input PointReconciliationBillInput, sourceKey ReconciliationSourceKey) (PointReconciliationBatch, bool, error) {
+	return ImportPointReconciliationBillContext(context.Background(), input, sourceKey)
+}
+
+func ImportPointReconciliationBillContext(ctx context.Context, input PointReconciliationBillInput, sourceKey ReconciliationSourceKey) (PointReconciliationBatch, bool, error) {
+	return importPointReconciliationBill(ctx, input, sourceKey, nil)
+}
+
+func ImportPointReconciliationBillWithAudit(ctx context.Context, input PointReconciliationBillInput, sourceKey ReconciliationSourceKey, audit RecordPointReconciliationImportAuditRequest) (PointReconciliationBatch, bool, error) {
+	return importPointReconciliationBill(ctx, input, sourceKey, &audit)
+}
+
+func importPointReconciliationBill(ctx context.Context, input PointReconciliationBillInput, sourceKey ReconciliationSourceKey, audit *RecordPointReconciliationImportAuditRequest) (PointReconciliationBatch, bool, error) {
 	if DB == nil || DB.Dialector.Name() != "sqlite" {
 		return PointReconciliationBatch{}, false, errors.New("reconciliation import is available only on the verified SQLite backend")
 	}
@@ -242,7 +280,7 @@ func ImportPointReconciliationBill(input PointReconciliationBillInput, sourceKey
 	}
 	var result PointReconciliationBatch
 	created := false
-	err = pointsTransaction(func(tx *gorm.DB) error {
+	err = pointsTransactionWithContext(ctx, DB, func(tx *gorm.DB) error {
 		var prior PointReconciliationBatch
 		lookup := tx.Select(reconciliationBatchMetadataColumns).Where("batch_key = ?", batchKey).First(&prior)
 		if lookup.Error == nil {
@@ -250,6 +288,15 @@ func ImportPointReconciliationBill(input PointReconciliationBillInput, sourceKey
 				return ErrReconciliationConflict
 			}
 			result = prior
+			if audit != nil {
+				outcome := "replayed"
+				if prior.Status == "unsupported_format" {
+					outcome = "replayed"
+				}
+				if err := createPointReconciliationImportAuditTx(tx, *audit, outcome, &prior.ID, prior.SourceSHA256); err != nil {
+					return err
+				}
+			}
 			return nil
 		}
 		if lookup.Error != gorm.ErrRecordNotFound {
@@ -307,11 +354,23 @@ func ImportPointReconciliationBill(input PointReconciliationBillInput, sourceKey
 		result.SourceNonce = nil
 		result.SourceCiphertext = nil
 		created = true
+		if audit != nil {
+			outcome := "imported"
+			if batch.Status == "unsupported_format" {
+				outcome = "unsupported"
+			}
+			if err := createPointReconciliationImportAuditTx(tx, *audit, outcome, &batch.ID, batch.SourceSHA256); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 	if err != nil {
+		if audit != nil {
+			return PointReconciliationBatch{}, false, err
+		}
 		var prior PointReconciliationBatch
-		if lookupErr := DB.Select(reconciliationBatchMetadataColumns).Where("batch_key = ?", batchKey).First(&prior).Error; lookupErr == nil {
+		if lookupErr := DB.WithContext(ctx).Select(reconciliationBatchMetadataColumns).Where("batch_key = ?", batchKey).First(&prior).Error; lookupErr == nil {
 			if sameReconciliationBatch(prior, input, status) {
 				return prior, false, nil
 			}
@@ -839,6 +898,92 @@ func RecordPointReconciliationAction(request RecordPointReconciliationActionRequ
 		return tx.Create(&result).Error
 	})
 	return result, err
+}
+
+type RecordPointReconciliationImportAuditRequest struct {
+	RequestKey   string
+	Phase        string
+	ActorUserID  int
+	Provider     string
+	BillDate     string
+	MerchantID   string
+	AppID        string
+	BatchID      *uint
+	SourceSHA256 string
+	Outcome      string
+	ErrorCode    string
+}
+
+func RecordPointReconciliationImportAudit(request RecordPointReconciliationImportAuditRequest) error {
+	return RecordPointReconciliationImportAuditContext(context.Background(), request)
+}
+
+func RecordPointReconciliationImportAuditContext(ctx context.Context, request RecordPointReconciliationImportAuditRequest) error {
+	if len(request.RequestKey) != 64 || !validDigest(request.RequestKey) || request.ActorUserID <= 0 ||
+		(request.Provider != "wechat" && request.Provider != "alipay") || len(request.BillDate) != 10 ||
+		(request.Phase != "started" && request.Phase != "result") ||
+		(request.Outcome != "started" && request.Outcome != "imported" && request.Outcome != "replayed" && request.Outcome != "unsupported" && request.Outcome != "failed") ||
+		len(request.MerchantID) > 80 || len(request.AppID) > 80 ||
+		(request.SourceSHA256 != "" && !validDigest(request.SourceSHA256)) || len(request.ErrorCode) > 40 {
+		return errors.New("invalid reconciliation import audit")
+	}
+	if request.Phase == "started" && (request.Outcome != "started" || request.ErrorCode != "" || request.BatchID != nil || request.SourceSHA256 != "") ||
+		request.Phase == "result" && request.Outcome == "started" ||
+		request.Outcome == "failed" && request.ErrorCode == "" || request.Outcome != "failed" && request.ErrorCode != "" {
+		return errors.New("invalid reconciliation import audit outcome")
+	}
+	if request.Phase == "started" {
+		return pointsTransactionWithContext(ctx, DB, func(tx *gorm.DB) error {
+			entry := PointReconciliationImportAudit{RequestKey: request.RequestKey, Phase: "started", ActorUserID: request.ActorUserID, Provider: request.Provider, BillDate: request.BillDate,
+				MerchantID: request.MerchantID, AppID: request.AppID, Outcome: "started", CreatedAt: time.Now().UTC()}
+			return tx.Create(&entry).Error
+		})
+	}
+	return pointsTransactionWithContext(ctx, DB, func(tx *gorm.DB) error {
+		return createPointReconciliationImportAuditTx(tx, request, request.Outcome, request.BatchID, request.SourceSHA256)
+	})
+}
+
+func createPointReconciliationImportAuditTx(tx *gorm.DB, request RecordPointReconciliationImportAuditRequest, outcome string, batchID *uint, sourceSHA256 string) error {
+	var started PointReconciliationImportAudit
+	if err := tx.Where("request_key = ? AND phase = ?", request.RequestKey, "started").First(&started).Error; err != nil {
+		return err
+	}
+	if started.ActorUserID != request.ActorUserID || started.Provider != request.Provider || started.BillDate != request.BillDate ||
+		started.MerchantID != request.MerchantID || started.AppID != request.AppID {
+		return ErrReconciliationConflict
+	}
+	entry := PointReconciliationImportAudit{RequestKey: request.RequestKey, Phase: "result", ActorUserID: request.ActorUserID, Provider: request.Provider, BillDate: request.BillDate,
+		MerchantID: request.MerchantID, AppID: request.AppID, BatchID: batchID, SourceSHA256: strings.ToLower(sourceSHA256), Outcome: outcome, ErrorCode: request.ErrorCode, CreatedAt: time.Now().UTC()}
+	return tx.Create(&entry).Error
+}
+
+func ListPointReconciliationImportAudits(beforeID uint, limit int, provider, outcome string) ([]PointReconciliationImportAudit, bool, error) {
+	if limit < 1 || limit > 100 {
+		limit = 30
+	}
+	if provider != "" && provider != "wechat" && provider != "alipay" || outcome != "" && outcome != "imported" && outcome != "replayed" && outcome != "unsupported" && outcome != "failed" && outcome != "started" {
+		return nil, false, errors.New("invalid reconciliation import audit filter")
+	}
+	query := DB.Model(&PointReconciliationImportAudit{}).Select("id, request_key, phase, actor_user_id, provider, bill_date, merchant_id, app_id, batch_id, source_sha256, outcome, error_code, created_at")
+	if beforeID > 0 {
+		query = query.Where("id < ?", beforeID)
+	}
+	if provider != "" {
+		query = query.Where("provider = ?", provider)
+	}
+	if outcome != "" {
+		query = query.Where("outcome = ?", outcome)
+	}
+	var rows []PointReconciliationImportAudit
+	if err := query.Order("id DESC").Limit(limit + 1).Find(&rows).Error; err != nil {
+		return nil, false, err
+	}
+	more := len(rows) > limit
+	if more {
+		rows = rows[:limit]
+	}
+	return rows, more, nil
 }
 
 func ListPointReconciliationActions(differenceID uint, beforeID uint, limit int) ([]PointReconciliationAction, bool, error) {

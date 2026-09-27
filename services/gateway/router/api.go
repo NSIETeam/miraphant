@@ -83,6 +83,19 @@ func SetApiRouter(router *gin.Engine) {
 			refundAdmin.POST("/:key/submit", middleware.RefundStepUpBodyLimit(), middleware.RefundStepUpUserRateLimit(), middleware.RefundStepUpIPRateLimit(), middleware.PointsCSRF(), middleware.RefundCapabilityAuth(model.RefundCapabilitySubmit), controller.SubmitAdminPointRefund)
 			refundAdmin.POST("/:key/reconcile", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), middleware.RefundCapabilityAuth(model.RefundCapabilityReconcile), controller.ReconcileAdminPointRefund)
 		}
+		reconciliationAdmin := apiRouter.Group("/admin/reconciliation")
+		reconciliationAdmin.Use(middleware.RefundSessionAuth())
+		{
+			reconciliationAdmin.GET("/status", middleware.RefundCapabilityAuth(model.ReconciliationCapabilityRead), controller.AdminReconciliationStatus)
+			reconciliationAdmin.GET("/batches", middleware.RefundCapabilityAuth(model.ReconciliationCapabilityRead), controller.AdminReconciliationBatches)
+			reconciliationAdmin.GET("/batches/:key", middleware.RefundCapabilityAuth(model.ReconciliationCapabilityRead), controller.AdminReconciliationBatch)
+			reconciliationAdmin.GET("/batches/:key/rows", middleware.RefundCapabilityAuth(model.ReconciliationCapabilityRead), controller.AdminReconciliationRows)
+			reconciliationAdmin.GET("/batches/:key/differences", middleware.RefundCapabilityAuth(model.ReconciliationCapabilityRead), controller.AdminReconciliationDifferences)
+			reconciliationAdmin.GET("/differences/:id/actions", middleware.RefundCapabilityAuth(model.ReconciliationCapabilityRead), controller.AdminReconciliationActions)
+			reconciliationAdmin.GET("/import-attempts", middleware.RefundCapabilityAuth(model.ReconciliationCapabilityRead), controller.AdminReconciliationImportAudits)
+			reconciliationAdmin.POST("/import", middleware.RefundStepUpBodyLimit(), middleware.RefundCapabilityAuth(model.ReconciliationCapabilityImport), middleware.PointsCSRF(), middleware.ReconciliationImportRateLimit(), controller.AdminImportReconciliationBill)
+			reconciliationAdmin.POST("/differences/:id/actions", middleware.RefundStepUpBodyLimit(), middleware.RefundCapabilityAuth(model.ReconciliationCapabilityNote), middleware.PointsCSRF(), middleware.PaymentUserWriteRateLimit(), controller.AdminRecordReconciliationAction)
+		}
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)

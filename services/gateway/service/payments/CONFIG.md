@@ -23,8 +23,8 @@ WeChat Pay reads `WECHAT_PAY_CONFIGURED`, `WECHAT_PAY_MERCHANT_ID`,
 Key files must be readable by the gateway process and must not be placed under
 the public website root. The adapters use fixed official provider endpoints;
 no endpoint or callback URL is accepted from a customer. The enabled lanes are
-WeChat Native and Alipay desktop page-pay. H5, JSAPI, Alipay mobile web,
-refund browser flows, reconciliation, and real merchant acceptance remain
+WeChat Native and Alipay desktop page-pay. H5, JSAPI, Alipay mobile web, and
+real merchant acceptance remain
 separate work. Refund HTTP routes are available behind
 `POINTS_REFUND_OPERATIONS_ENABLED`; keep this switch false until merchant
 configuration, a published package, an eligible priced model/channel, and the
@@ -42,7 +42,7 @@ shutdown, the worker is cancelled and awaited before the database is closed.
 
 ## Implemented HTTP entry points
 
-These routes require points schema version 11, applied explicitly with
+These routes require the current points schema (version 13), applied explicitly with
 `--migrate-points`.
 Back up and stop the production service before an approved migration; startup
 does not apply the points migration automatically. Legacy orders with missing
@@ -120,8 +120,34 @@ not eligible for recovery dispatch; only a separate submit action can create
 the provider submission intent. Older `approved` records retain their prior
 recovery behavior.
 
-Provider reconciliation, payment status management and refund browser flows
-remain separate work. Points refunds have only been verified against the supported
+Provider reconciliation is available to root and users granted the independent
+`reconciliation.read`, `reconciliation.import`, and `reconciliation.note`
+capabilities. Role 10 does not receive those permissions by default, and refund
+capabilities do not grant reconciliation access. Import requires a configured
+payment provider and an independent source encryption key. It remains available
+while new purchases and points billing are paused; existing batch metadata can
+be read without source encryption being configured. Imports are limited to 30
+per user per hour and serialized within one gateway process.
+
+Set `POINTS_RECONCILIATION_SOURCE_KEY_ID` and
+`POINTS_RECONCILIATION_SOURCE_KEY_BASE64` to enable encrypted source retention.
+The latter must be standard padded Base64 decoding to exactly 32 bytes. Use a
+dedicated stable server secret, separate from login/session and payment keys;
+do not generate it at startup or expose it through environment/status APIs.
+Missing or malformed configuration disables import without disabling metadata
+reads. There is no plaintext fallback or raw-source export route. Historical
+key retention and rotation operations still need an operational procedure.
+
+The admin API is rooted at `/api/admin/reconciliation`: status, paginated batch,
+row, difference, action and import-attempt reads; `POST /import` accepts only
+provider and bill date; and `POST /differences/:id/actions` appends an operator
+note/query/reference. All routes require the current session and current
+capability checks; writes additionally require same-origin CSRF. Provider
+identity and URLs come from server configuration. WeChat ALL produces parsed
+rows; Alipay is retained as an `unsupported_format` opaque batch. Neither
+imports nor notes modify point balances or mark findings resolved.
+
+Points refunds and reconciliation are currently restricted to the verified
 single-instance SQLite configuration; other database backends are not enabled.
 
 ## Refund authorization foundation

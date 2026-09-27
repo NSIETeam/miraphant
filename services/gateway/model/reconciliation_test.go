@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
@@ -18,7 +19,7 @@ import (
 
 func migrateReconciliationTestTables(t *testing.T, db *gorm.DB) {
 	t.Helper()
-	if err := db.AutoMigrate(&PointReconciliationBatch{}, &PointReconciliationRow{}, &PointReconciliationDifference{}, &PointReconciliationAction{}); err != nil {
+	if err := db.AutoMigrate(&PointReconciliationBatch{}, &PointReconciliationRow{}, &PointReconciliationDifference{}, &PointReconciliationAction{}, &PointReconciliationImportAudit{}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -242,23 +243,124 @@ func TestReconciliationSchemaV11UpgradeCreatesTables(t *testing.T) {
 	if err := MigratePointsSchema(); err != nil {
 		t.Fatal(err)
 	}
-	for _, table := range []any{&PointReconciliationBatch{}, &PointReconciliationRow{}, &PointReconciliationDifference{}, &PointReconciliationAction{}} {
+	for _, table := range []any{&PointReconciliationBatch{}, &PointReconciliationRow{}, &PointReconciliationDifference{}, &PointReconciliationAction{}, &PointReconciliationImportAudit{}} {
 		if !db.Migrator().HasTable(table) {
-			t.Fatalf("missing v12 table %T", table)
+			t.Fatalf("missing reconciliation table %T", table)
 		}
 	}
 	var current PointsSchemaMigration
-	if err := db.Order("version DESC").First(&current).Error; err != nil || current.Version != 12 {
+	if err := db.Order("version DESC").First(&current).Error; err != nil || current.Version != pointsSchemaVersion {
 		t.Fatalf("schema marker not advanced: %+v %v", current, err)
 	}
 	if err := MigratePointsSchema(); err != nil {
 		t.Fatal(err)
 	}
 	var count int64
-	db.Model(&PointsSchemaMigration{}).Where("version = ?", 12).Count(&count)
+	db.Model(&PointsSchemaMigration{}).Where("version = ?", pointsSchemaVersion).Count(&count)
 	if count != 1 {
 		t.Fatalf("schema migration is not idempotent: %d", count)
 	}
+}
+
+func TestReconciliationSchemaV12UpgradeAddsImportAuditWithoutChangingBatches(t *testing.T) {
+	db := openPointsTestDB(t, filepath.Join(t.TempDir(), "reconciliation-v12.db"))
+	oldDB := DB
+	DB = db
+	defer func() { DB = oldDB }()
+	if err := db.AutoMigrate(&PointReconciliationBatch{}, &PointReconciliationRow{}, &PointReconciliationDifference{}, &PointReconciliationAction{}); err != nil {
+		t.Fatal(err)
+	}
+	prior := PointReconciliationBatch{BatchKey: strings.Repeat("c", 64), Provider: "alipay", MerchantID: "merchant-v12", AppID: "app-v12", BillDate: "2026-09-26", BillType: "trade", FormatVersion: "opaque-v1", ImportVersion: 1, Timezone: "Asia/Shanghai", Status: "unsupported_format", SourceSHA256: strings.Repeat("d", 64), SourceKeyID: "old-key", SourceNonce: []byte("nonce"), SourceCiphertext: []byte("ciphertext"), SourceSize: 12}
+	if err := db.Create(&prior).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&PointsSchemaMigration{Version: 12, AppliedAt: time.Now().UTC()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatal(err)
+	}
+	if !db.Migrator().HasTable(&PointReconciliationImportAudit{}) {
+		t.Fatal("v13 import audit table was not created")
+	}
+	var preserved PointReconciliationBatch
+	if err := db.First(&preserved, "batch_key = ?", prior.BatchKey).Error; err != nil || preserved.SourceSHA256 != prior.SourceSHA256 || preserved.SourceKeyID != prior.SourceKeyID || string(preserved.SourceNonce) != string(prior.SourceNonce) || string(preserved.SourceCiphertext) != string(prior.SourceCiphertext) {
+		t.Fatalf("existing batch changed during v12 upgrade: %+v err=%v", preserved, err)
+	}
+	var current PointsSchemaMigration
+	if err := db.Order("version DESC").First(&current).Error; err != nil || current.Version != 13 {
+		t.Fatalf("v12 marker not advanced: %+v err=%v", current, err)
+	}
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatal(err)
+	}
+	var versions int64
+	db.Model(&PointsSchemaMigration{}).Where("version = ?", 13).Count(&versions)
+	if versions != 1 {
+		t.Fatalf("v13 migration marker duplicated: %d", versions)
+	}
+}
+
+func TestReconciliationImportAndFinalAuditRollbackTogetherAndRespectContext(t *testing.T) {
+	db := openPointsTestDB(t, filepath.Join(t.TempDir(), "reconciliation-audit-atomic.db"))
+	oldDB := DB
+	DB = db
+	defer func() { DB = oldDB }()
+	if err := MigratePointsSchema(); err != nil {
+		t.Fatal(err)
+	}
+	input, _ := reconciliationSource(t, "2026-09-27", "configured-app", "1.00", "audit-atomic-fixture")
+	key := reconciliationKey()
+	first, created, err := ImportPointReconciliationBill(input, key)
+	if err != nil || !created {
+		t.Fatalf("seed batch failed: created=%v err=%v", created, err)
+	}
+	makeAttempt := func(seed string) RecordPointReconciliationImportAuditRequest {
+		requestKey := strings.Repeat(seed, 64)
+		started := RecordPointReconciliationImportAuditRequest{RequestKey: requestKey, Phase: "started", ActorUserID: 712, Provider: input.Provider, BillDate: input.BillDate, MerchantID: input.MerchantID, AppID: input.AppID, Outcome: "started"}
+		if err := RecordPointReconciliationImportAudit(started); err != nil {
+			t.Fatal(err)
+		}
+		started.Phase = "result"
+		return started
+	}
+	if err := db.Exec(`CREATE TRIGGER reject_reconciliation_result BEFORE INSERT ON point_reconciliation_import_audits WHEN NEW.phase = 'result' BEGIN SELECT RAISE(FAIL, 'audit unavailable'); END`).Error; err != nil {
+		t.Fatal(err)
+	}
+	newBatchRequest := makeAttempt("e")
+	changed, _ := reconciliationSource(t, "2026-09-27", "configured-app", "1.00", "audit-atomic-new-fixture")
+	if _, _, err := ImportPointReconciliationBillWithAudit(context.Background(), changed, key, newBatchRequest); err == nil {
+		t.Fatal("invalid changed source unexpectedly imported")
+	}
+	resultCount := func() (batches, rows, finals int64) {
+		db.Model(&PointReconciliationBatch{}).Count(&batches)
+		db.Model(&PointReconciliationRow{}).Count(&rows)
+		db.Model(&PointReconciliationImportAudit{}).Where("phase = ?", "result").Count(&finals)
+		return
+	}
+	if batches, rows, finals := resultCount(); batches != 1 || rows == 0 || finals != 0 {
+		t.Fatalf("failed audited import left partial evidence: batches=%d rows=%d finals=%d", batches, rows, finals)
+	}
+	if err := db.Exec("DROP TRIGGER reject_reconciliation_result").Error; err != nil {
+		t.Fatal(err)
+	}
+	priorRequest := makeAttempt("f")
+	if err := db.Exec(`CREATE TRIGGER reject_reconciliation_result BEFORE INSERT ON point_reconciliation_import_audits WHEN NEW.phase = 'result' BEGIN SELECT RAISE(FAIL, 'audit unavailable'); END`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, created, err := ImportPointReconciliationBillWithAudit(context.Background(), input, key, priorRequest); err == nil || created {
+		t.Fatalf("existing batch was returned as success despite final audit failure: created=%v err=%v", created, err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	cancelledRequest := makeAttempt("a")
+	if _, created, err := ImportPointReconciliationBillWithAudit(ctx, input, key, cancelledRequest); !errors.Is(err, context.Canceled) || created {
+		t.Fatalf("cancelled same-source replay was treated as success: created=%v err=%v", created, err)
+	}
+	if batches, rows, finals := resultCount(); batches != 1 || rows == 0 || finals != 0 {
+		t.Fatalf("audit failure/cancellation changed stored import: batches=%d rows=%d finals=%d", batches, rows, finals)
+	}
+	_ = first
 }
 
 func TestReconciliationMissingProviderUsesExactVerifiedPaymentEventDate(t *testing.T) {
