@@ -454,3 +454,5 @@ Luna 已停止编辑并交付稳定节点。父核对 v11 additive schema、持�
 父最终 CI 七包定向回归全通过（controller 1.894s、router 0.440s、model 2.626s、relay/controller 1.484s、relay/adaptor/openai 0.619s）；完整支付协议与服务 `go test -race ./payment/... ./service/payments -count=1 -timeout=120s` 全通过（alipay 8.184s、wechat 2.988s、service 3.517s）。无 Go 数据竞态，存在 macOS 既有链接器 warning；diff 检查通过。非零 cursor 按页向后扫描并回绕较早到期记录、旧 v10 本地未知通知升级后处理、重复批次不重复外呼均已覆盖。
 
 允许提交本节点。自动恢复默认关闭；恢复只处理已审批记录及已入箱证据，未知结果不释放冻结，沿用原退款号及金额。真实二进制空队列生命周期证据见前文；在途操作与重建 worker 使用合成渠道，不能声称真实商户或完整进程宕机联调。公共退款接口、细分权限与二次认证、客户/管理退款页面、支付对账及真实商户验收仍待完成。
+
+父已确认提交 `76fc5a0ca1b813e7c7104f825ab3a419398550aa` 的 [CI 36340851189](https://github.com/NSIETeam/miraphant/actions/runs/36340851189) 为 completed/success。该结果覆盖已提交的 v11 恢复节点，不包含后续开发中的退款权限基础。新版本未部署，真实支付未开放。
