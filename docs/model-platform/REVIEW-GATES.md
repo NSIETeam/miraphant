@@ -647,3 +647,20 @@ Luna 冻结交接后，父复核独立密钥配置、真实会话与 reconciliat
 - 对照支付宝官方 Java SDK v2 的 `AlipayDataDataserviceBillDownloadurlQueryModel`，确认 `secure` 是字符串；只有 `true` 请求 HTTPS 下载地址。旧请求缺少该参数，可能收到被当前安全下载器拒绝的 HTTP 地址。
 - Luna 补上签名业务参数 `secure="true"` 并加入有效签名 HTTP 地址拒绝用例；父任务检查请求签名测试和错误断言，独立执行 `go test -race ./payment/alipay ./payment/bill -count=1 -timeout=120s`，分别通过（6.866s / 2.569s）。
 - 没有 HTTP 回退、URL 改写、真实渠道调用或逐行解析能力新增。支付宝仍仅保存原始来源证据，格式为 unsupported。
+
+### 2026-09-28 离线盘点实现前的只读边界实证
+
+父任务用 TemporaryDirectory 创建合成 WAL 数据库、写入并关闭；打开前仅有 `sample.db`，文件头读写版本为 `02 02`。以 `mode=ro` + `PRAGMA query_only=ON` 打开并 SELECT 后，新建的 `sample.db-shm`、`sample.db-wal` 在关闭连接后仍存在。故“只读连接”不足以证明不产生输入旁文件。
+
+已要求盘点工具在连接前拒绝 WAL 模式文件头，仅接收独立 rollback-journal 备份；不使用 immutable 跳过 WAL，不自动转换原文件。工具实现和针对这一边界的回归仍待最终交接审核。该实验仅用临时合成文件。
+
+支付宝 HTTPS 修复提交 `85d58a8c9cba16793d21b231f231fe41ad866db1` 的远端 CI [36356468888](https://github.com/NSIETeam/miraphant/actions/runs/36356468888) 已完成且通过，包含网关检查、协议适配器检查与构建。
+
+### 2026-09-28 离线盘点冻结版父审核
+
+- Luna 交付 `scripts/legacy-inventory.py`、合成测试与 LEGACY-INVENTORY.md；脚本 SHA-256：`75768d21c1fd0c352b2ace5fd128a51dfdcc804dc2e349019cdcf380bb167759`。
+- 父在冻结版本独立运行 `PYTHONDONTWRITEBYTECODE=1 python3 services/gateway/scripts/test_legacy_inventory.py -v`：10 例通过（0.116s）。CI 增加同一合成检查步骤，缺少脚本会失败，不使用可返回 0 测试的宽泛 discover。
+- 父另用自行创建的合成数据库及真实 CLI 子进程，验证包含中文/问号/井号的路径、两条 int64 最大值合计 `18446744073709551614`、输入 SHA 不变、无新旁文件、0600 文件权限、拒绝覆盖原报告、未知私密状态报错时不泄漏值或输入路径。全部通过，临时数据已清理。
+- 源码审核确认固定列读取、视图拒绝、已禁用/启用未兑换码分列、用户余额与密钥限额/积分分开；倍率只留摘要和条目数，URL 只留是否配置。长小数不经 Decimal.normalize 舍入。
+- 上一节 WAL 实验所发现的输入旁文件问题，已由连接前文件头检查和回归覆盖；仍需运维保证输入是完整的独立备份，不由无旁文件推断生产已排空。
+- 本节点不运行实际额度迁移、不提供换算比例、不归类历史购买/赠送、不证明日志完整，也未读取生产备份或部署。
