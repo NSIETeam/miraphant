@@ -29,6 +29,7 @@ func (p *Provider) DownloadTradeBill(ctx context.Context, billDate time.Time) (b
 	response, err := p.api(ctx, "alipay.data.dataservice.bill.downloadurl.query", map[string]string{
 		"bill_type": "trade",
 		"bill_date": day,
+		"secure":    "true",
 	})
 	if err != nil {
 		return bill.RawBill{}, err

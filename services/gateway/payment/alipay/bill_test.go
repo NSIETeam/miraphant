@@ -3,6 +3,7 @@ package alipay
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -52,7 +53,7 @@ func TestAlipayTradeBillVerifiesAPIResponseAndReturnsRawEvidence(t *testing.T) {
 		if err := json.Unmarshal([]byte(params["biz_content"]), &query); err != nil {
 			t.Error(err)
 		}
-		if query["bill_type"] != "trade" || query["bill_date"] != day {
+		if query["bill_type"] != "trade" || query["bill_date"] != day || query["secure"] != "true" {
 			t.Errorf("unexpected bill query: %+v", query)
 		}
 		response := []byte(`{"code":"10000","msg":"Success","bill_download_url":"https://dwbillcenter.alipay.com/bill.csv?token=short-lived"}`)
@@ -95,6 +96,47 @@ func TestAlipayBillRejectsInvalidSignedResponseBeforeDownload(t *testing.T) {
 	date := time.Now().In(time.FixedZone("CST", 8*60*60)).AddDate(0, 0, -1)
 	if _, err := keys.provider.DownloadTradeBill(context.Background(), date); err == nil || downloads != 0 {
 		t.Fatalf("unsigned Alipay URL response accepted: downloads=%d err=%v", downloads, err)
+	}
+}
+
+func TestAlipayBillRejectsHTTPDownloadURLBeforeDownload(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			t.Error(err)
+			return
+		}
+		params := make(map[string]string)
+		for key, values := range r.Form {
+			if len(values) != 1 {
+				t.Errorf("duplicate API form value for %s", key)
+			}
+			if len(values) > 0 {
+				params[key] = values[0]
+			}
+		}
+		verifyRequestSignature(t, &keys.merchant.PublicKey, params)
+		var query map[string]string
+		if err := json.Unmarshal([]byte(params["biz_content"]), &query); err != nil {
+			t.Error(err)
+		}
+		if query["secure"] != "true" {
+			t.Errorf("secure HTTPS request parameter missing: %+v", query)
+		}
+		response := []byte(`{"code":"10000","msg":"Success","bill_download_url":"http://dwbillcenter.alipay.com/bill.csv?token=short-lived"}`)
+		_, _ = w.Write(signAPIResponse(t, keys.alipay, "alipay.data.dataservice.bill.downloadurl.query", response))
+	}))
+	defer server.Close()
+	keys.provider.baseURL = server.URL + "/gateway.do"
+	keys.provider.billResolver = billTestResolver{{IP: net.ParseIP("1.1.1.1")}}
+	var downloads int
+	keys.provider.billTransport = billTestRoundTripper(func(*http.Request) (*http.Response, error) {
+		downloads++
+		return nil, nil
+	})
+	date := time.Now().In(time.FixedZone("CST", 8*60*60)).AddDate(0, 0, -1)
+	if _, err := keys.provider.DownloadTradeBill(context.Background(), date); !errors.Is(err, bill.ErrUnsafeDownloadURL) || downloads != 0 {
+		t.Fatalf("HTTP bill URL was not rejected before download: downloads=%d err=%v", downloads, err)
 	}
 }
 

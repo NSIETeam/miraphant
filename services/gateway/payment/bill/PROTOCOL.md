@@ -1,8 +1,8 @@
 # Payment trade-bill adapter boundary
 
-This package is a protocol/parser checkpoint only. It does not import bills into a database, match rows to orders, create reconciliation cases, or expose an admin route. No production bill request was made in tests.
+This package contains the bill protocol and parser adapters; database import, matching, audit, and admin HTTP/UI integration are provided by `service/payments`, `controller/admin_reconciliation.go`, and the default reconciliation page. This is local implementation evidence, not a claim of production availability. No production bill request was made in tests. See [`RECONCILIATION.md`](RECONCILIATION.md) for the end-to-end repository boundary.
 
-No new environment variables or merchant secrets were added. Both adapters use the existing server-side provider configuration; callers cannot supply a URL. The methods are not wired to a public or admin route. A WeChat raw bill contains payer identifiers and custom merchant text, so a later persistence layer must set access and retention rules before storing raw bytes.
+The adapters use existing server-side provider configuration; callers cannot supply a URL. The integration is limited to the repository's authorized admin reconciliation flow. A WeChat raw bill contains payer identifiers and custom merchant text, so stored source access and retention remain governed by the reconciliation safeguards described below.
 
 ## WeChat Pay
 
@@ -22,23 +22,22 @@ Official sources:
 
 ## Alipay
 
-`alipay.Provider.DownloadTradeBill` calls the fixed `alipay.data.dataservice.bill.downloadurl.query` method with `bill_type=trade` and a completed `Asia/Shanghai` date. The existing gateway adapter verifies the API response signature over the original response node. The returned URL must use HTTPS and the observed official host `dwbillcenter.alipay.com`; the safe downloader applies DNS/public-IP checks, no redirects, a size limit, and rejects HTTP content-encoding compression. It does not unpack archives. The raw result includes a local SHA-256, bill date, format marker, and configured merchant/app identity. The API response is signed; the downloaded file has no independent provider hash in the verified contract, so the local SHA-256 is an evidence digest, not a provider integrity signature.
+`alipay.Provider.DownloadTradeBill` calls the fixed `alipay.data.dataservice.bill.downloadurl.query` method with `bill_type=trade`, a completed `Asia/Shanghai` date, and `secure=true`. The official v2 Java SDK documents `secure` as a string and states that only `true` returns an HTTPS bill URL; it is included in the signed request. The existing gateway adapter verifies the API response signature over the original response node. The returned URL must use HTTPS and the observed official host `dwbillcenter.alipay.com`; the safe downloader applies DNS/public-IP checks, no redirects, a size limit, and rejects HTTP content-encoding compression. It does not unpack archives. The raw result includes a local SHA-256, bill date, format marker, and configured merchant/app identity. The API response is signed; the downloaded file has no independent provider hash in the verified contract, so the local SHA-256 is an evidence digest, not a provider integrity signature.
 
 The ordinary merchant `trade` file's current column schema, encoding, compression, row states, summary, and date semantics are not implemented. The official bill URL API proves how to request and download a trade bill, but the accessible current API reference does not specify that file layout. An older bank-interconnect data dictionary is a different product and is not used as a merchant parser. Until a current official normal-merchant format or validated merchant sample is available, bytes remain opaque; do not normalize them or claim Alipay reconciliation support.
 
 References:
 
 - [Alipay bill download URL API](https://opendocs.alipay.com/apis/api_15/alipay.data.dataservice.bill.downloadurl.query) — method and response URL.
+- [Alipay Java SDK v2 request model](https://raw.githubusercontent.com/alipay/alipay-sdk-java-all/master/v2/src/main/java/com/alipay/api/domain/AlipayDataDataserviceBillDownloadurlQueryModel.java) — `secure` is a string; `true` selects an HTTPS bill URL.
 - [Older generic reconciliation article](https://developer.alibaba.com/docs/doc.htm?articleId=106262&docType=1&source=search&treeId=193) — a format research lead only; not sufficient evidence for a current parser.
 - [Bank-interconnect data dictionary](https://doc.open.alipay.com/docs/doc.htm?articleId=106431&docType=1) — explicitly excluded from the normal merchant parser.
 
 ## Reconciliation follow-up
 
-The first SQLite storage/matching checkpoint is described in
-[`RECONCILIATION.md`](RECONCILIATION.md). It stores encrypted immutable source
-batches, per-row evidence, fixed findings, and append-only operator references;
-it does not expose import/list HTTP endpoints or modify points. Alipay bytes
-remain explicitly unsupported for row parsing. Next work must add configured
-provider/key loading, bounded admin HTTP access, and a review UI before claiming
-an operational reconciliation workflow. Fee/net settlement-account matching
-is separate from this trade-bill phase.
+The SQLite storage/matching implementation, bounded admin HTTP access, and
+default reconciliation page are described in [`RECONCILIATION.md`](RECONCILIATION.md).
+Alipay bytes remain explicitly unsupported for row parsing. This repository
+implementation is not a claim that production reconciliation is enabled or
+has been validated against live merchant accounts. Fee/net settlement-account
+matching is separate from this trade-bill phase.

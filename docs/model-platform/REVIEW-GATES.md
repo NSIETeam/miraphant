@@ -640,3 +640,10 @@ Luna 冻结交接后，父复核独立密钥配置、真实会话与 reconciliat
 - 父任务默认前端构建及 Go 编译成功；前端仍有既有 lint 警告。产物 `main.bdb32f1a.js` / `main.0bcfa790.css`。
 - 隔离示例数据库、本地端口、支付外连阻断下：root 登录、品牌状态页、运营设置旧字段隐藏及三个积分入口完成浏览器抽查；品牌页桌面与 390×844 截图目视通过。测试服务和临时数据库已清理。
 - 抽查二进制 SHA-256：`95d90cf2d607bad5a803f5d167a3741dd0f27c990fdc8adb03dddfc4647a37fb`。这不代表真实商户联调、生产发布或全部错误状态验收完成。
+
+### 2026-09-28 品牌 CI 与支付宝 HTTPS 请求修复
+
+- 品牌提交 `471fac57dc80342dc656c80300ac76a020862e24` 的 CI [36356244084](https://github.com/NSIETeam/miraphant/actions/runs/36356244084) 完成且通过。
+- 对照支付宝官方 Java SDK v2 的 `AlipayDataDataserviceBillDownloadurlQueryModel`，确认 `secure` 是字符串；只有 `true` 请求 HTTPS 下载地址。旧请求缺少该参数，可能收到被当前安全下载器拒绝的 HTTP 地址。
+- Luna 补上签名业务参数 `secure="true"` 并加入有效签名 HTTP 地址拒绝用例；父任务检查请求签名测试和错误断言，独立执行 `go test -race ./payment/alipay ./payment/bill -count=1 -timeout=120s`，分别通过（6.866s / 2.569s）。
+- 没有 HTTP 回退、URL 改写、真实渠道调用或逐行解析能力新增。支付宝仍仅保存原始来源证据，格式为 unsupported。
