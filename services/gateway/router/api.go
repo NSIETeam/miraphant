@@ -4,6 +4,7 @@ import (
 	"github.com/songquanpeng/one-api/controller"
 	"github.com/songquanpeng/one-api/controller/auth"
 	"github.com/songquanpeng/one-api/middleware"
+	"github.com/songquanpeng/one-api/model"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,9 @@ func SetApiRouter(router *gin.Engine) {
 	callbacks.Use(middleware.PaymentCallbackRateLimit())
 	callbacks.POST("/wechat", controller.WeChatPaymentNotify)
 	callbacks.POST("/alipay", controller.AlipayPaymentNotify)
+	refundCallbacks := router.Group("/api/payments/refunds/notify")
+	refundCallbacks.Use(middleware.PaymentCallbackRateLimit())
+	refundCallbacks.POST("/wechat", controller.WeChatRefundNotify)
 
 	apiRouter := router.Group("/api")
 	apiRouter.Use(gzip.Gzip(gzip.DefaultCompression))
@@ -34,6 +38,10 @@ func SetApiRouter(router *gin.Engine) {
 			paymentUser.GET("/orders", controller.PointPurchaseOrders)
 			paymentUser.GET("/orders/:key", controller.PointPurchaseOrder)
 			paymentUser.GET("/orders/:key/checkout", controller.PointPurchaseOrderCheckout)
+			paymentUser.GET("/orders/:key/refund-quote", controller.CustomerPointRefundQuote)
+			paymentUser.GET("/orders/:key/refunds", controller.CustomerPointRefundsForOrder)
+			paymentUser.POST("/orders/:key/refund-requests", middleware.PaymentUserWriteRateLimit(), middleware.RefundStepUpBodyLimit(), middleware.PointsCSRF(), controller.CreateCustomerPointRefund)
+			paymentUser.GET("/refunds/:key", controller.CustomerPointRefund)
 			paymentUser.POST("/orders/:key/query", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.PointPurchaseOrderQuery)
 			paymentUser.POST("/orders/:key/close", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), controller.PointPurchaseOrderClose)
 		}
@@ -57,13 +65,23 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			refundAuth.GET("/csrf", controller.RefundAuthorizationCSRF)
 			refundAuth.GET("/self", controller.RefundAuthorizationSelf)
-			refundAuth.POST("/step-up", middleware.RefundManagerAuth(), middleware.CriticalRateLimit(), middleware.RefundStepUpIPRateLimit(), middleware.RefundStepUpUserRateLimit(), middleware.RefundStepUpBodyLimit(), middleware.PointsCSRF(), controller.IssueRefundAuthorizationStepUp)
+			refundAuth.POST("/step-up", middleware.CriticalRateLimit(), middleware.RefundStepUpIPRateLimit(), middleware.RefundStepUpUserRateLimit(), middleware.RefundStepUpBodyLimit(), middleware.PointsCSRF(), controller.IssueRefundAuthorizationStepUp)
 		}
 		refundAuthAdmin := apiRouter.Group("/admin/refund-auth")
 		refundAuthAdmin.Use(middleware.RefundSessionAuth(), middleware.RefundManagerAuth())
 		{
 			refundAuthAdmin.GET("/users/:id/grants", controller.AdminRefundCapabilityGrants)
 			refundAuthAdmin.POST("/grants", middleware.RefundStepUpBodyLimit(), middleware.PointsCSRF(), controller.ChangeRefundCapabilities)
+		}
+		refundAdmin := apiRouter.Group("/admin/refunds")
+		refundAdmin.Use(middleware.RefundSessionAuth())
+		{
+			refundAdmin.GET("", middleware.RefundCapabilityAuth(model.RefundCapabilityRead), controller.AdminPointRefunds)
+			refundAdmin.GET("/:key", middleware.RefundCapabilityAuth(model.RefundCapabilityRead), controller.AdminPointRefund)
+			refundAdmin.POST("/:key/approve", middleware.RefundStepUpBodyLimit(), middleware.RefundStepUpUserRateLimit(), middleware.RefundStepUpIPRateLimit(), middleware.PointsCSRF(), middleware.RefundCapabilityAuth(model.RefundCapabilityReview), controller.DecideAdminPointRefund)
+			refundAdmin.POST("/:key/reject", middleware.RefundStepUpBodyLimit(), middleware.RefundStepUpUserRateLimit(), middleware.RefundStepUpIPRateLimit(), middleware.PointsCSRF(), middleware.RefundCapabilityAuth(model.RefundCapabilityReview), controller.DecideAdminPointRefund)
+			refundAdmin.POST("/:key/submit", middleware.RefundStepUpBodyLimit(), middleware.RefundStepUpUserRateLimit(), middleware.RefundStepUpIPRateLimit(), middleware.PointsCSRF(), middleware.RefundCapabilityAuth(model.RefundCapabilitySubmit), controller.SubmitAdminPointRefund)
+			refundAdmin.POST("/:key/reconcile", middleware.PaymentUserWriteRateLimit(), middleware.PointsCSRF(), middleware.RefundCapabilityAuth(model.RefundCapabilityReconcile), controller.ReconcileAdminPointRefund)
 		}
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)

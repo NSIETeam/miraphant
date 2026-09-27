@@ -488,3 +488,23 @@ Luna 已完成两项收口并停止编辑。父核对 `User.Update` 按 GORM 非
 父最终七包定向复验通过（controller 1.528s、router 0.525s、model 4.020s、relay/controller 1.899s、relay/adaptor/openai 1.266s）。父再独立运行 `go test -race ./model -run 'Test(RefundCapability|DelegatedRefund)' -count=3 -timeout=120s` 通过（31.485s），以及 `Test(RefundActorPassword|UserProfileUpdatePreservesRefund)` 的 race 三次重复检查通过（12.589s）；只有既有 macOS 链接器 warning，没有 Go race。父将新增普通资料更新用例一并加入 CI 筛选，避免只在本地运行。完整支付协议与服务 race 结果见本节前的首轮复验，收口未改渠道协议或恢复服务。diff 检查通过。
 
 允许提交此节点：包括能力授权、账户版本失效、会话绑定的短期单次密码再确认、授权审计、root 管理 HTTP、当前能力查询及事务内退款票据 helper。该确认不是 MFA。公开退款申请／审批／渠道提交、客户和财务页面、对账及真实商户验收仍未完成；操作开关默认关闭，不代表可开放真实退款。
+
+父已确认权限基础提交 `0cbf6c5bf4b80ad7dc4322f32a62b76aed5f0913` 的 [CI 36343358328](https://github.com/NSIETeam/miraphant/actions/runs/36343358328) 为 completed/success。下一退款业务 HTTP／页面节点仍在实施，不能用此构建结果覆盖后续工作。
+
+## 退款业务接口早审（开发中，2026-09-28）
+
+开发中版本尝试用 `approved` 且空 `recovery_action` 表示审核通过但尚未授权提交，并让 worker 仅扫描 `approved/apply`。这与 v10 历史 `approved` 空 action 的首次恢复语义冲突：旧已获准记录会被永久跳过，而直接 Dispatch／Claim 又可能将新待提交记录当首次 apply。父要求明确持久状态或标记，模型 Claim 层拒绝未提交授权，保留历史已批准恢复，并覆盖直接查询不能偷偷首次 apply。
+
+可退概览必须与申请路径共享原订单／购买及赠送 lot 的身份、金额、累计退款和到期快照校验；仅验证余额守恒不足以证明原订单可退。坏快照应拒绝或显示不可退，不能用“预估”掩盖必定提交失败的矛盾。普通并发消费导致概览过时仍由请求事务最终重验处理。上述均为早审要求，未验收。
+
+退款控制器早审补充：决策／提交若先消费单次票据再检查业务键，成功但响应丢失的重试会返回 401，无法辨明既有结果；提交意图已提交而网络调用前宕机时，默认关闭 worker 加上人工核实拒绝 approved 会留下无人可恢复的记录。已要求精确业务键重放返回既有结果，并提供已授权提交意图的安全恢复入口，不能把 review_approved 当作已获准提交。客户申请的外部 quote 预检还可能在同键并发时先返回“已有在途退款”，绕过账本内部幂等返回；要求避免预检遮蔽同键语义并补路由并发检查。
+
+父已准备仓库外隔离浏览器验收脚本 `work/review_refund_ui_server.py`：临时 SQLite 与合成账户／商户密钥、阻断真实支付外呼、财务与只读客服能力、签名加密的微信支付／退款通知、暂停新退款后历史通知及重复通知账本计数。当前仅完成脚本语法检查，尚未启动新退款版本或取得浏览器验收结果，不能把此准备工作当作退款验收。父将 CustomerRefund／AdminRefund／WeChatRefund 前缀加入 CI 定向筛选。
+
+## 退款业务接口父级复验（2026-09-28）
+
+本轮独立定向检查通过：controller 1.742s、router 1.354s、model 2.867s、relay/controller 2.277s、relay/adaptor/openai 1.679s；middleware 无测试文件。完整 payment/... 与 service/payments race 检查通过（支付宝 6.197s、微信 2.649s、服务 3.112s），无 Go race，仅既有 macOS 链接警告。CI 筛选已加入 FinanceReconcile，覆盖其他获授权财务人员恢复已提交意图。
+
+源码复核已确认 review_approved 与历史 approved 分离、客户同键并发进入账本幂等、业务决定与票据同事务、已提交业务键安全重放、渠道调用在事务外，以及提交所有分支共用终态优先返回。实际路由用例覆盖申请双请求只冻结一次、审批后不能直接 Claim、提交前中断后的原号恢复、跨财务人员恢复和关闭新操作时两次签名微信通知只结算一次。可退概览补入原订单及 lot 快照检查。
+
+此结果仅覆盖后端候选与合成渠道；客户及财务界面、真实浏览器交互、商户实付退款均未因此完成。

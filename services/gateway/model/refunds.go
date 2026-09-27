@@ -84,6 +84,25 @@ type PointRefundOperationClaim struct {
 	Kind   string // apply or query; submitting after a crash always returns query.
 }
 
+type PointRefundQuote struct {
+	OrderKey       string
+	OrderAmountFen int64
+	RefundedFen    int64
+	MaxRefundFen   int64
+	Channel        string
+	OrderState     string
+	HasInFlight    bool
+}
+
+type PointRefundListFilter struct {
+	BeforeID uint
+	Limit    int
+	UserID   int
+	OrderKey string
+	State    string
+	Channel  string
+}
+
 func pointRefundDBReady(db *gorm.DB) error {
 	if db == nil || db.Dialector == nil || db.Dialector.Name() != "sqlite" {
 		return ErrPointRefundUnavailable
@@ -285,6 +304,188 @@ func GetPointRefundByKey(refundKey string) (*PointRefund, error) {
 		return nil, err
 	}
 	return &refund, nil
+}
+
+func GetPointRefundForUser(userID int, refundKey string) (*PointRefund, error) {
+	if userID <= 0 || refundKey == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if err := pointRefundDBReady(DB); err != nil {
+		return nil, err
+	}
+	var refund PointRefund
+	if err := DB.Where("user_id = ? AND refund_key = ?", userID, refundKey).First(&refund).Error; err != nil {
+		return nil, err
+	}
+	return &refund, nil
+}
+
+func GetPointRefundByIdempotency(userID int, orderKey, idempotencyKey string) (*PointRefund, error) {
+	if userID <= 0 || orderKey == "" || idempotencyKey == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if err := pointRefundDBReady(DB); err != nil {
+		return nil, err
+	}
+	var refund PointRefund
+	if err := DB.Where("user_id = ? AND order_key = ? AND idempotency_key = ?", userID, orderKey, idempotencyKey).First(&refund).Error; err != nil {
+		return nil, err
+	}
+	return &refund, nil
+}
+
+func ListPointRefunds(filter PointRefundListFilter) ([]PointRefund, bool, error) {
+	if filter.Limit <= 0 || filter.Limit > 100 || filter.UserID < 0 {
+		return nil, false, errors.New("invalid refund list filter")
+	}
+	if filter.State != "" && !validPointRefundState(filter.State) {
+		return nil, false, errors.New("invalid refund state filter")
+	}
+	if filter.Channel != "" && filter.Channel != "wechat" && filter.Channel != "alipay" {
+		return nil, false, errors.New("invalid refund channel filter")
+	}
+	if err := pointRefundDBReady(DB); err != nil {
+		return nil, false, err
+	}
+	query := DB.Model(&PointRefund{})
+	if filter.BeforeID > 0 {
+		query = query.Where("id < ?", filter.BeforeID)
+	}
+	if filter.UserID > 0 {
+		query = query.Where("user_id = ?", filter.UserID)
+	}
+	if filter.OrderKey != "" {
+		query = query.Where("order_key = ?", filter.OrderKey)
+	}
+	if filter.State != "" {
+		query = query.Where("state = ?", filter.State)
+	}
+	if filter.Channel != "" {
+		query = query.Where("channel = ?", filter.Channel)
+	}
+	var rows []PointRefund
+	if err := query.Order("id DESC").Limit(filter.Limit + 1).Find(&rows).Error; err != nil {
+		return nil, false, err
+	}
+	hasMore := len(rows) > filter.Limit
+	if hasMore {
+		rows = rows[:filter.Limit]
+	}
+	return rows, hasMore, nil
+}
+
+func validPointRefundState(state string) bool {
+	switch state {
+	case "awaiting_review", "review_approved", "approved", "submitting", "submitted", "unknown", "succeeded", "rejected", "definite_failed", "needs_manual_review":
+		return true
+	default:
+		return false
+	}
+}
+
+// PointRefundableQuote is a best-effort preview. RequestPointRefund repeats
+// every bound and allocation check atomically when the customer submits.
+func PointRefundableQuote(userID int, orderKey string) (*PointRefundQuote, error) {
+	if userID <= 0 || orderKey == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var quote PointRefundQuote
+	err := pointRefundTransaction(DB, func(tx *gorm.DB) error {
+		quote = PointRefundQuote{}
+		now := time.Now().UTC()
+		if err := expireAvailablePointLotsTx(tx, userID, now); err != nil {
+			return err
+		}
+		var order PointPurchaseOrder
+		if err := tx.Where("user_id = ? AND order_key = ?", userID, orderKey).First(&order).Error; err != nil {
+			return err
+		}
+		quote = PointRefundQuote{OrderKey: order.OrderKey, OrderAmountFen: order.AmountFen, Channel: order.Channel, OrderState: order.State}
+		if order.State != "credited" && order.State != "refunded" || order.AmountFen <= 0 || order.Currency != "CNY" || (order.Channel != "wechat" && order.Channel != "alipay") || order.ProviderMerchantID == "" || order.ProviderAppID == "" || order.ProviderTransactionID == "" || order.AmountFen > int64(^uint64(0)>>1)/PointMicroPerPoint || order.PurchaseMicro != order.AmountFen*PointMicroPerPoint {
+			return nil
+		}
+		var active int64
+		if err := tx.Model(&PointRefund{}).Where("order_key = ? AND active_order_key IS NOT NULL", order.OrderKey).Count(&active).Error; err != nil {
+			return err
+		}
+		quote.HasInFlight = active > 0
+		var prior []PointRefund
+		if err := tx.Where("order_key = ? AND state = ?", order.OrderKey, "succeeded").Find(&prior).Error; err != nil {
+			return err
+		}
+		for _, row := range prior {
+			if row.UserID != order.UserID || row.OriginalAmountFen != order.AmountFen || row.Currency != order.Currency || row.Channel != order.Channel || row.ProviderMerchantID != order.ProviderMerchantID || row.ProviderAppID != order.ProviderAppID || row.ProviderTransactionID != order.ProviderTransactionID || row.AmountFen <= 0 {
+				return errors.New("completed refund record does not match its original order")
+			}
+			var addErr error
+			quote.RefundedFen, addErr = checkedAdd(quote.RefundedFen, row.AmountFen)
+			if addErr != nil {
+				return addErr
+			}
+		}
+		remaining := order.AmountFen - quote.RefundedFen
+		if remaining <= 0 || quote.HasInFlight {
+			return nil
+		}
+		var purchase PointLot
+		if err := tx.Where("business_key = ?", "purchase:"+order.OrderKey).First(&purchase).Error; err != nil {
+			return err
+		}
+		if purchase.UserID != order.UserID || purchase.Kind != "purchase" || purchase.InitialMicro != order.PurchaseMicro || purchase.AmountFen != order.AmountFen || purchase.RefundedMicro%PointMicroPerPoint != 0 || purchase.RefundedMicro != quote.RefundedFen*PointMicroPerPoint {
+			return errors.New("purchase lot does not match the refundable order snapshot")
+		}
+		if err := validatePointLotConservation(purchase); err != nil {
+			return err
+		}
+		maxFen := remaining
+		purchaseFen := purchase.AvailableMicro / PointMicroPerPoint
+		if purchaseFen < maxFen {
+			maxFen = purchaseFen
+		}
+		if order.BonusMicro > 0 {
+			if order.BonusExpiresAt == nil {
+				return errors.New("order bonus has no immutable expiry")
+			}
+			var bonus PointLot
+			if err := tx.Where("business_key = ?", "bonus:"+order.OrderKey).First(&bonus).Error; err != nil {
+				return err
+			}
+			if bonus.UserID != order.UserID || bonus.Kind != "bonus" || bonus.InitialMicro != order.BonusMicro || bonus.ExpiresAt == nil || *bonus.ExpiresAt != *order.BonusExpiresAt {
+				return errors.New("bonus lot does not match the refundable order snapshot")
+			}
+			if err := validatePointLotConservation(bonus); err != nil {
+				return err
+			}
+			accounted, err := checkedAdd(bonus.RevokedMicro, bonus.ExpiredMicro)
+			if err != nil {
+				return err
+			}
+			low, high := int64(0), maxFen
+			for low < high {
+				mid := low + (high-low+1)/2
+				target, targetErr := cumulativeBonusTarget(order.BonusMicro, quote.RefundedFen+mid, order.AmountFen)
+				if targetErr != nil {
+					return targetErr
+				}
+				required := int64(0)
+				if target > accounted {
+					required = target - accounted
+				}
+				if required <= bonus.AvailableMicro {
+					low = mid
+				} else {
+					high = mid - 1
+				}
+			}
+			maxFen = low
+		}
+		quote.MaxRefundFen = maxFen
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &quote, nil
 }
 
 func MarkPointRefundNeedsManualReview(refundKey, code string, now time.Time) error {
@@ -725,47 +926,116 @@ func decidePointRefundOn(db *gorm.DB, refundKey, decisionKey string, actorID int
 		return errors.New("invalid refund decision")
 	}
 	return pointRefundTransaction(db, func(tx *gorm.DB) error {
-		var refund PointRefund
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("refund_key = ?", refundKey).First(&refund).Error; err != nil {
-			return err
+		return decidePointRefundTx(tx, refundKey, decisionKey, actorID, action, reason, true)
+	})
+}
+
+// DecidePointRefundTx persists a review decision or explicit submit intent in
+// the caller's transaction, allowing step-up consumption and audit to commit
+// atomically with the refund state transition.
+func DecidePointRefundTx(tx *gorm.DB, refundKey, decisionKey string, actorID int, action, reason string, scheduleApply bool) error {
+	if tx == nil || refundKey == "" || decisionKey == "" || actorID <= 0 || (action != "approve" && action != "reject" && action != "submit") || strings.TrimSpace(reason) == "" || len([]byte(reason)) > 512 {
+		return errors.New("invalid refund decision")
+	}
+	return decidePointRefundTx(tx, refundKey, decisionKey, actorID, action, reason, scheduleApply)
+}
+
+// MatchPointRefundDecision supports safe HTTP replay after a committed action
+// whose response was lost. The route still enforces the actor's current
+// capability; changed actor, refund, action, reason, or business key conflicts.
+func MatchPointRefundDecision(refundKey, decisionKey string, actorID int, action, reason string) (bool, error) {
+	if refundKey == "" || decisionKey == "" || actorID <= 0 {
+		return false, errors.New("invalid refund decision replay lookup")
+	}
+	if err := pointRefundDBReady(DB); err != nil {
+		return false, err
+	}
+	var refund PointRefund
+	if err := DB.Select("id").First(&refund, "refund_key = ?", refundKey).Error; err != nil {
+		return false, err
+	}
+	var prior PointRefundDecision
+	err := DB.Where("decision_key = ?", decisionKey).First(&prior).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if prior.RefundID != refund.ID || prior.ActorUserID != actorID || prior.Action != action || prior.Reason != reason {
+		return false, ErrPointsConflict
+	}
+	return true, nil
+}
+
+func decidePointRefundTx(tx *gorm.DB, refundKey, decisionKey string, actorID int, action, reason string, scheduleApply bool) error {
+	var refund PointRefund
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("refund_key = ?", refundKey).First(&refund).Error; err != nil {
+		return err
+	}
+	var prior PointRefundDecision
+	err := tx.Where("decision_key = ?", decisionKey).First(&prior).Error
+	if err == nil {
+		if prior.RefundID == refund.ID && prior.ActorUserID == actorID && prior.Action == action && prior.Reason == reason {
+			return nil
 		}
-		var prior PointRefundDecision
-		err := tx.Where("decision_key = ?", decisionKey).First(&prior).Error
-		if err == nil {
-			if prior.RefundID == refund.ID && prior.ActorUserID == actorID && prior.Action == action && prior.Reason == reason {
-				return nil
-			}
-			return ErrPointsConflict
-		}
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-		if refund.State != "awaiting_review" {
+		return ErrPointsConflict
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	now := time.Now().UTC()
+	if action == "submit" {
+		if refund.State != "review_approved" {
 			return ErrPointRefundState
 		}
-		now := time.Now().UTC()
 		decision := PointRefundDecision{RefundID: refund.ID, DecisionKey: decisionKey, ActorUserID: actorID, Action: action, Reason: reason, CreatedAt: now}
 		if err := tx.Create(&decision).Error; err != nil {
 			return err
 		}
-		if action == "approve" {
-			upd := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": "approved", "recovery_action": "apply", "recovery_next_at": 0, "recovery_attempts": 0, "recovery_last_error_code": "", "updated_at": now})
-			if upd.Error != nil {
-				return upd.Error
-			}
-			if upd.RowsAffected != 1 {
-				return ErrPointRefundState
-			}
-			return nil
+		result := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "review_approved").Updates(map[string]interface{}{"state": "approved", "recovery_action": "apply", "recovery_next_at": 0, "updated_at": now})
+		if result.Error != nil {
+			return result.Error
 		}
-		if err := releasePointRefundTx(tx, &refund, "rejected", now); err != nil {
-			return err
-		}
-		if err := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": "rejected", "active_order_key": nil, "recovery_action": "", "recovery_next_at": 0, "recovery_query_failures": 0, "updated_at": now}).Error; err != nil {
-			return err
+		if result.RowsAffected != 1 {
+			return ErrPointRefundState
 		}
 		return nil
-	})
+	}
+	if refund.State != "awaiting_review" {
+		return ErrPointRefundState
+	}
+	decision := PointRefundDecision{RefundID: refund.ID, DecisionKey: decisionKey, ActorUserID: actorID, Action: action, Reason: reason, CreatedAt: now}
+	if err := tx.Create(&decision).Error; err != nil {
+		return err
+	}
+	if action == "approve" {
+		recoveryAction := ""
+		state := "review_approved"
+		if scheduleApply {
+			recoveryAction = "apply"
+			state = "approved"
+		}
+		result := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": state, "recovery_action": recoveryAction, "recovery_next_at": 0, "recovery_attempts": 0, "recovery_last_error_code": "", "updated_at": now})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrPointRefundState
+		}
+		return nil
+	}
+	if err := releasePointRefundTx(tx, &refund, "rejected", now); err != nil {
+		return err
+	}
+	result := tx.Model(&PointRefund{}).Where("id = ? AND state = ?", refund.ID, "awaiting_review").Updates(map[string]interface{}{"state": "rejected", "active_order_key": nil, "recovery_action": "", "recovery_next_at": 0, "recovery_query_failures": 0, "updated_at": now})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return ErrPointRefundState
+	}
+	return nil
 }
 
 func RecordPointRefundEvidence(input PointRefundEvidenceInput) error {

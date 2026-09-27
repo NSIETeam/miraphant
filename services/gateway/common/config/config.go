@@ -188,6 +188,7 @@ var WeChatPayPrivateKeyFile = env.String("WECHAT_PAY_PRIVATE_KEY_FILE", "")
 var WeChatPayPlatformKeyFile = env.String("WECHAT_PAY_PLATFORM_KEY_FILE", "")
 var WeChatPayAPIv3Key = env.String("WECHAT_PAY_API_V3_KEY", "")
 var WeChatPayNotifyURL = env.String("WECHAT_PAY_NOTIFY_URL", "")
+var WeChatPayRefundNotifyURL = env.String("WECHAT_PAY_REFUND_NOTIFY_URL", "")
 
 var AlipayConfigured = env.Bool("ALIPAY_CONFIGURED", false)
 var AlipayAppID = env.String("ALIPAY_APP_ID", "")

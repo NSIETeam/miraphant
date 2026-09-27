@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/config"
@@ -36,6 +37,8 @@ type refundStepUpRequest struct {
 	TargetUserID int      `json:"target_user_id"`
 	Capabilities []string `json:"capabilities"`
 	Reason       string   `json:"reason"`
+	RefundKey    string   `json:"refund_key"`
+	BusinessKey  string   `json:"business_key"`
 	Password     string   `json:"password"`
 }
 
@@ -58,7 +61,13 @@ func IssueRefundAuthorizationStepUp(c *gin.Context) {
 		paymentHTTPError(c, http.StatusBadRequest, "请求参数无效")
 		return
 	}
-	ticket, err := model.IssueRefundCapabilityStepUpTicket(c.GetInt(ctxkey.Id), c.GetString("refund_auth_session"), req.Password, req.Action, req.TargetUserID, req.Capabilities, req.Reason)
+	var ticket string
+	var err error
+	if strings.HasPrefix(req.Action, "refund.") {
+		ticket, err = model.IssueRefundDecisionStepUpTicket(c.GetInt(ctxkey.Id), c.GetString("refund_auth_session"), req.Password, req.RefundKey, req.Action, req.BusinessKey, req.Reason)
+	} else {
+		ticket, err = model.IssueRefundCapabilityStepUpTicket(c.GetInt(ctxkey.Id), c.GetString("refund_auth_session"), req.Password, req.Action, req.TargetUserID, req.Capabilities, req.Reason)
+	}
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrRefundCapabilityDenied):

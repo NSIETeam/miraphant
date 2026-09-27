@@ -53,15 +53,26 @@
 | `POST /api/points/estimate` | 登录／限流 | 返回估算、模型、价格版本及限制；不扣款 |
 | `GET /api/points/wallet` | 客户本人 | 购买、赠送、冻结、可用和流水游标 |
 | `POST /api/payments/orders` | 客户本人 | `package_id`、`channel`、幂等键；金额与积分由服务端决定 |
-| `GET /api/payments/orders/:id` | 订单本人／授权管理员 | 付款与到账状态，无其他客户资料 |
-| `POST /api/payments/orders/:id/refund-requests` | 订单本人 | 申请退款及原因，不直接执行渠道退款 |
+| `GET /api/payments/orders/:key` | 订单本人／授权管理员 | 付款与到账状态，无其他客户资料 |
+| `GET /api/payments/orders/:key/refund-quote` | 订单本人 | 当前可退金额预览；提交时重新核验并冻结积分 |
+| `POST /api/payments/orders/:key/refund-requests` | 订单本人 | 仅提交整数分金额、原因、幂等键；订单、退款号和渠道身份由服务端读取 |
+| `GET /api/payments/orders/:key/refunds` | 订单本人 | 本订单退款进度，按本人订单隔离 |
+| `GET /api/payments/refunds/:key` | 退款本人 | 单笔退款状态，其他客户返回不存在 |
 | `POST /api/payments/notify/wechat` | 渠道签名 | 验签、解密、核验订单后可靠记录通知 |
 | `POST /api/payments/notify/alipay` | 渠道签名 | 验签、核验订单后可靠记录通知 |
-| `POST /api/admin/payments/orders/:id/reconcile` | 财务／管理员 | 主动查单、幂等修复，必须审计 |
-| `POST /api/admin/payments/refunds` | 财务／管理员 | 审核后创建退款，唯一退款单号，冻结后发送 |
+| `POST /api/payments/refunds/notify/wechat` | 渠道签名 | 独立退款回调；验签解密并先持久化通知，再确认接收 |
+| `GET /api/admin/refunds`、`GET /api/admin/refunds/:key` | `refund.read` 或平台管理员 | 安全退款列表／详情，不返回支付原始报文或凭据 |
+| `POST /api/admin/refunds/:key/approve`、`/reject` | `refund.review` 或平台管理员 | 独立短期密码再确认票据；审批通过后等待单独提交，不直接调用渠道 |
+| `POST /api/admin/refunds/:key/submit` | `refund.submit` 或平台管理员 | 再确认后事务内写入提交意图，再调用渠道；未知结果继续冻结并按原退款号恢复 |
+| `POST /api/admin/refunds/:key/reconcile` | `refund.reconcile` 或平台管理员 | 查询渠道与处理持久证据，不接受客户端提供的成功状态 |
+| `POST /api/refund-auth/step-up` | 当前已登录且有相应能力 | 重新验证本地密码，签发绑定会话、退款、动作、金额、业务键和原因的一次性票据 |
+| `GET /api/refund-auth/self`、`/csrf` | 当前已登录 | 返回本人能力和 CSRF token；不暴露票据摘要、凭据指纹或支付密钥 |
+| `GET /api/admin/refund-auth/users/:id/grants`、`POST /api/admin/refund-auth/grants` | 平台管理员（role 100） | 查询或变更退款能力；变更须密码再确认及原因审计 |
 | `POST /api/admin/points/adjustments` | 管理员 | 增量账本记录＋原因＋唯一业务键，不允许覆盖余额 |
 
-Cookie 登录的写操作具备 CSRF 防护，创建订单、估算、登录和退款申请均限流。支付通知不依赖用户登录，但必须验证支付渠道身份。订单 ID 不作为权限凭据。
+Cookie 登录的写操作具备 CSRF 防护；退款操作另需动作绑定的短期重新认证，CSRF 不能代替密码再确认。客户状态和订单始终按当前登录用户过滤。支付通知不依赖用户登录，但必须验证支付渠道身份并先可靠持久化。退款开关默认关闭；暂停新申请和处理操作不关闭历史状态读取、回调验签与恢复。
+
+当前退款授权使用独立 capability：role 100 精确匹配时拥有平台能力，role 10 不自动获得财务权限。客服只读授权仅可读取；审批权限只能把申请推进到 `review_approved`，必须另由具备 `refund.submit` 的人员确认提交。`review_approved` 不进入自动恢复派发。审批、拒绝、提交分别绑定独立票据、业务键和原因；重复提交同一已完成业务键可恢复既有结果，不重复消费资金或生成渠道退款号。
 
 ## 页面验收
 

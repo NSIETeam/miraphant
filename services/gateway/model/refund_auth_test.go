@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -132,6 +133,18 @@ func TestRefundCapabilityRoleMappingAndStepUpScope(t *testing.T) {
 	}
 	if err := db.Model(&RefundAuthorizationAudit{}).Where("id = ?", audit.ID).Update("reason", "").Error; err == nil {
 		t.Fatal("authorization audit update was accepted")
+	}
+}
+
+func TestRefundDecisionStepUpReasonUses512ByteContract(t *testing.T) {
+	scope := RefundStepUpScope{Action: "refund.approve", RefundKey: "refund-reason-boundary", AmountFen: 100,
+		BusinessKey: "refund-decision-boundary-key", Reason: strings.Repeat("界", 170) + "ab"}
+	if _, err := normalizeRefundStepUpScope(scope); err != nil {
+		t.Fatalf("512-byte UTF-8 decision reason was rejected: %v", err)
+	}
+	scope.Reason += "c"
+	if _, err := normalizeRefundStepUpScope(scope); !errors.Is(err, ErrRefundAuthConflict) {
+		t.Fatalf("513-byte decision reason was not rejected: %v", err)
 	}
 }
 
@@ -358,8 +371,8 @@ func TestDelegatedRefundStepUpBindsServerSnapshotAndConsumesInBusinessTransactio
 	}
 	if err := DB.Transaction(func(tx *gorm.DB) error {
 		return ConsumeRefundOperationStepUpTx(tx, ticket, finance.Id, session, refunds[0].RefundKey, "refund.submit", time.Now())
-	}); !errors.Is(err, ErrRefundCapabilityDenied) {
-		t.Fatalf("finance used an ungranted operation: %v", err)
+	}); !errors.Is(err, ErrRefundStepUpInvalid) {
+		t.Fatalf("ticket scope was reusable for a different operation: %v", err)
 	}
 	if err := DB.Transaction(func(tx *gorm.DB) error {
 		return ConsumeRefundOperationStepUpTx(tx, ticket, finance.Id, session, refunds[0].RefundKey, "refund.review", stored.ExpiresAt.Add(time.Second))

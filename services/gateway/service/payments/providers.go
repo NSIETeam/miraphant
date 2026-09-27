@@ -36,7 +36,7 @@ func ConfigureProviders() error {
 		if err != nil {
 			return errors.New("WeChat Pay platform key configuration is invalid")
 		}
-		p, err := wechat.New(wechat.Config{Enabled: true, MerchantID: config.WeChatPayMerchantID, AppID: config.WeChatPayAppID, MerchantSerial: config.WeChatPayMerchantSerial, PlatformSerial: config.WeChatPayPlatformSerial, APIPrivateKey: privateKey, PlatformPublicKey: platformKey, APIv3Key: []byte(config.WeChatPayAPIv3Key), NotifyURL: config.WeChatPayNotifyURL})
+		p, err := wechat.New(wechat.Config{Enabled: true, MerchantID: config.WeChatPayMerchantID, AppID: config.WeChatPayAppID, MerchantSerial: config.WeChatPayMerchantSerial, PlatformSerial: config.WeChatPayPlatformSerial, APIPrivateKey: privateKey, PlatformPublicKey: platformKey, APIv3Key: []byte(config.WeChatPayAPIv3Key), NotifyURL: config.WeChatPayNotifyURL, RefundNotifyURL: config.WeChatPayRefundNotifyURL})
 		if err != nil {
 			return errors.New("WeChat Pay configuration is incomplete or invalid")
 		}

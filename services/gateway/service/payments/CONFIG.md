@@ -15,7 +15,8 @@ WeChat Pay reads `WECHAT_PAY_CONFIGURED`, `WECHAT_PAY_MERCHANT_ID`,
 `WECHAT_PAY_APP_ID`, `WECHAT_PAY_MERCHANT_SERIAL`,
 `WECHAT_PAY_PLATFORM_SERIAL`, `WECHAT_PAY_PRIVATE_KEY_FILE`,
 `WECHAT_PAY_PLATFORM_KEY_FILE`, `WECHAT_PAY_API_V3_KEY`, and
-`WECHAT_PAY_NOTIFY_URL`. Alipay reads `ALIPAY_CONFIGURED`, `ALIPAY_APP_ID`,
+`WECHAT_PAY_NOTIFY_URL`; the independent refund callback uses
+`WECHAT_PAY_REFUND_NOTIFY_URL`. Alipay reads `ALIPAY_CONFIGURED`, `ALIPAY_APP_ID`,
 `ALIPAY_SELLER_ID`, `ALIPAY_PRIVATE_KEY_FILE`, `ALIPAY_PUBLIC_KEY_FILE`,
 `ALIPAY_NOTIFY_URL`, and optional `ALIPAY_RETURN_URL`.
 
@@ -23,9 +24,12 @@ Key files must be readable by the gateway process and must not be placed under
 the public website root. The adapters use fixed official provider endpoints;
 no endpoint or callback URL is accepted from a customer. The enabled lanes are
 WeChat Native and Alipay desktop page-pay. H5, JSAPI, Alipay mobile web,
-refund HTTP endpoints, reconciliation, and real merchant acceptance remain
-separate work. Refund protocol adapters and the internal durable recovery
-service exist, but no public refund submission or approval route is enabled.
+refund browser flows, reconciliation, and real merchant acceptance remain
+separate work. Refund HTTP routes are available behind
+`POINTS_REFUND_OPERATIONS_ENABLED`; keep this switch false until merchant
+configuration, a published package, an eligible priced model/channel, and the
+provider's refund contract have all been reviewed. No real merchant refund has
+been performed as part of local acceptance.
 
 Automatic refund recovery is disabled by default. Set
 `POINTS_REFUND_RECOVERY_ENABLED=true` to start the internal background worker.
@@ -75,8 +79,49 @@ the exact refund number, amount, original transaction and merchant snapshot.
 Unknown outcomes keep the original points frozen; automatic recovery never
 creates a new refund number or releases a hold based on an absent query result.
 
-Provider reconciliation, payment status management, public refund HTTP routes
-and refund browser flows remain separate work. Points refunds have only been verified against the supported
+## Refund request and review routes
+
+Customer refund routes require the current login session and points schema.
+Historical reads remain available while new refund operations are paused:
+
+- `GET /api/payments/orders/:key/refund-quote`: a best-effort preview; the
+  request transaction rechecks the order, previous refunds, purchase and bonus
+  lots, and available balance.
+- `POST /api/payments/orders/:key/refund-requests`: same-origin CSRF and a
+  customer idempotency key; only integer `amount_fen`, reason and
+  `idempotency_key` are accepted. Refund number, provider identity and frozen
+  lots are selected by the server.
+- `GET /api/payments/orders/:key/refunds` and
+  `GET /api/payments/refunds/:key`: current-customer progress, with strict
+  ownership checks.
+- `POST /api/payments/refunds/notify/wechat`: independent WeChat refund
+  notification URL; verifies signature and encrypted resource, persists the
+  verified inbox before acknowledging, then attempts inbox processing. A
+  processing error leaves the durable event available for recovery.
+- `GET /api/admin/refunds` and `GET /api/admin/refunds/:key`: current
+  `refund.read` capability, paginated safe projections.
+- `POST /api/admin/refunds/:key/approve` and `/reject`: current
+  `refund.review`; a scoped password recheck ticket is consumed in the same
+  transaction as the decision and audit. Approval moves to `review_approved`
+  and does not call a provider.
+- `POST /api/admin/refunds/:key/submit`: current `refund.submit`; a separate
+  ticket commits the submit intent before provider I/O. Replays of that exact
+  business decision resume the durable operation without a second ticket.
+- `POST /api/admin/refunds/:key/reconcile`: current `refund.reconcile`; checks
+  existing provider state and preserves frozen points for unknown outcomes.
+- `POST /api/refund-auth/step-up`: password recheck for action-bound approve,
+  reject or submit tickets. Tickets are short-lived, one-use and session-bound.
+
+Role 100 receives platform refund capabilities; role 10 has no refund
+capability by default. Delegated capabilities are checked against current
+database identity on every request. Refund action tickets are never exposed as
+a standalone consume operation. The `review_approved` state is deliberately
+not eligible for recovery dispatch; only a separate submit action can create
+the provider submission intent. Older `approved` records retain their prior
+recovery behavior.
+
+Provider reconciliation, payment status management and refund browser flows
+remain separate work. Points refunds have only been verified against the supported
 single-instance SQLite configuration; other database backends are not enabled.
 
 ## Refund authorization foundation
@@ -106,9 +151,8 @@ the grant until root explicitly grants it again. Grant and revoke records keep
 actor, target, capability set, reason and time; they never contain passwords,
 step-up tickets, provider payloads or credential fingerprints.
 
-The current foundation exposes `GET /api/refund-auth/self` and `/csrf`,
-`POST /api/refund-auth/step-up` for root grant/revoke re-verification,
-`GET /api/admin/refund-auth/users/:id/grants`, and
-`POST /api/admin/refund-auth/grants`. It does not expose refund request,
-approval, provider submission, or ticket-consumption routes. Refund action
-tickets are consumed only inside a later refund business transaction.
+The authorization foundation exposes `GET /api/refund-auth/self` and `/csrf`,
+`POST /api/refund-auth/step-up` for root grant/revoke and scoped refund-action
+re-verification, `GET /api/admin/refund-auth/users/:id/grants`, and
+`POST /api/admin/refund-auth/grants`. Refund action tickets are consumed only
+inside the matching refund business transaction.

@@ -202,7 +202,7 @@ type PointRefund struct {
 	OriginalPurchaseMicro int64   `gorm:"not null"`
 	OriginalBonusMicro    int64   `gorm:"not null;default:0"`
 	Reason                string  `gorm:"size:512;not null"`
-	State                 string  `gorm:"size:24;not null;index"` // awaiting_review, approved, submitting, submitted, unknown, succeeded, rejected, definite_failed, needs_manual_review
+	State                 string  `gorm:"size:24;not null;index"` // awaiting_review, review_approved, approved (legacy/authorized submit), submitting, submitted, unknown, succeeded, rejected, definite_failed, needs_manual_review
 	OperationToken        string  `gorm:"size:80;not null;default:''"`
 	OperationKind         string  `gorm:"size:16;not null;default:''"` // apply, query
 	OperationClaimedAt    int64   `gorm:"not null;default:0;index"`

@@ -115,18 +115,23 @@ type RefundStepUpScope struct {
 	Capabilities []string `json:"capabilities,omitempty"`
 	Reason       string   `json:"reason,omitempty"`
 	RefundKey    string   `json:"refund_key,omitempty"`
+	BusinessKey  string   `json:"business_key,omitempty"`
 	AmountFen    int64    `json:"amount_fen,omitempty"`
 }
 
 func normalizeRefundStepUpScope(scope RefundStepUpScope) (RefundStepUpScope, error) {
 	scope.Action = strings.TrimSpace(scope.Action)
 	scope.Reason = strings.TrimSpace(scope.Reason)
-	if len(scope.Reason) > 256 {
+	maxReasonBytes := 256
+	if scope.Action == "refund.approve" || scope.Action == "refund.reject" || scope.Action == "refund.submit" {
+		maxReasonBytes = 512
+	}
+	if len([]byte(scope.Reason)) > maxReasonBytes {
 		return RefundStepUpScope{}, ErrRefundAuthConflict
 	}
 	switch scope.Action {
 	case RefundStepUpGrant, RefundStepUpRevoke:
-		if scope.TargetUserID <= 0 || len(scope.Capabilities) == 0 || scope.Reason == "" || scope.RefundKey != "" || scope.AmountFen != 0 {
+		if scope.TargetUserID <= 0 || len(scope.Capabilities) == 0 || scope.Reason == "" || scope.RefundKey != "" || scope.BusinessKey != "" || scope.AmountFen != 0 {
 			return RefundStepUpScope{}, ErrRefundAuthConflict
 		}
 		seen := make(map[string]struct{}, len(scope.Capabilities))
@@ -140,11 +145,17 @@ func normalizeRefundStepUpScope(scope RefundStepUpScope) (RefundStepUpScope, err
 			seen[capability] = struct{}{}
 		}
 		sort.Strings(scope.Capabilities)
-	case "refund.review", "refund.submit", "refund.reconcile":
+	case "refund.review", "refund.approve", "refund.reject", "refund.submit", "refund.reconcile":
 		if scope.TargetUserID != 0 || len(scope.Capabilities) != 0 || scope.RefundKey == "" || len(scope.RefundKey) > 180 || scope.AmountFen <= 0 {
 			return RefundStepUpScope{}, ErrRefundAuthConflict
 		}
-		scope.Reason = ""
+		if scope.Action == "refund.approve" || scope.Action == "refund.reject" || scope.Action == "refund.submit" {
+			if scope.BusinessKey == "" || len(scope.BusinessKey) > 180 || scope.Reason == "" || len(scope.Reason) > 512 {
+				return RefundStepUpScope{}, ErrRefundAuthConflict
+			}
+		} else if scope.BusinessKey != "" || scope.Reason != "" {
+			return RefundStepUpScope{}, ErrRefundAuthConflict
+		}
 	default:
 		return RefundStepUpScope{}, ErrRefundAuthConflict
 	}
@@ -284,7 +295,7 @@ func IssueRefundCapabilityStepUpTicket(actorID int, sessionBinding, password, ac
 }
 
 func refundActionAllowedTx(tx *gorm.DB, actorID int, action string) bool {
-	capability := map[string]string{"refund.review": RefundCapabilityReview, "refund.submit": RefundCapabilitySubmit, "refund.reconcile": RefundCapabilityReconcile}[action]
+	capability := map[string]string{"refund.review": RefundCapabilityReview, "refund.approve": RefundCapabilityReview, "refund.reject": RefundCapabilityReview, "refund.submit": RefundCapabilitySubmit, "refund.reconcile": RefundCapabilityReconcile}[action]
 	if capability == "" {
 		return false
 	}
@@ -313,6 +324,20 @@ func IssueRefundOperationStepUpTicket(actorID int, sessionBinding, password, ref
 		return "", ErrRefundAuthConflict
 	}
 	scope := RefundStepUpScope{Action: action, RefundKey: refund.RefundKey, AmountFen: refund.AmountFen}
+	return issueRefundStepUpTicket(actorID, sessionBinding, password, scope)
+}
+
+// IssueRefundDecisionStepUpTicket binds a confirmation to one persisted refund,
+// exact action, server-side amount, client idempotency key, and decision reason.
+func IssueRefundDecisionStepUpTicket(actorID int, sessionBinding, password, refundKey, action, businessKey, reason string) (string, error) {
+	if !config.PointRefundOperationsEnabled {
+		return "", ErrRefundAuthUnavailable
+	}
+	var refund PointRefund
+	if err := DB.Select("refund_key", "amount_fen").First(&refund, "refund_key = ?", refundKey).Error; err != nil {
+		return "", ErrRefundAuthConflict
+	}
+	scope := RefundStepUpScope{Action: action, RefundKey: refund.RefundKey, AmountFen: refund.AmountFen, BusinessKey: businessKey, Reason: reason}
 	return issueRefundStepUpTicket(actorID, sessionBinding, password, scope)
 }
 
@@ -385,6 +410,17 @@ func ConsumeRefundOperationStepUpTx(tx *gorm.DB, rawTicket string, actorID int, 
 		return err
 	}
 	scope := RefundStepUpScope{Action: action, RefundKey: refund.RefundKey, AmountFen: refund.AmountFen}
+	return consumeRefundStepUpTicketTx(tx, rawTicket, actorID, sessionBinding, scope, now.UTC())
+}
+
+// ConsumeRefundDecisionStepUpTx is used inside the same transaction as the
+// decision/audit write. Amount is always loaded from the immutable refund row.
+func ConsumeRefundDecisionStepUpTx(tx *gorm.DB, rawTicket string, actorID int, sessionBinding, refundKey, action, businessKey, reason string, now time.Time) error {
+	var refund PointRefund
+	if err := tx.First(&refund, "refund_key = ?", refundKey).Error; err != nil {
+		return err
+	}
+	scope := RefundStepUpScope{Action: action, RefundKey: refund.RefundKey, AmountFen: refund.AmountFen, BusinessKey: businessKey, Reason: reason}
 	return consumeRefundStepUpTicketTx(tx, rawTicket, actorID, sessionBinding, scope, now.UTC())
 }
 
