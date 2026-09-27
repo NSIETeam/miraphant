@@ -142,7 +142,8 @@ export function CustomerRefundPanel({ order }) {
       }, { headers: { 'X-CSRF-Token': csrfToken } });
       const known = { ...pending, state: 'known', refund_key: response?.data?.refund_key };
       sessionStorage.setItem(storageKey, JSON.stringify(known)); setIntent(known);
-      setNotice('退款申请已记录。相应积分已冻结，处理结果会显示在下方。');
+      const state = response?.data?.state;
+      setNotice(state === 'succeeded' ? '退款已完成。' : state === 'rejected' || state === 'definite_failed' ? '退款未继续处理，相关冻结积分已释放。' : state === 'awaiting_review' || state === 'review_approved' || state === 'submitted' || state === 'unknown' || state === 'needs_manual_review' ? '退款申请结果已读取，处理进度会显示在下方。' : '退款申请结果已读取。');
       setAmount(''); setReason(''); await load();
     } catch (e) {
       setError(explain(e));
