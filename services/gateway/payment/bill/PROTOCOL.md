@@ -32,6 +32,13 @@ References:
 - [Older generic reconciliation article](https://developer.alibaba.com/docs/doc.htm?articleId=106262&docType=1&source=search&treeId=193) — a format research lead only; not sufficient evidence for a current parser.
 - [Bank-interconnect data dictionary](https://doc.open.alipay.com/docs/doc.htm?articleId=106431&docType=1) — explicitly excluded from the normal merchant parser.
 
-## Remaining reconciliation work
+## Reconciliation follow-up
 
-The next phase must persist immutable source batches (provider, date, merchant/app scope, format/version, source digest and appropriate raw-file retention), detect duplicate imports without deleting duplicate rows, match payment/refund evidence by explicit identifiers, and create auditable differences. Fee/net settlement reconciliation is separate from this transaction-bill parser. Human resolution must not rewrite source evidence or directly alter points.
+The first SQLite storage/matching checkpoint is described in
+[`RECONCILIATION.md`](RECONCILIATION.md). It stores encrypted immutable source
+batches, per-row evidence, fixed findings, and append-only operator references;
+it does not expose import/list HTTP endpoints or modify points. Alipay bytes
+remain explicitly unsupported for row parsing. Next work must add configured
+provider/key loading, bounded admin HTTP access, and a review UI before claiming
+an operational reconciliation workflow. Fee/net settlement-account matching
+is separate from this trade-bill phase.

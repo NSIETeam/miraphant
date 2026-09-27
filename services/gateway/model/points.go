@@ -988,7 +988,7 @@ type PointsSchemaMigration struct {
 	AppliedAt time.Time
 }
 
-const pointsSchemaVersion = 11
+const pointsSchemaVersion = 12
 
 // MigratePointsSchema is deliberately separate from the normal startup migration.
 func MigratePointsSchema() error {
@@ -1010,7 +1010,7 @@ func MigratePointsSchema() error {
 		return nil
 	}
 	// Each additive AutoMigrate is safe to rerun if a backend commits DDL implicitly.
-	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}, &PointRefundRecoveryCursor{}}
+	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointAdminAudit{}, &PointTokenBudget{}, &PointPurchaseOrder{}, &PointPackage{}, &PointActivePackage{}, &PaymentEvent{}, &PaymentTransaction{}, &PointRefund{}, &PointRefundAllocation{}, &PointRefundDecision{}, &PointRefundEvidence{}, &PointRefundProviderOwner{}, &PointRefundInbox{}, &PointRefundRecoveryCursor{}, &PointReconciliationBatch{}, &PointReconciliationRow{}, &PointReconciliationDifference{}, &PointReconciliationAction{}}
 	for _, item := range models {
 		if err := DB.AutoMigrate(item); err != nil {
 			return err

@@ -51,7 +51,7 @@ jobs:
           cache-dependency-path: services/gateway/go.sum
       - name: Verify points HTTP, relay, and ledger transactions
         working-directory: services/gateway
-        run: go test ./controller ./router ./middleware ./model ./relay/controller ./relay/adaptor/openai -run 'Test(AdminPayment|AdminAudit|AdminRefund|FinanceReconcile|CustomerRefund|WeChatRefund|SQLite|Refund|DelegatedRefund|UserProfileUpdatePreservesRefund|LateNonterminalRefund|UnknownRecovery|OfflineRecovery|Payment|WeChatSigned|Point|LegacyQuota|NewUsers|NewPurchase|Adjustment|PendingUsage|ExpiredBonus|PaidOrder|Reviewed)' -count=1
+        run: go test ./controller ./router ./middleware ./model ./relay/controller ./relay/adaptor/openai -run 'Test(Reconciliation|AdminReconciliation|AdminPayment|AdminAudit|AdminRefund|FinanceReconcile|CustomerRefund|WeChatRefund|SQLite|Refund|DelegatedRefund|UserProfileUpdatePreservesRefund|LateNonterminalRefund|UnknownRecovery|OfflineRecovery|Payment|WeChatSigned|Point|LegacyQuota|NewUsers|NewPurchase|Adjustment|PendingUsage|ExpiredBonus|PaidOrder|Reviewed)' -count=1
       - name: Verify payment protocol adapters
         working-directory: services/gateway
         run: go test ./payment/... ./service/payments -count=1
