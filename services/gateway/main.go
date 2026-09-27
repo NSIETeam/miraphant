@@ -16,6 +16,7 @@ import (
 	"github.com/songquanpeng/one-api/model"
 	"github.com/songquanpeng/one-api/relay/adaptor/openai"
 	"github.com/songquanpeng/one-api/router"
+	"net"
 	"os"
 	"strconv"
 )
@@ -38,6 +39,16 @@ func main() {
 	// Initialize SQL Database
 	model.InitDB()
 	model.InitLogDB()
+	if *common.MigratePoints {
+		if err := model.MigratePointsSchema(); err != nil {
+			logger.FatalLog("points schema migration failed: " + err.Error())
+		}
+		logger.SysLog("points schema migration completed")
+		if err := model.CloseDB(); err != nil {
+			logger.FatalLog("failed to close database: " + err.Error())
+		}
+		return
+	}
 
 	var err error
 	err = model.CreateRootAccountIfNeed()
@@ -108,7 +119,13 @@ func main() {
 		port = strconv.Itoa(*common.Port)
 	}
 	logger.SysLogf("server started on http://localhost:%s", port)
-	err = server.Run(":" + port)
+	address := os.Getenv("BIND_ADDRESS")
+	if address == "" {
+		address = ":" + port // preserve the upstream all-interface default
+	} else if _, _, splitErr := net.SplitHostPort(address); splitErr != nil {
+		address = net.JoinHostPort(address, port)
+	}
+	err = server.Run(address)
 	if err != nil {
 		logger.FatalLog("failed to start HTTP server: " + err.Error())
 	}

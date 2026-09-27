@@ -162,3 +162,7 @@ var UserContentRequestProxy = env.String("USER_CONTENT_REQUEST_PROXY", "")
 var UserContentRequestTimeout = env.Int("USER_CONTENT_REQUEST_TIMEOUT", 30)
 
 var EnforceIncludeUsage = env.Bool("ENFORCE_INCLUDE_USAGE", false)
+
+// PointsBillingEnabled remains opt-in until the points ledger is connected to
+// every quota mutation and relay settlement path.
+var PointsBillingEnabled = env.Bool("POINTS_BILLING_ENABLED", false)

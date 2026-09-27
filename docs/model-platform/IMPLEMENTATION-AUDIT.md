@@ -128,3 +128,11 @@
 ## 首次审计阶段边界（历史记录）
 
 首次审计只核对官网仓库、产品规格和公开的 OneAPI v0.6.10 源码，并新增本文件；当时未纳管服务源码。其余实现、生产验证和商户验收边界以后续阶段状态为准。
+
+## G1 基础账本实现状态（待主 agent 复审）
+
+本轮在 `services/gateway/model/points.go` 新增微积分账户投影、来源/有效期 lot、append-only ledger、不可变价格版本与独立激活映射、逻辑请求 hold/lot allocation/attempt、显式 token budget、购买订单、人工裁决记录及显式 schema migration。价格费用使用整数运算并只做一次 half-up；赠送 lot 有效期采用 UTC Unix 秒，避免 SQLite 对带时区 DATETIME 字符串比较产生错误排序。`ReservePoints` 默认受 `POINTS_BILLING_ENABLED=false` 保护，不接入 relay；访问密钥必须已有显式积分预算记录，`Unlimited` 也需明确设定。每个 attempt 要提供请求指纹；估算/缺失 usage 进入 pending，未知结果不按 TTL 自动释放；需要人工或供应商裁决后才可 settle/release。超出冻结预算时维持 needs-review，审核 settle 会在同一事务重新校验余额与 token cap 并额外冻结，不能透支或截断真实 usage。
+
+`--migrate-points` 是单独的显式迁移入口。迁移不包在跨数据库 DDL 事务中，逐表 additive `AutoMigrate` 可在 MySQL 隐式提交/中途失败后重跑；仅全部表完成后写版本记录。SQLite 专项测试覆盖双 GORM 句柄并发冻结、余额不足、token cap 失败回滚、pending 到可信 usage 幂等结算、过期 lot、新冻结/旧 hold 释放、paid order 重复到账以及超冻结预算的审核补冻。当前实际验证为本机 Go 1.25.1：上述 model 专项测试通过，`go build ./...` 通过；全量 `go test ./...` 被既有 `common/image` 的 `TestDecode/Decode:jpeg` 失败阻断（`image: unknown format` 后测试 panic），本轮没有修改该测试或其图片资源。
+
+本轮没有在 MySQL/PostgreSQL 实例上验证，不能据 SQLite 结果宣称跨数据库运行验收；没有改写、转换或投影旧 `User.Quota`，也没有把新账本余额与旧余额并行扣费。relay 各种模态和 quota 增减路径尚未接线，因此新计费必须保持关闭。没有真实微信/支付宝适配、订单创建/通知验签或商户到账；credit service 只接受数据库中已可靠标记 `paid` 且金额/积分快照符合 1 元=100 积分的订单。未部署、未提交或推送；生产 Linux/amd64 构建还需独立 CI/主 agent 验收。

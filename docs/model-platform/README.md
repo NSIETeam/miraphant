@@ -126,7 +126,10 @@ v0.6.10 的 `AdminTopUp` 直接增加额度，再记录日志，没有支付订�
 - [OneAPI API 说明](https://github.com/songquanpeng/one-api/blob/main/docs/API.md)
 - [OneAPI README 授权说明](https://github.com/songquanpeng/one-api/blob/main/README.md)
 - [微信支付网站接入指引](https://pay.wechatpay.cn/static/applyment_guide/applyment_detail_website.shtml)
-- [微信支付通知处理说明](https://pay.wechatpay.cn/doc/v2/merchant/4011937152)（通用处理原则；实现使用所签约产品的 API v3 文档）
+- [微信 Native API v3 接入及状态流转](https://pay.wechatpay.cn/doc/v3/merchant/4012791891)
+- [微信 Native 下单 API v3](https://pay.wechatpay.cn/doc/v3/merchant/4012791877)
+- [微信支付官方 Go SDK](https://github.com/wechatpay-apiv3/wechatpay-go)：支持请求签名、应答验签、通知验签和解密；新商户需根据实际配置选择微信支付公钥或平台证书验签，不能强制只支持证书下载模式。
+- [支付宝官方 EasySDK API 契约](https://github.com/alipay/alipay-easysdk/blob/master/APIDoc.md)：电脑网站与手机网站支付分别接入，核对查询、关单、退款和通知验签的接口契约；实际 Go 依赖选型须注明来源并固定版本。
 - [支付宝网站支付产品](https://b.alipay.com/signing/productScene.htm?navKey=wysk&sceneId=wysk)
 
 本文不包含已生效的商业报价、生产密钥或已上线功能声明。

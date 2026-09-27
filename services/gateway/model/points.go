@@ -1,0 +1,996 @@
+package model
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"math/big"
+	"strconv"
+	"strings"
+	"time"
+
+	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+const PointMicroPerPoint int64 = 1_000_000
+
+func checkedAdd(a, b int64) (int64, error) {
+	maxInt64 := int64(^uint64(0) >> 1)
+	if b > 0 && a > maxInt64-b || b < 0 && a < -maxInt64-1-b {
+		return 0, errors.New("integer amount overflow")
+	}
+	return a + b, nil
+}
+
+var ErrPointsDisabled = errors.New("points billing is disabled")
+var ErrPointsConflict = errors.New("points idempotency key conflict")
+var ErrPointsInsufficient = errors.New("insufficient available points")
+var ErrPointsPending = errors.New("point hold requires usage review")
+
+type PointAccount struct {
+	UserID         int   `gorm:"primaryKey"`
+	AvailableMicro int64 `gorm:"not null;default:0"`
+	HeldMicro      int64 `gorm:"not null;default:0"`
+	SpentMicro     int64 `gorm:"not null;default:0"`
+	UpdatedAt      time.Time
+}
+
+type PointLot struct {
+	ID             uint   `gorm:"primaryKey"`
+	UserID         int    `gorm:"not null;index:idx_point_lot_user_expiry"`
+	BusinessKey    string `gorm:"size:160;not null;uniqueIndex"`
+	Kind           string `gorm:"size:24;not null;index"` // purchase, bonus, grant, migration
+	SourceRef      string `gorm:"size:160;not null;default:''"`
+	AmountFen      int64  `gorm:"not null;default:0"`
+	InitialMicro   int64  `gorm:"not null"`
+	AvailableMicro int64  `gorm:"not null"`
+	HeldMicro      int64  `gorm:"not null;default:0"`
+	ConsumedMicro  int64  `gorm:"not null;default:0"`
+	RefundedMicro  int64  `gorm:"not null;default:0"`
+	ExpiresAt      *int64 `gorm:"index:idx_point_lot_user_expiry"` // UTC Unix seconds
+	CreatedAt      time.Time
+}
+
+type PointLedger struct {
+	ID             uint   `gorm:"primaryKey"`
+	UserID         int    `gorm:"not null;index"`
+	BusinessKey    string `gorm:"size:180;not null;uniqueIndex"`
+	Kind           string `gorm:"size:32;not null"`
+	LotID          *uint  `gorm:"index"`
+	HoldID         *uint  `gorm:"index"`
+	OrderID        *uint  `gorm:"index"`
+	AvailableDelta int64  `gorm:"not null"`
+	HeldDelta      int64  `gorm:"not null"`
+	SpentDelta     int64  `gorm:"not null"`
+	AvailableAfter int64  `gorm:"not null"`
+	HeldAfter      int64  `gorm:"not null"`
+	SpentAfter     int64  `gorm:"not null"`
+	Reason         string `gorm:"size:512;not null;default:''"`
+	CreatedAt      time.Time
+}
+
+func (*PointLedger) BeforeUpdate(*gorm.DB) error { return errors.New("point ledger is append-only") }
+func (*PointLedger) BeforeDelete(*gorm.DB) error { return errors.New("point ledger is append-only") }
+
+type PointPriceVersion struct {
+	ID                    uint   `gorm:"primaryKey"`
+	Version               string `gorm:"size:80;not null;uniqueIndex"`
+	ModelID               string `gorm:"size:160;not null"`
+	Source                string `gorm:"size:512;not null;default:''"`
+	InputMicroPer1K       int64  `gorm:"not null"`
+	CachedInputMicroPer1K int64  `gorm:"not null"`
+	OutputMicroPer1K      int64  `gorm:"not null"`
+	ExtraMicro            int64  `gorm:"not null;default:0"`
+	CreatedAt             time.Time
+}
+
+type PointActivePrice struct {
+	ModelID   string `gorm:"primaryKey;size:160"`
+	Version   string `gorm:"size:80;not null"`
+	UpdatedAt time.Time
+}
+
+type PointHold struct {
+	ID                uint   `gorm:"primaryKey"`
+	UserID            int    `gorm:"not null;index"`
+	TokenID           int    `gorm:"not null;index"`
+	LogicalRequestKey string `gorm:"size:180;not null;uniqueIndex"`
+	BudgetMicro       int64  `gorm:"not null"`
+	PriceVersion      string `gorm:"size:80;not null;default:''"`
+	PriceSnapshot     string `gorm:"type:text;not null;default:''"`
+	State             string `gorm:"size:24;not null;index"` // held, pending, settled, released, needs_review
+	UsageMicro        int64  `gorm:"not null;default:0"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type PointHoldAllocation struct {
+	ID            uint  `gorm:"primaryKey"`
+	HoldID        uint  `gorm:"not null;uniqueIndex:idx_point_hold_lot"`
+	LotID         uint  `gorm:"not null;uniqueIndex:idx_point_hold_lot;index"`
+	ReservedMicro int64 `gorm:"not null"`
+	SettledMicro  int64 `gorm:"not null;default:0"`
+}
+
+type PointHoldAttempt struct {
+	ID                 uint   `gorm:"primaryKey"`
+	HoldID             uint   `gorm:"not null;uniqueIndex:idx_point_attempt_key"`
+	AttemptKey         string `gorm:"size:180;not null;uniqueIndex:idx_point_attempt_key"`
+	RequestFingerprint string `gorm:"size:128;not null;default:''"`
+	State              string `gorm:"size:24;not null;index"` // started, succeeded, failed, unknown
+	UsageMicro         int64  `gorm:"not null;default:0"`
+	UsageSource        string `gorm:"size:48;not null;default:''"`
+	UsageAuthoritative bool   `gorm:"not null;default:false"`
+	UsageFingerprint   string `gorm:"size:128;not null;default:''"`
+	Billable           bool   `gorm:"not null;default:false"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type PointHoldDecision struct {
+	ID          uint   `gorm:"primaryKey"`
+	HoldID      uint   `gorm:"not null;index"`
+	DecisionKey string `gorm:"size:180;not null;uniqueIndex"`
+	Action      string `gorm:"size:16;not null"`
+	UsageMicro  int64  `gorm:"not null;default:0"`
+	Reason      string `gorm:"size:512;not null"`
+	CreatedAt   time.Time
+}
+
+func (*PointHoldDecision) BeforeUpdate(*gorm.DB) error {
+	return errors.New("point hold decisions are append-only")
+}
+func (*PointHoldDecision) BeforeDelete(*gorm.DB) error {
+	return errors.New("point hold decisions are append-only")
+}
+
+type PointTokenBudget struct {
+	TokenID    int   `gorm:"primaryKey"`
+	UserID     int   `gorm:"not null;index"`
+	LimitMicro int64 `gorm:"not null;default:0"`
+	HeldMicro  int64 `gorm:"not null;default:0"`
+	SpentMicro int64 `gorm:"not null;default:0"`
+	Unlimited  bool  `gorm:"not null;default:false"`
+	UpdatedAt  time.Time
+}
+
+type PointPurchaseOrder struct {
+	ID             uint    `gorm:"primaryKey"`
+	OrderKey       string  `gorm:"size:160;not null;uniqueIndex"`
+	UserID         int     `gorm:"not null;index"`
+	AmountFen      int64   `gorm:"not null"`
+	PurchaseMicro  int64   `gorm:"not null"`
+	BonusMicro     int64   `gorm:"not null;default:0"`
+	BonusExpiresAt *int64  // UTC Unix seconds
+	State          string  `gorm:"size:24;not null;index"` // pending, paid, credited, closed, refunded
+	PaidEventKey   *string `gorm:"size:180;uniqueIndex"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (*PointPriceVersion) BeforeUpdate(*gorm.DB) error {
+	return errors.New("point price versions are immutable")
+}
+func (*PointPriceVersion) BeforeDelete(*gorm.DB) error {
+	return errors.New("point price versions are immutable")
+}
+
+func CreatePointPriceVersion(price *PointPriceVersion) error {
+	if price == nil || price.Version == "" || price.ModelID == "" || price.InputMicroPer1K < 0 || price.CachedInputMicroPer1K < 0 || price.OutputMicroPer1K < 0 || price.ExtraMicro < 0 {
+		return errors.New("invalid price version")
+	}
+	return DB.Create(price).Error
+}
+
+func ActivatePointPriceVersion(modelID, version string) error {
+	if modelID == "" || version == "" {
+		return errors.New("model and price version are required")
+	}
+	return pointsTransaction(func(tx *gorm.DB) error {
+		var price PointPriceVersion
+		if err := tx.Where("version = ? AND model_id = ?", version, modelID).First(&price).Error; err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		return tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "model_id"}}, DoUpdates: clause.Assignments(map[string]interface{}{"version": version, "updated_at": now})}).Create(&PointActivePrice{ModelID: modelID, Version: version, UpdatedAt: now}).Error
+	})
+}
+
+type PointsSchemaMigration struct {
+	Version   int `gorm:"primaryKey"`
+	AppliedAt time.Time
+}
+
+const pointsSchemaVersion = 2
+
+// MigratePointsSchema is deliberately separate from the normal startup migration.
+func MigratePointsSchema() error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+	if err := DB.AutoMigrate(&PointsSchemaMigration{}); err != nil {
+		return err
+	}
+	var applied PointsSchemaMigration
+	err := DB.First(&applied, "version = ?", pointsSchemaVersion).Error
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	// Each additive AutoMigrate is safe to rerun if a backend commits DDL implicitly.
+	models := []interface{}{&PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointTokenBudget{}, &PointPurchaseOrder{}}
+	for _, item := range models {
+		if err := DB.AutoMigrate(item); err != nil {
+			return err
+		}
+	}
+	return DB.Create(&PointsSchemaMigration{Version: pointsSchemaVersion, AppliedAt: time.Now().UTC()}).Error
+}
+
+func pointsTransaction(fn func(*gorm.DB) error) error {
+	return pointsTransactionWithContext(context.Background(), DB, fn)
+}
+
+func pointsTransactionOn(db *gorm.DB, fn func(*gorm.DB) error) error {
+	return pointsTransactionWithContext(context.Background(), db, fn)
+}
+
+func isSQLiteBusy(err error) bool {
+	var sqliteErr sqlite3.Error
+	return errors.As(err, &sqliteErr) && (sqliteErr.Code == sqlite3.ErrBusy || sqliteErr.Code == sqlite3.ErrLocked)
+}
+
+func pointsTransactionWithContext(ctx context.Context, db *gorm.DB, fn func(*gorm.DB) error) error {
+	var err error
+	for attempt := 0; attempt < 8; attempt++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		err = db.WithContext(ctx).Transaction(fn)
+		if err == nil || !common.UsingSQLite || !isSQLiteBusy(err) {
+			return err
+		}
+		// The DB-only closure resolves its unique business key before every retry.
+		wait := time.NewTimer(time.Duration(25*(attempt+1)) * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			wait.Stop()
+			return ctx.Err()
+		case <-wait.C:
+		}
+	}
+	return err
+}
+
+func expireAvailablePointLotsTx(tx *gorm.DB, userID int, now time.Time) error {
+	var lots []PointLot
+	if err := tx.Where("user_id = ? AND available_micro > 0 AND expires_at IS NOT NULL AND expires_at <= ?", userID, now.Unix()).Order("id ASC").Find(&lots).Error; err != nil {
+		return err
+	}
+	var total int64
+	for _, lot := range lots {
+		next, err := checkedAdd(total, lot.AvailableMicro)
+		if err != nil {
+			return err
+		}
+		total = next
+	}
+	if total == 0 {
+		return nil
+	}
+	update := tx.Model(&PointLot{}).Where("user_id = ? AND available_micro > 0 AND expires_at IS NOT NULL AND expires_at <= ?", userID, now.Unix()).Update("available_micro", 0)
+	if update.Error != nil {
+		return update.Error
+	}
+	if update.RowsAffected != int64(len(lots)) {
+		return errors.New("point lot expiry changed concurrently")
+	}
+	accountUpdate := tx.Model(&PointAccount{}).Where("user_id = ? AND available_micro >= ?", userID, total).Update("available_micro", gorm.Expr("available_micro - ?", total))
+	if accountUpdate.Error != nil {
+		return accountUpdate.Error
+	}
+	if accountUpdate.RowsAffected != 1 {
+		return errors.New("point account does not cover expired lots")
+	}
+	var after PointAccount
+	if err := tx.First(&after, "user_id = ?", userID).Error; err != nil {
+		return err
+	}
+	runningAvailable := after.AvailableMicro + total
+	for _, lot := range lots {
+		runningAvailable -= lot.AvailableMicro
+		lotID := lot.ID
+		if err := tx.Create(&PointLedger{UserID: userID, BusinessKey: fmt.Sprintf("expire:lot:%d", lot.ID), Kind: "expire", LotID: &lotID, AvailableDelta: -lot.AvailableMicro, AvailableAfter: runningAvailable, HeldAfter: after.HeldMicro, SpentAfter: after.SpentMicro, Reason: "expired bonus lot"}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ParseMicroPoints parses a decimal point amount without floating point rounding.
+func ParseMicroPoints(value string) (int64, error) {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.HasPrefix(value, "-") {
+		return 0, errors.New("points must be a non-negative decimal")
+	}
+	parts := strings.Split(value, ".")
+	if len(parts) > 2 || len(parts) == 2 && len(parts[1]) > 6 {
+		return 0, errors.New("points support at most six decimal places")
+	}
+	for _, part := range parts {
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return 0, errors.New("points must contain digits only")
+			}
+		}
+	}
+	whole, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	fraction := ""
+	if len(parts) == 2 {
+		fraction = parts[1]
+	}
+	for len(fraction) < 6 {
+		fraction += "0"
+	}
+	var fractional int64
+	if fraction != "" {
+		fractional, err = strconv.ParseInt(fraction, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if whole > (int64(^uint64(0)>>1)-fractional)/PointMicroPerPoint {
+		return 0, errors.New("points amount overflow")
+	}
+	return whole*PointMicroPerPoint + fractional, nil
+}
+
+// CalculatePointUsage rounds once, half-up, after summing all token components.
+func CalculatePointUsage(prompt, cachedPrompt, output int64, price PointPriceVersion) (int64, error) {
+	if prompt < 0 || cachedPrompt < 0 || output < 0 || cachedPrompt > prompt || price.InputMicroPer1K < 0 || price.CachedInputMicroPer1K < 0 || price.OutputMicroPer1K < 0 || price.ExtraMicro < 0 {
+		return 0, errors.New("invalid usage or price snapshot")
+	}
+	uncached := prompt - cachedPrompt
+	total := new(big.Int).Mul(big.NewInt(uncached), big.NewInt(price.InputMicroPer1K))
+	total.Add(total, new(big.Int).Mul(big.NewInt(cachedPrompt), big.NewInt(price.CachedInputMicroPer1K)))
+	total.Add(total, new(big.Int).Mul(big.NewInt(output), big.NewInt(price.OutputMicroPer1K)))
+	total.Add(total, big.NewInt(500))
+	total.Div(total, big.NewInt(1000))
+	total.Add(total, big.NewInt(price.ExtraMicro))
+	if !total.IsInt64() {
+		return 0, errors.New("usage calculation overflow")
+	}
+	return total.Int64(), nil
+}
+
+type PointReserveRequest struct {
+	UserID             int
+	TokenID            int
+	LogicalRequestKey  string
+	AttemptKey         string
+	AttemptFingerprint string
+	BudgetMicro        int64
+	PriceVersion       string
+	PriceSnapshot      string
+}
+
+// ReservePoints holds a single logical-request budget; retry attempts share that hold.
+func ReservePoints(req PointReserveRequest) (*PointHold, error) {
+	return ReservePointsContext(context.Background(), req)
+}
+
+func ReservePointsContext(ctx context.Context, req PointReserveRequest) (*PointHold, error) {
+	return reservePointsContextOn(ctx, DB, req)
+}
+
+func reservePointsOn(db *gorm.DB, req PointReserveRequest) (*PointHold, error) {
+	return reservePointsContextOn(context.Background(), db, req)
+}
+
+func reservePointsContextOn(ctx context.Context, db *gorm.DB, req PointReserveRequest) (*PointHold, error) {
+	if !config.PointsBillingEnabled {
+		return nil, ErrPointsDisabled
+	}
+	if db == nil || req.UserID <= 0 || req.TokenID <= 0 || req.LogicalRequestKey == "" || req.AttemptKey == "" || req.AttemptFingerprint == "" || req.BudgetMicro <= 0 || req.PriceVersion == "" {
+		return nil, errors.New("invalid point reserve request")
+	}
+	var price PointPriceVersion
+	if err := db.Where("version = ?", req.PriceVersion).First(&price).Error; err != nil {
+		return nil, err
+	}
+	priceSnapshot, err := json.Marshal(price)
+	if err != nil {
+		return nil, err
+	}
+	if req.PriceSnapshot != "" && req.PriceSnapshot != string(priceSnapshot) {
+		return nil, ErrPointsConflict
+	}
+	req.PriceSnapshot = string(priceSnapshot)
+	var result PointHold
+	err = pointsTransactionWithContext(ctx, db, func(tx *gorm.DB) error {
+		var allocations []PointHoldAllocation
+		var existing PointHold
+		err := tx.Where("logical_request_key = ?", req.LogicalRequestKey).First(&existing).Error
+		if err == nil {
+			if existing.UserID != req.UserID || existing.TokenID != req.TokenID || existing.BudgetMicro != req.BudgetMicro || existing.PriceVersion != req.PriceVersion || existing.PriceSnapshot != req.PriceSnapshot {
+				return ErrPointsConflict
+			}
+			if existing.State == "settled" || existing.State == "released" || existing.State == "needs_review" {
+				return ErrPointsConflict
+			}
+			var attempt PointHoldAttempt
+			err = tx.Where("hold_id = ? AND attempt_key = ?", existing.ID, req.AttemptKey).First(&attempt).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				attempt = PointHoldAttempt{HoldID: existing.ID, AttemptKey: req.AttemptKey, RequestFingerprint: req.AttemptFingerprint, State: "started"}
+				if err = tx.Create(&attempt).Error; err != nil {
+					return err
+				}
+			} else if err != nil {
+				return err
+			} else if attempt.RequestFingerprint != req.AttemptFingerprint {
+				return ErrPointsConflict
+			}
+			result = existing
+			return nil
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		var active PointActivePrice
+		if err := tx.Where("model_id = ? AND version = ?", price.ModelID, req.PriceVersion).First(&active).Error; err != nil {
+			return errors.New("price version is not active")
+		}
+		var token Token
+		if err := tx.Select("id", "user_id", "status").First(&token, "id = ?", req.TokenID).Error; err != nil {
+			return err
+		}
+		if token.UserId != req.UserID || token.Status != TokenStatusEnabled {
+			return errors.New("point token is not active for user")
+		}
+		var budget PointTokenBudget
+		if err := tx.First(&budget, "token_id = ?", req.TokenID).Error; err != nil {
+			return errors.New("explicit point token budget is required")
+		}
+		if budget.UserID != req.UserID {
+			return errors.New("point token budget owner mismatch")
+		}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&PointAccount{UserID: req.UserID}).Error; err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		if err := expireAvailablePointLotsTx(tx, req.UserID, now); err != nil {
+			return err
+		}
+		updated := tx.Model(&PointAccount{}).Where("user_id = ? AND available_micro >= ?", req.UserID, req.BudgetMicro).Updates(map[string]interface{}{"available_micro": gorm.Expr("available_micro - ?", req.BudgetMicro), "held_micro": gorm.Expr("held_micro + ?", req.BudgetMicro)})
+		if updated.Error != nil {
+			return updated.Error
+		}
+		if updated.RowsAffected != 1 {
+			return ErrPointsInsufficient
+		}
+		if !budget.Unlimited {
+			capUpdate := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND user_id = ? AND limit_micro - spent_micro - held_micro >= ?", req.TokenID, req.UserID, req.BudgetMicro).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro + ?", req.BudgetMicro)})
+			if capUpdate.Error != nil {
+				return capUpdate.Error
+			}
+			if capUpdate.RowsAffected != 1 {
+				return errors.New("point token budget exceeded")
+			}
+		} else {
+			capUpdate := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND user_id = ?", req.TokenID, req.UserID).Update("held_micro", gorm.Expr("held_micro + ?", req.BudgetMicro))
+			if capUpdate.Error != nil {
+				return capUpdate.Error
+			}
+			if capUpdate.RowsAffected != 1 {
+				return errors.New("point token budget missing")
+			}
+		}
+		var lots []PointLot
+		now = time.Now().UTC()
+		if err := tx.Where("user_id = ? AND available_micro > 0 AND (expires_at IS NULL OR expires_at > ?)", req.UserID, now.Unix()).Order("CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END ASC").Order("expires_at ASC").Order("created_at ASC").Order("id ASC").Find(&lots).Error; err != nil {
+			return err
+		}
+		remaining := req.BudgetMicro
+		for _, lot := range lots {
+			if remaining == 0 {
+				break
+			}
+			take := lot.AvailableMicro
+			if take > remaining {
+				take = remaining
+			}
+			upd := tx.Model(&PointLot{}).Where("id = ? AND available_micro >= ?", lot.ID, take).Updates(map[string]interface{}{"available_micro": gorm.Expr("available_micro - ?", take), "held_micro": gorm.Expr("held_micro + ?", take)})
+			if upd.Error != nil {
+				return upd.Error
+			}
+			if upd.RowsAffected != 1 {
+				return ErrPointsInsufficient
+			}
+			remaining -= take
+			allocation := PointHoldAllocation{LotID: lot.ID, ReservedMicro: take}
+			// Hold ID is filled after the hold insert below; stage allocations in memory.
+			allocations = append(allocations, allocation)
+		}
+		if remaining != 0 {
+			return ErrPointsInsufficient
+		}
+		result = PointHold{UserID: req.UserID, TokenID: req.TokenID, LogicalRequestKey: req.LogicalRequestKey, BudgetMicro: req.BudgetMicro, PriceVersion: req.PriceVersion, PriceSnapshot: req.PriceSnapshot, State: "held"}
+		if err := tx.Create(&result).Error; err != nil {
+			return err
+		}
+		for i := range allocations {
+			allocations[i].HoldID = result.ID
+			if err := tx.Create(&allocations[i]).Error; err != nil {
+				return err
+			}
+		}
+		attempt := PointHoldAttempt{HoldID: result.ID, AttemptKey: req.AttemptKey, RequestFingerprint: req.AttemptFingerprint, State: "started"}
+		if err := tx.Create(&attempt).Error; err != nil {
+			return err
+		}
+		var account PointAccount
+		if err := tx.First(&account, "user_id = ?", req.UserID).Error; err != nil {
+			return err
+		}
+		return tx.Create(&PointLedger{UserID: req.UserID, BusinessKey: "hold:" + req.LogicalRequestKey, Kind: "hold", HeldDelta: req.BudgetMicro, AvailableDelta: -req.BudgetMicro, AvailableAfter: account.AvailableMicro, HeldAfter: account.HeldMicro, SpentAfter: account.SpentMicro, Reason: "request budget reserved"}).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+type PointAttemptUsage struct {
+	LogicalRequestKey string
+	AttemptKey        string
+	State             string
+	UsageMicro        int64
+	UsageSource       string
+	Authoritative     bool
+	Fingerprint       string
+	Billable          bool
+}
+
+// RecordPointAttemptUsage stores evidence. Untrusted or absent usage leaves funds held.
+func RecordPointAttemptUsage(report PointAttemptUsage) (*PointHold, error) {
+	var hold PointHold
+	err := pointsTransaction(func(tx *gorm.DB) error {
+		if err := tx.Where("logical_request_key = ?", report.LogicalRequestKey).First(&hold).Error; err != nil {
+			return err
+		}
+		var attempt PointHoldAttempt
+		if err := tx.Where("hold_id = ? AND attempt_key = ?", hold.ID, report.AttemptKey).First(&attempt).Error; err != nil {
+			return err
+		}
+		if report.UsageMicro < 0 {
+			return errors.New("usage cannot be negative")
+		}
+		if report.Authoritative && (report.UsageSource == "" || report.Fingerprint == "") {
+			return errors.New("authoritative usage requires provenance and fingerprint")
+		}
+		state := report.State
+		if state != "succeeded" && state != "failed" && state != "unknown" {
+			return errors.New("invalid attempt state")
+		}
+		if !report.Authoritative || state == "unknown" {
+			state = "unknown"
+		}
+		if hold.State == "settled" || hold.State == "released" {
+			if attempt.State == state && attempt.UsageMicro == report.UsageMicro && attempt.UsageSource == report.UsageSource && attempt.UsageAuthoritative == report.Authoritative && attempt.UsageFingerprint == report.Fingerprint && attempt.Billable == report.Billable {
+				return nil
+			}
+			return ErrPointsConflict
+		}
+		if attempt.State != "started" && !(attempt.State == "unknown" && report.Authoritative) {
+			if attempt.State == state && attempt.UsageMicro == report.UsageMicro && attempt.UsageSource == report.UsageSource && attempt.UsageAuthoritative == report.Authoritative && attempt.UsageFingerprint == report.Fingerprint && attempt.Billable == report.Billable {
+				return nil
+			}
+			return ErrPointsConflict
+		}
+		if !report.Authoritative || state == "unknown" {
+			state = "unknown"
+			hold.State = "pending"
+		}
+		if err := tx.Model(&attempt).Updates(map[string]interface{}{"state": state, "usage_micro": report.UsageMicro, "usage_source": report.UsageSource, "usage_authoritative": report.Authoritative, "usage_fingerprint": report.Fingerprint, "billable": report.Billable}).Error; err != nil {
+			return err
+		}
+		var attempts []PointHoldAttempt
+		if err := tx.Where("hold_id = ?", hold.ID).Find(&attempts).Error; err != nil {
+			return err
+		}
+		total := int64(0)
+		for _, item := range attempts {
+			if item.ID == attempt.ID {
+				item.State, item.UsageMicro, item.UsageAuthoritative, item.Billable = state, report.UsageMicro, report.Authoritative, report.Billable
+			}
+			if item.State == "started" || item.State == "unknown" || !item.UsageAuthoritative {
+				hold.State = "pending"
+				return tx.Model(&hold).Update("state", "pending").Error
+			}
+			if item.Billable {
+				var sumErr error
+				total, sumErr = checkedAdd(total, item.UsageMicro)
+				if sumErr != nil {
+					return sumErr
+				}
+			}
+		}
+		hold.UsageMicro = total
+		if total > hold.BudgetMicro {
+			hold.State = "needs_review"
+			return tx.Model(&hold).Updates(map[string]interface{}{"state": hold.State, "usage_micro": total}).Error
+		}
+		hold.State = "held"
+		return settlePointHoldTx(tx, &hold, total)
+	})
+	return &hold, err
+}
+
+func settlePointHoldTx(tx *gorm.DB, hold *PointHold, usage int64) error {
+	if hold.State == "settled" {
+		if hold.UsageMicro == usage {
+			return nil
+		}
+		return ErrPointsConflict
+	}
+	if hold.State != "held" || usage < 0 || usage > hold.BudgetMicro {
+		return ErrPointsPending
+	}
+	now := time.Now().UTC()
+	if err := expireAvailablePointLotsTx(tx, hold.UserID, now); err != nil {
+		return err
+	}
+	var allocations []PointHoldAllocation
+	if err := tx.Where("hold_id = ?", hold.ID).Order("id ASC").Find(&allocations).Error; err != nil {
+		return err
+	}
+	remaining := usage
+	availableRelease := int64(0)
+	for _, allocation := range allocations {
+		consume := allocation.ReservedMicro
+		if consume > remaining {
+			consume = remaining
+		}
+		release := allocation.ReservedMicro - consume
+		var lot PointLot
+		if err := tx.First(&lot, allocation.LotID).Error; err != nil {
+			return err
+		}
+		updates := map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", allocation.ReservedMicro), "consumed_micro": gorm.Expr("consumed_micro + ?", consume)}
+		if lot.ExpiresAt == nil || *lot.ExpiresAt > now.Unix() {
+			updates["available_micro"] = gorm.Expr("available_micro + ?", release)
+			availableRelease += release
+		}
+		lotUpdate := tx.Model(&PointLot{}).Where("id = ? AND held_micro >= ?", lot.ID, allocation.ReservedMicro).Updates(updates)
+		if lotUpdate.Error != nil {
+			return lotUpdate.Error
+		}
+		if lotUpdate.RowsAffected != 1 {
+			return errors.New("point lot state changed")
+		}
+		remaining -= consume
+		if err := tx.Model(&allocation).Update("settled_micro", consume).Error; err != nil {
+			return err
+		}
+	}
+	if remaining != 0 {
+		return errors.New("hold allocation does not cover usage")
+	}
+	update := tx.Model(&PointAccount{}).Where("user_id = ? AND held_micro >= ?", hold.UserID, hold.BudgetMicro).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "available_micro": gorm.Expr("available_micro + ?", hold.BudgetMicro-usage), "spent_micro": gorm.Expr("spent_micro + ?", usage)})
+	if update.Error != nil {
+		return update.Error
+	}
+	if update.RowsAffected != 1 {
+		return errors.New("point account state changed")
+	}
+	if availableRelease != hold.BudgetMicro-usage {
+		update = tx.Model(&PointAccount{}).Where("user_id = ?", hold.UserID).Update("available_micro", gorm.Expr("available_micro - ?", hold.BudgetMicro-usage-availableRelease))
+		if update.Error != nil {
+			return update.Error
+		}
+		if update.RowsAffected != 1 {
+			return errors.New("point account expiry adjustment failed")
+		}
+	}
+	tokenUpdate := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND held_micro >= ?", hold.TokenID, hold.BudgetMicro).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "spent_micro": gorm.Expr("spent_micro + ?", usage)})
+	if tokenUpdate.Error != nil {
+		return tokenUpdate.Error
+	}
+	if tokenUpdate.RowsAffected != 1 {
+		return errors.New("point token budget state changed")
+	}
+	var account PointAccount
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&account, "user_id = ?", hold.UserID).Error; err != nil {
+		return err
+	}
+	holdUpdate := tx.Model(hold).Where("state IN ?", []string{"held", "pending", "needs_review"}).Updates(map[string]interface{}{"state": "settled", "usage_micro": usage})
+	if holdUpdate.Error != nil {
+		return holdUpdate.Error
+	}
+	if holdUpdate.RowsAffected != 1 {
+		return ErrPointsConflict
+	}
+	return tx.Create(&PointLedger{UserID: hold.UserID, BusinessKey: fmt.Sprintf("settle:%s", hold.LogicalRequestKey), Kind: "settle", HoldID: &hold.ID, AvailableDelta: availableRelease, HeldDelta: -hold.BudgetMicro, SpentDelta: usage, AvailableAfter: account.AvailableMicro, HeldAfter: account.HeldMicro, SpentAfter: account.SpentMicro, Reason: "authoritative usage settlement"}).Error
+}
+
+// ResolvePointHold is an auditable, idempotent human/provider decision path; no TTL releases funds.
+func ResolvePointHold(logicalKey, decisionKey, action string, usage int64, reason string) error {
+	if decisionKey == "" || reason == "" {
+		return errors.New("decision key and reason are required")
+	}
+	return pointsTransaction(func(tx *gorm.DB) error {
+		var hold PointHold
+		if err := tx.Where("logical_request_key = ?", logicalKey).First(&hold).Error; err != nil {
+			return err
+		}
+		var prior PointHoldDecision
+		err := tx.Where("decision_key = ?", decisionKey).First(&prior).Error
+		if err == nil {
+			if prior.HoldID == hold.ID && prior.Action == action && prior.UsageMicro == usage && prior.Reason == reason {
+				return nil
+			}
+			return ErrPointsConflict
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		if hold.State != "pending" && hold.State != "needs_review" {
+			return ErrPointsConflict
+		}
+		decision := PointHoldDecision{HoldID: hold.ID, DecisionKey: decisionKey, Action: action, UsageMicro: usage, Reason: reason}
+		if err := tx.Create(&decision).Error; err != nil {
+			return err
+		}
+		if action == "settle" {
+			if usage > hold.BudgetMicro {
+				if err := extendPointHoldTx(tx, &hold, usage-hold.BudgetMicro, decisionKey); err != nil {
+					return err
+				}
+			}
+			hold.State = "held"
+			if err := settlePointHoldTx(tx, &hold, usage); err != nil {
+				return err
+			}
+		} else if action == "release" {
+			if usage != 0 {
+				return errors.New("release decision must have zero usage")
+			}
+			hold.State = "held"
+			if err := releasePointHoldTx(tx, &hold); err != nil {
+				return err
+			}
+		} else {
+			return errors.New("decision must be settle or release")
+		}
+		return nil
+	})
+}
+
+func extendPointHoldTx(tx *gorm.DB, hold *PointHold, extra int64, decisionKey string) error {
+	if extra <= 0 {
+		return errors.New("hold extension must be positive")
+	}
+	now := time.Now().UTC()
+	if err := expireAvailablePointLotsTx(tx, hold.UserID, now); err != nil {
+		return err
+	}
+	accountUpdate := tx.Model(&PointAccount{}).Where("user_id = ? AND available_micro >= ?", hold.UserID, extra).Updates(map[string]interface{}{"available_micro": gorm.Expr("available_micro - ?", extra), "held_micro": gorm.Expr("held_micro + ?", extra)})
+	if accountUpdate.Error != nil {
+		return accountUpdate.Error
+	}
+	if accountUpdate.RowsAffected != 1 {
+		return ErrPointsInsufficient
+	}
+	var budget PointTokenBudget
+	if err := tx.First(&budget, "token_id = ? AND user_id = ?", hold.TokenID, hold.UserID).Error; err != nil {
+		return err
+	}
+	if !budget.Unlimited {
+		update := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND user_id = ? AND limit_micro - spent_micro - held_micro >= ?", hold.TokenID, hold.UserID, extra).Update("held_micro", gorm.Expr("held_micro + ?", extra))
+		if update.Error != nil {
+			return update.Error
+		}
+		if update.RowsAffected != 1 {
+			return errors.New("point token budget cannot cover reviewed usage")
+		}
+	} else {
+		update := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND user_id = ?", hold.TokenID, hold.UserID).Update("held_micro", gorm.Expr("held_micro + ?", extra))
+		if update.Error != nil {
+			return update.Error
+		}
+		if update.RowsAffected != 1 {
+			return errors.New("point token budget missing")
+		}
+	}
+	var lots []PointLot
+	if err := tx.Where("user_id = ? AND available_micro > 0 AND (expires_at IS NULL OR expires_at > ?)", hold.UserID, now.Unix()).Order("CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END ASC").Order("expires_at ASC").Order("created_at ASC").Order("id ASC").Find(&lots).Error; err != nil {
+		return err
+	}
+	remaining := extra
+	for _, lot := range lots {
+		if remaining == 0 {
+			break
+		}
+		take := lot.AvailableMicro
+		if take > remaining {
+			take = remaining
+		}
+		update := tx.Model(&PointLot{}).Where("id = ? AND available_micro >= ?", lot.ID, take).Updates(map[string]interface{}{"available_micro": gorm.Expr("available_micro - ?", take), "held_micro": gorm.Expr("held_micro + ?", take)})
+		if update.Error != nil {
+			return update.Error
+		}
+		if update.RowsAffected != 1 {
+			return ErrPointsInsufficient
+		}
+		remaining -= take
+		var allocation PointHoldAllocation
+		err := tx.Where("hold_id = ? AND lot_id = ?", hold.ID, lot.ID).First(&allocation).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			allocation = PointHoldAllocation{HoldID: hold.ID, LotID: lot.ID, ReservedMicro: take}
+			if err := tx.Create(&allocation).Error; err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		} else {
+			updated := tx.Model(&allocation).Where("reserved_micro = ?", allocation.ReservedMicro).Update("reserved_micro", gorm.Expr("reserved_micro + ?", take))
+			if updated.Error != nil {
+				return updated.Error
+			}
+			if updated.RowsAffected != 1 {
+				return errors.New("hold allocation changed")
+			}
+		}
+	}
+	if remaining != 0 {
+		return ErrPointsInsufficient
+	}
+	newBudget, err := checkedAdd(hold.BudgetMicro, extra)
+	if err != nil {
+		return err
+	}
+	if err := tx.Model(hold).Update("budget_micro", newBudget).Error; err != nil {
+		return err
+	}
+	hold.BudgetMicro = newBudget
+	var account PointAccount
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&account, "user_id = ?", hold.UserID).Error; err != nil {
+		return err
+	}
+	return tx.Create(&PointLedger{UserID: hold.UserID, BusinessKey: "review_topup:" + decisionKey, Kind: "review_topup", HoldID: &hold.ID, AvailableDelta: -extra, HeldDelta: extra, AvailableAfter: account.AvailableMicro, HeldAfter: account.HeldMicro, SpentAfter: account.SpentMicro, Reason: "adjudicated usage exceeded initial hold"}).Error
+}
+
+func releasePointHoldTx(tx *gorm.DB, hold *PointHold) error {
+	now := time.Now().UTC()
+	if err := expireAvailablePointLotsTx(tx, hold.UserID, now); err != nil {
+		return err
+	}
+	var allocations []PointHoldAllocation
+	if err := tx.Where("hold_id = ?", hold.ID).Find(&allocations).Error; err != nil {
+		return err
+	}
+	var availableRelease int64
+	for _, allocation := range allocations {
+		var lot PointLot
+		if err := tx.First(&lot, allocation.LotID).Error; err != nil {
+			return err
+		}
+		release := allocation.ReservedMicro - allocation.SettledMicro
+		updates := map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", release)}
+		if lot.ExpiresAt == nil || *lot.ExpiresAt > now.Unix() {
+			updates["available_micro"] = gorm.Expr("available_micro + ?", release)
+			availableRelease += release
+		}
+		upd := tx.Model(&PointLot{}).Where("id = ? AND held_micro >= ?", lot.ID, release).Updates(updates)
+		if upd.Error != nil {
+			return upd.Error
+		}
+		if upd.RowsAffected != 1 {
+			return errors.New("point lot state changed")
+		}
+	}
+	update := tx.Model(&PointAccount{}).Where("user_id = ? AND held_micro >= ?", hold.UserID, hold.BudgetMicro).Updates(map[string]interface{}{"held_micro": gorm.Expr("held_micro - ?", hold.BudgetMicro), "available_micro": gorm.Expr("available_micro + ?", availableRelease)})
+	if update.Error != nil {
+		return update.Error
+	}
+	if update.RowsAffected != 1 {
+		return errors.New("point account state changed")
+	}
+	tokenUpdate := tx.Model(&PointTokenBudget{}).Where("token_id = ? AND held_micro >= ?", hold.TokenID, hold.BudgetMicro).Update("held_micro", gorm.Expr("held_micro - ?", hold.BudgetMicro))
+	if tokenUpdate.Error != nil {
+		return tokenUpdate.Error
+	}
+	if tokenUpdate.RowsAffected != 1 {
+		return errors.New("point token budget state changed")
+	}
+	var account PointAccount
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&account, "user_id = ?", hold.UserID).Error; err != nil {
+		return err
+	}
+	holdUpdate := tx.Model(hold).Where("state IN ?", []string{"held", "pending", "needs_review"}).Update("state", "released")
+	if holdUpdate.Error != nil {
+		return holdUpdate.Error
+	}
+	if holdUpdate.RowsAffected != 1 {
+		return ErrPointsConflict
+	}
+	return tx.Create(&PointLedger{UserID: hold.UserID, BusinessKey: "release:" + hold.LogicalRequestKey, Kind: "release", HoldID: &hold.ID, AvailableDelta: availableRelease, HeldDelta: -hold.BudgetMicro, AvailableAfter: account.AvailableMicro, HeldAfter: account.HeldMicro, SpentAfter: account.SpentMicro, Reason: "adjudicated release"}).Error
+}
+
+// CreditPaidPointOrder only credits an order already durably marked paid by a future verified adapter.
+func CreditPaidPointOrder(orderKey, eventKey string) error {
+	if orderKey == "" || eventKey == "" {
+		return errors.New("order and verified event keys are required")
+	}
+	return pointsTransaction(func(tx *gorm.DB) error {
+		var order PointPurchaseOrder
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("order_key = ?", orderKey).First(&order).Error; err != nil {
+			return err
+		}
+		if order.State == "credited" {
+			if order.PaidEventKey != nil && *order.PaidEventKey == eventKey {
+				return nil
+			}
+			return ErrPointsConflict
+		}
+		if order.State != "paid" {
+			return errors.New("order is not verified paid")
+		}
+		if order.PaidEventKey == nil || *order.PaidEventKey != eventKey {
+			return ErrPointsConflict
+		}
+		if order.PurchaseMicro <= 0 || order.AmountFen <= 0 || order.AmountFen > int64(^uint64(0)>>1)/PointMicroPerPoint || order.PurchaseMicro != order.AmountFen*PointMicroPerPoint || order.BonusMicro < 0 {
+			return errors.New("invalid paid order snapshot")
+		}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&PointAccount{UserID: order.UserID}).Error; err != nil {
+			return err
+		}
+		lot := PointLot{UserID: order.UserID, BusinessKey: "purchase:" + order.OrderKey, Kind: "purchase", SourceRef: order.OrderKey, AmountFen: order.AmountFen, InitialMicro: order.PurchaseMicro, AvailableMicro: order.PurchaseMicro}
+		if err := tx.Create(&lot).Error; err != nil {
+			return err
+		}
+		if order.BonusMicro > 0 {
+			bonus := PointLot{UserID: order.UserID, BusinessKey: "bonus:" + order.OrderKey, Kind: "bonus", SourceRef: order.OrderKey, InitialMicro: order.BonusMicro, AvailableMicro: order.BonusMicro, ExpiresAt: order.BonusExpiresAt}
+			if err := tx.Create(&bonus).Error; err != nil {
+				return err
+			}
+		}
+		total, err := checkedAdd(order.PurchaseMicro, order.BonusMicro)
+		if err != nil {
+			return err
+		}
+		upd := tx.Model(&PointAccount{}).Where("user_id = ? AND available_micro <= ?", order.UserID, int64(^uint64(0)>>1)-total).Update("available_micro", gorm.Expr("available_micro + ?", total))
+		if upd.Error != nil {
+			return upd.Error
+		}
+		if upd.RowsAffected != 1 {
+			return errors.New("point account missing")
+		}
+		var account PointAccount
+		if err := tx.First(&account, "user_id = ?", order.UserID).Error; err != nil {
+			return err
+		}
+		ledger := PointLedger{UserID: order.UserID, BusinessKey: "credit:" + order.OrderKey, Kind: "purchase_credit", AvailableDelta: total, AvailableAfter: account.AvailableMicro, HeldAfter: account.HeldMicro, SpentAfter: account.SpentMicro, Reason: "verified paid order credit"}
+		if err := tx.Create(&ledger).Error; err != nil {
+			return err
+		}
+		orderUpdate := tx.Model(&order).Where("state = ? AND paid_event_key = ?", "paid", eventKey).Update("state", "credited")
+		if orderUpdate.Error != nil {
+			return orderUpdate.Error
+		}
+		if orderUpdate.RowsAffected != 1 {
+			return ErrPointsConflict
+		}
+		return nil
+	})
+}

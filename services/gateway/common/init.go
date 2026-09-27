@@ -11,17 +11,18 @@ import (
 )
 
 var (
-	Port         = flag.Int("port", 3000, "the listening port")
-	PrintVersion = flag.Bool("version", false, "print version and exit")
-	PrintHelp    = flag.Bool("help", false, "print help and exit")
-	LogDir       = flag.String("log-dir", "./logs", "specify the log directory")
+	Port          = flag.Int("port", 3000, "the listening port")
+	PrintVersion  = flag.Bool("version", false, "print version and exit")
+	PrintHelp     = flag.Bool("help", false, "print help and exit")
+	LogDir        = flag.String("log-dir", "./logs", "specify the log directory")
+	MigratePoints = flag.Bool("migrate-points", false, "apply the explicit points ledger schema migration and exit")
 )
 
 func printHelp() {
 	fmt.Println("One API " + Version + " - All in one API service for OpenAI API.")
 	fmt.Println("Copyright (C) 2023 JustSong. All rights reserved.")
 	fmt.Println("GitHub: https://github.com/songquanpeng/one-api")
-	fmt.Println("Usage: one-api [--port <port>] [--log-dir <log directory>] [--version] [--help]")
+	fmt.Println("Usage: one-api [--port <port>] [--log-dir <log directory>] [--migrate-points] [--version] [--help]")
 }
 
 func Init() {
