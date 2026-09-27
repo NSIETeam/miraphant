@@ -49,8 +49,8 @@ jobs:
         with:
           go-version: 1.25.1
           cache-dependency-path: services/gateway/go.sum
-      - name: Verify points HTTP and ledger transactions
+      - name: Verify points HTTP, relay, and ledger transactions
         working-directory: services/gateway
-        run: go test ./controller ./router ./middleware ./model -run 'Test(PointsHTTP|PointsSchema|Adjustment|Point|PendingUsage|ExpiredBonus|PaidOrder|Reviewed)' -count=1
+        run: go test ./controller ./router ./middleware ./model ./relay/controller ./relay/adaptor/openai -run 'Test(OfflineRecovery|Point|LegacyQuota|NewUsers|Adjustment|PendingUsage|ExpiredBonus|PaidOrder|Reviewed)' -count=1
       - name: Build frontend themes and Go gateway
         run: services/gateway/scripts/build-local.sh

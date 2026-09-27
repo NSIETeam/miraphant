@@ -213,6 +213,10 @@ func UpdateToken(c *gin.Context) {
 		})
 		return
 	}
+	if config.PointsBillingEnabled && statusOnly == "" && (token.RemainQuota != cleanToken.RemainQuota || token.UnlimitedQuota != cleanToken.UnlimitedQuota) {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": model.ErrPointsLegacyQuotaDisabled.Error()})
+		return
+	}
 	if token.Status == model.TokenStatusEnabled {
 		if cleanToken.Status == model.TokenStatusExpired && cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
 			c.JSON(http.StatusOK, gin.H{
@@ -221,7 +225,7 @@ func UpdateToken(c *gin.Context) {
 			})
 			return
 		}
-		if cleanToken.Status == model.TokenStatusExhausted && cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
+		if !config.PointsBillingEnabled && cleanToken.Status == model.TokenStatusExhausted && cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",

@@ -166,3 +166,6 @@ var EnforceIncludeUsage = env.Bool("ENFORCE_INCLUDE_USAGE", false)
 // PointsBillingEnabled remains opt-in until the points ledger is connected to
 // every quota mutation and relay settlement path.
 var PointsBillingEnabled = env.Bool("POINTS_BILLING_ENABLED", false)
+var PointsMaxInputBytes = env.Int("POINTS_MAX_INPUT_BYTES", 131072)
+var PointsMaxOutputTokens = env.Int("POINTS_MAX_OUTPUT_TOKENS", 8192)
+var PointsRelayTimeout = env.Int("POINTS_RELAY_TIMEOUT", 120)

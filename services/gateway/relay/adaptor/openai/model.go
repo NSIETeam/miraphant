@@ -1,6 +1,37 @@
 package openai
 
-import "github.com/songquanpeng/one-api/relay/model"
+import (
+	"encoding/json"
+	"github.com/songquanpeng/one-api/relay/model"
+)
+
+type providerUsage struct {
+	PromptTokens            *int                               `json:"prompt_tokens"`
+	CompletionTokens        *int                               `json:"completion_tokens"`
+	TotalTokens             *int                               `json:"total_tokens"`
+	PromptTokensDetails     *model.UsagePromptTokenDetails     `json:"prompt_tokens_details"`
+	CompletionTokensDetails *model.UsageCompletionTokenDetails `json:"completion_tokens_details"`
+}
+
+func (u *providerUsage) usage() *model.Usage {
+	if u == nil {
+		return nil
+	}
+	out := &model.Usage{PromptTokensDetails: u.PromptTokensDetails, CompletionTokensDetails: u.CompletionTokensDetails}
+	if u.PromptTokens != nil {
+		out.PromptTokens = *u.PromptTokens
+		out.PromptTokensPresent = true
+	}
+	if u.CompletionTokens != nil {
+		out.CompletionTokens = *u.CompletionTokens
+		out.CompletionTokensPresent = true
+	}
+	if u.TotalTokens != nil {
+		out.TotalTokens = *u.TotalTokens
+		out.TotalTokensPresent = true
+	}
+	return out
+}
 
 type TextContent struct {
 	Type string `json:"type,omitempty"`
@@ -77,9 +108,24 @@ type UsageOrResponseText struct {
 }
 
 type SlimTextResponse struct {
-	Choices     []TextResponseChoice `json:"choices"`
-	model.Usage `json:"usage"`
-	Error       model.Error `json:"error"`
+	Id      string               `json:"id"`
+	Choices []TextResponseChoice `json:"choices"`
+	Usage   *model.Usage         `json:"usage"`
+	Error   model.Error          `json:"error"`
+}
+
+func (r *SlimTextResponse) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Id      string               `json:"id"`
+		Choices []TextResponseChoice `json:"choices"`
+		Usage   *providerUsage       `json:"usage"`
+		Error   model.Error          `json:"error"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*r = SlimTextResponse{Id: raw.Id, Choices: raw.Choices, Usage: raw.Usage.usage(), Error: raw.Error}
+	return nil
 }
 
 type TextResponseChoice struct {
@@ -135,6 +181,22 @@ type ChatCompletionsStreamResponse struct {
 	Model   string                                `json:"model"`
 	Choices []ChatCompletionsStreamResponseChoice `json:"choices"`
 	Usage   *model.Usage                          `json:"usage,omitempty"`
+}
+
+func (r *ChatCompletionsStreamResponse) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Id      string                                `json:"id"`
+		Object  string                                `json:"object"`
+		Created int64                                 `json:"created"`
+		Model   string                                `json:"model"`
+		Choices []ChatCompletionsStreamResponseChoice `json:"choices"`
+		Usage   *providerUsage                        `json:"usage"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*r = ChatCompletionsStreamResponse{Id: raw.Id, Object: raw.Object, Created: raw.Created, Model: raw.Model, Choices: raw.Choices, Usage: raw.Usage.usage()}
+	return nil
 }
 
 type CompletionsStreamResponse struct {

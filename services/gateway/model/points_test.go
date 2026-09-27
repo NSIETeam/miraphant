@@ -91,6 +91,183 @@ func TestPointArithmeticExactHalfUp(t *testing.T) {
 	}
 }
 
+func TestLegacyQuotaWritesAreBlockedInPointsMode(t *testing.T) {
+	db, cleanup := withPointsFixture(t, 1_000_000, 1_000_000, false)
+	defer cleanup()
+	if err := db.AutoMigrate(&User{}); err != nil {
+		t.Fatal(err)
+	}
+	user := User{Id: 41, Username: "legacy-quota-user", Password: "fixture", AccessToken: "legacy-quota-access", AffCode: "legacy-quota-code", Role: RoleCommonUser, Status: UserStatusEnabled, Quota: 1234}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&Token{}).Where("id = ?", 77).Updates(map[string]any{"remain_quota": 5000, "used_quota": 100}).Error; err != nil {
+		t.Fatal(err)
+	}
+	for name, call := range map[string]func() error{
+		"increase user":  func() error { return IncreaseUserQuota(41, 100) },
+		"decrease user":  func() error { return DecreaseUserQuota(41, 100) },
+		"queued user":    func() error { return increaseUserQuota(41, 100) },
+		"increase token": func() error { return IncreaseTokenQuota(77, 100) },
+		"decrease token": func() error { return DecreaseTokenQuota(77, 100) },
+		"queued token":   func() error { return increaseTokenQuota(77, 100) },
+	} {
+		if err := call(); !errors.Is(err, ErrPointsLegacyQuotaDisabled) {
+			t.Errorf("%s error=%v, want legacy quota disabled", name, err)
+		}
+	}
+	if _, err := Redeem("any-code", 41); !errors.Is(err, ErrPointsLegacyQuotaDisabled) {
+		t.Fatalf("redemption should be blocked in points mode: %v", err)
+	}
+	if err := (&User{Id: 41}).Delete(); !errors.Is(err, ErrPointsUserDeletionDisabled) {
+		t.Fatalf("user deletion should preserve point ownership: %v", err)
+	}
+	user.Quota = 0
+	if err := user.Update(false); err != nil {
+		t.Fatal(err)
+	}
+	token, err := GetTokenById(77)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token.RemainQuota = 0
+	token.UnlimitedQuota = false
+	if err := token.Update(); err != nil {
+		t.Fatal(err)
+	}
+	var persistedUser User
+	if err := db.First(&persistedUser, "id = ?", 41).Error; err != nil {
+		t.Fatal(err)
+	}
+	var persistedToken Token
+	if err := db.First(&persistedToken, "id = ?", 77).Error; err != nil {
+		t.Fatal(err)
+	}
+	if persistedUser.Quota != 1234 || persistedToken.RemainQuota != 5000 || persistedToken.UsedQuota != 100 || persistedToken.UnlimitedQuota {
+		t.Fatalf("legacy quota columns changed: user=%d token=%+v", persistedUser.Quota, persistedToken)
+	}
+}
+
+func TestNewUsersDoNotReceiveLegacyQuotaInPointsMode(t *testing.T) {
+	db, cleanup := withPointsFixture(t, 1_000_000, 1_000_000, false)
+	defer cleanup()
+	if err := db.AutoMigrate(&User{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&User{Id: 41, Username: "inviter", Password: "fixture", AccessToken: "inviter-access", AffCode: "invite", Role: RoleCommonUser, Status: UserStatusEnabled, Quota: 2500}).Error; err != nil {
+		t.Fatal(err)
+	}
+	oldNew, oldInviter, oldInvitee := config.QuotaForNewUser, config.QuotaForInviter, config.QuotaForInvitee
+	config.QuotaForNewUser, config.QuotaForInviter, config.QuotaForInvitee = 1000, 500, 300
+	t.Cleanup(func() {
+		config.QuotaForNewUser, config.QuotaForInviter, config.QuotaForInvitee = oldNew, oldInviter, oldInvitee
+	})
+	user := User{Username: "new-points-user", Password: "fixture", Role: RoleCommonUser, Status: UserStatusEnabled}
+	if err := user.Insert(41); err != nil {
+		t.Fatal(err)
+	}
+	var persisted User
+	if err := db.First(&persisted, "id = ?", user.Id).Error; err != nil {
+		t.Fatal(err)
+	}
+	if persisted.Quota != 0 {
+		t.Fatalf("new points user received legacy quota %d", persisted.Quota)
+	}
+	var inviter User
+	if err := db.First(&inviter, "id = ?", 41).Error; err != nil {
+		t.Fatal(err)
+	}
+	if inviter.Quota != 2500 {
+		t.Fatalf("new-user invite bonus changed inviter legacy quota to %d", inviter.Quota)
+	}
+	var defaultToken Token
+	if err := db.Where("user_id = ? AND name = ?", user.Id, "default").First(&defaultToken).Error; err != nil {
+		t.Fatal(err)
+	}
+	if defaultToken.RemainQuota != 0 || defaultToken.UnlimitedQuota {
+		t.Fatalf("default token received legacy quota: %+v", defaultToken)
+	}
+}
+
+func TestPointsTokenAuthenticationIgnoresLegacyExhaustion(t *testing.T) {
+	db, cleanup := withPointsFixture(t, 1_000_000, 1_000_000, false)
+	defer cleanup()
+	if err := db.Model(&Token{}).Where("id = ?", 77).Updates(map[string]any{"status": TokenStatusExhausted, "remain_quota": 0, "unlimited_quota": false}).Error; err != nil {
+		t.Fatal(err)
+	}
+	token, err := ValidateUserToken("points-test-token")
+	if err != nil {
+		t.Fatalf("legacy exhausted state blocked points token: %v", err)
+	}
+	if token.Status != TokenStatusExhausted || token.RemainQuota != 0 {
+		t.Fatalf("authentication did not read current token record: %+v", token)
+	}
+	if err := db.Model(&Token{}).Where("id = ?", 77).Update("status", TokenStatusDisabled).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateUserToken("points-test-token"); err == nil {
+		t.Fatal("disabled token was accepted in points mode")
+	}
+}
+
+func TestOfflineRecoveryMarksHeldPendingAndIsIdempotent(t *testing.T) {
+	db, cleanup := withPointsFixture(t, 1_000_000, 1_000_000, false)
+	defer cleanup()
+	hold, err := ReservePoints(PointReserveRequest{UserID: 41, TokenID: 77, LogicalRequestKey: "recover:logical-1", AttemptKey: "primary", LocalRequestID: "local-1", AttemptFingerprint: "fingerprint-1", BudgetMicro: 100_000, PriceVersion: "test-v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recovered, err := RecoverOrphanedPointHolds("ops-2026-09-27-a", "process stopped during provider response")
+	if err != nil || recovered != 1 {
+		t.Fatalf("recovery count=%d err=%v", recovered, err)
+	}
+	var stored PointHold
+	if err := db.First(&stored, "id = ?", hold.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if stored.State != "pending" || stored.UsageMicro != 0 {
+		t.Fatalf("recovery settled or released hold: %+v", stored)
+	}
+	var account PointAccount
+	if err := db.First(&account, "user_id = ?", 41).Error; err != nil {
+		t.Fatal(err)
+	}
+	if account.AvailableMicro != 900_000 || account.HeldMicro != 100_000 || account.SpentMicro != 0 {
+		t.Fatalf("recovery changed balances: %+v", account)
+	}
+	var audits int64
+	if err := db.Model(&PointAdminAudit{}).Where("action = ?", "offline_hold_recovery").Count(&audits).Error; err != nil {
+		t.Fatal(err)
+	}
+	if audits != 2 {
+		t.Fatalf("expected batch and hold audit rows, got %d", audits)
+	}
+	later, err := ReservePoints(PointReserveRequest{UserID: 41, TokenID: 77, LogicalRequestKey: "recover:later", AttemptKey: "primary", LocalRequestID: "local-later", AttemptFingerprint: "fingerprint-later", BudgetMicro: 100_000, PriceVersion: "test-v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recovered, err = RecoverOrphanedPointHolds("ops-2026-09-27-a", "process stopped during provider response")
+	if err != nil || recovered != 0 {
+		t.Fatalf("idempotent rerun count=%d err=%v", recovered, err)
+	}
+	var laterStored PointHold
+	if err := db.First(&laterStored, "id = ?", later.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if laterStored.State != "held" {
+		t.Fatalf("replay recovered a later request: %+v", laterStored)
+	}
+	if _, err := RecoverOrphanedPointHolds("ops-2026-09-27-a", "different reason"); !errors.Is(err, ErrPointsConflict) {
+		t.Fatalf("conflicting recovery reason accepted: %v", err)
+	}
+	if err := db.Model(&PointAdminAudit{}).Where("action = ?", "offline_hold_recovery").Count(&audits).Error; err != nil {
+		t.Fatal(err)
+	}
+	if audits != 2 {
+		t.Fatalf("repeated recovery duplicated audit rows: %d", audits)
+	}
+}
+
 func TestPointsSchemaUpgradesVersionOne(t *testing.T) {
 	oldDB, oldSQLite := DB, common.UsingSQLite
 	t.Cleanup(func() { DB, common.UsingSQLite = oldDB, oldSQLite })
@@ -102,7 +279,10 @@ func TestPointsSchemaUpgradesVersionOne(t *testing.T) {
 	if err := db.AutoMigrate(&PointsSchemaMigration{}, &PointAccount{}, &PointLot{}, &PointLedger{}, &PointPriceVersion{}, &PointActivePrice{}, &PointHold{}, &PointHoldAllocation{}, &PointHoldAttempt{}, &PointHoldDecision{}, &PointTokenBudget{}, &PointPurchaseOrder{}); err != nil {
 		t.Fatal(err)
 	}
-	// Simulate the known v1 schema by removing fields/tables added in v3.
+	// Simulate the known v1 schema by removing fields/tables added in v3 and v4.
+	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "local_request_id"); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.Migrator().DropColumn(&PointHoldAttempt{}, "provider_request_id"); err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +326,7 @@ func TestPointsSchemaUpgradesVersionOne(t *testing.T) {
 	if err := db.First(&current, "version = ?", pointsSchemaVersion).Error; err != nil {
 		t.Fatal(err)
 	}
-	if !db.Migrator().HasTable(&PointAdminAudit{}) || !db.Migrator().HasColumn(&PointHoldAttempt{}, "provider_response_id") {
+	if !db.Migrator().HasTable(&PointAdminAudit{}) || !db.Migrator().HasColumn(&PointHoldAttempt{}, "provider_response_id") || !db.Migrator().HasColumn(&PointHoldAttempt{}, "local_request_id") {
 		t.Fatal("schema upgrade omitted newly required audit or provider evidence fields")
 	}
 	var account PointAccount
@@ -167,7 +347,7 @@ func TestPointsSchemaUpgradesVersionOne(t *testing.T) {
 	var migrationCount int64
 	db.Model(&PointsSchemaMigration{}).Where("version = ?", pointsSchemaVersion).Count(&migrationCount)
 	if migrationCount != 1 {
-		t.Fatalf("expected one v3 marker, got %d", migrationCount)
+		t.Fatalf("expected one current schema marker, got %d", migrationCount)
 	}
 	sqlDB, _ := db.DB()
 	_ = sqlDB.Close()

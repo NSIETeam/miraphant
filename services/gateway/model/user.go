@@ -122,17 +122,21 @@ func (user *User) Insert(inviterId int) error {
 			return err
 		}
 	}
-	user.Quota = config.QuotaForNewUser
+	if config.PointsBillingEnabled {
+		user.Quota = 0
+	} else {
+		user.Quota = config.QuotaForNewUser
+	}
 	user.AccessToken = random.GetUUID()
 	user.AffCode = random.GetRandomString(4)
 	result := DB.Create(user)
 	if result.Error != nil {
 		return result.Error
 	}
-	if config.QuotaForNewUser > 0 {
+	if !config.PointsBillingEnabled && config.QuotaForNewUser > 0 {
 		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", common.LogQuota(config.QuotaForNewUser)))
 	}
-	if inviterId != 0 {
+	if !config.PointsBillingEnabled && inviterId != 0 {
 		if config.QuotaForInvitee > 0 {
 			_ = IncreaseUserQuota(user.Id, config.QuotaForInvitee)
 			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("使用邀请码赠送 %s", common.LogQuota(config.QuotaForInvitee)))
@@ -151,7 +155,10 @@ func (user *User) Insert(inviterId int) error {
 		AccessedTime:   helper.GetTimestamp(),
 		ExpiredTime:    -1,
 		RemainQuota:    -1,
-		UnlimitedQuota: true,
+		UnlimitedQuota: !config.PointsBillingEnabled,
+	}
+	if config.PointsBillingEnabled {
+		cleanToken.RemainQuota = 0
 	}
 	result.Error = cleanToken.Insert()
 	if result.Error != nil {
@@ -174,11 +181,18 @@ func (user *User) Update(updatePassword bool) error {
 	} else if user.Status == UserStatusEnabled {
 		blacklist.UnbanUser(user.Id)
 	}
-	err = DB.Model(user).Updates(user).Error
+	if config.PointsBillingEnabled {
+		err = DB.Model(user).Omit("quota").Updates(user).Error
+	} else {
+		err = DB.Model(user).Updates(user).Error
+	}
 	return err
 }
 
 func (user *User) Delete() error {
+	if config.PointsBillingEnabled {
+		return ErrPointsUserDeletionDisabled
+	}
 	if user.Id == 0 {
 		return errors.New("id 为空！")
 	}
@@ -369,6 +383,9 @@ func GetUserGroup(id int) (group string, err error) {
 }
 
 func IncreaseUserQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
@@ -380,11 +397,17 @@ func IncreaseUserQuota(id int, quota int64) (err error) {
 }
 
 func increaseUserQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	err = DB.Model(&User{}).Where("id = ?", id).Update("quota", gorm.Expr("quota + ?", quota)).Error
 	return err
 }
 
 func DecreaseUserQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
@@ -396,6 +419,9 @@ func DecreaseUserQuota(id int, quota int64) (err error) {
 }
 
 func decreaseUserQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	err = DB.Model(&User{}).Where("id = ?", id).Update("quota", gorm.Expr("quota - ?", quota)).Error
 	return err
 }

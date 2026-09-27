@@ -43,6 +43,9 @@ func CreateRootAccountIfNeed() error {
 			AccessToken: accessToken,
 			Quota:       500000000000000,
 		}
+		if config.PointsBillingEnabled {
+			rootUser.Quota = 0
+		}
 		DB.Create(&rootUser)
 		if config.InitialRootToken != "" {
 			logger.SysLog("creating initial root token as requested")
@@ -57,6 +60,10 @@ func CreateRootAccountIfNeed() error {
 				ExpiredTime:    -1,
 				RemainQuota:    500000000000000,
 				UnlimitedQuota: true,
+			}
+			if config.PointsBillingEnabled {
+				token.RemainQuota = 0
+				token.UnlimitedQuota = false
 			}
 			DB.Create(&token)
 		}

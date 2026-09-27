@@ -11,18 +11,21 @@ import (
 )
 
 var (
-	Port          = flag.Int("port", 3000, "the listening port")
-	PrintVersion  = flag.Bool("version", false, "print version and exit")
-	PrintHelp     = flag.Bool("help", false, "print help and exit")
-	LogDir        = flag.String("log-dir", "./logs", "specify the log directory")
-	MigratePoints = flag.Bool("migrate-points", false, "apply the explicit points ledger schema migration and exit")
+	Port                 = flag.Int("port", 3000, "the listening port")
+	PrintVersion         = flag.Bool("version", false, "print version and exit")
+	PrintHelp            = flag.Bool("help", false, "print help and exit")
+	LogDir               = flag.String("log-dir", "./logs", "specify the log directory")
+	MigratePoints        = flag.Bool("migrate-points", false, "apply the explicit points ledger schema migration and exit")
+	RecoverPointHolds    = flag.Bool("recover-point-holds", false, "mark held point requests pending for manual review and exit (offline SQLite only)")
+	PointsRecoveryBatch  = flag.String("points-recovery-batch", "", "unique audit key for an offline points hold recovery batch")
+	PointsRecoveryReason = flag.String("points-recovery-reason", "", "operator reason recorded for offline points hold recovery")
 )
 
 func printHelp() {
 	fmt.Println("One API " + Version + " - All in one API service for OpenAI API.")
 	fmt.Println("Copyright (C) 2023 JustSong. All rights reserved.")
 	fmt.Println("GitHub: https://github.com/songquanpeng/one-api")
-	fmt.Println("Usage: one-api [--port <port>] [--log-dir <log directory>] [--migrate-points] [--version] [--help]")
+	fmt.Println("Usage: one-api [--port <port>] [--log-dir <log directory>] [--migrate-points | --recover-point-holds --points-recovery-batch <key> --points-recovery-reason <reason>] [--version] [--help]")
 }
 
 func Init() {

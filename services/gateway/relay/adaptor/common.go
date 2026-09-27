@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/client"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"io"
 	"net/http"
@@ -23,7 +24,12 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.
 	if err != nil {
 		return nil, fmt.Errorf("get request url failed: %w", err)
 	}
-	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
+	var req *http.Request
+	if config.PointsBillingEnabled {
+		req, err = http.NewRequestWithContext(c.Request.Context(), c.Request.Method, fullRequestURL, requestBody)
+	} else {
+		req, err = http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("new request failed: %w", err)
 	}

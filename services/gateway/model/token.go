@@ -61,7 +61,17 @@ func ValidateUserToken(key string) (token *Token, err error) {
 	if key == "" {
 		return nil, errors.New("未提供令牌")
 	}
-	token, err = CacheGetTokenByKey(key)
+	if config.PointsBillingEnabled {
+		var tokenRecord Token
+		keyColumn := "`key`"
+		if common.UsingPostgreSQL {
+			keyColumn = `"key"`
+		}
+		err = DB.Where(keyColumn+" = ?", key).First(&tokenRecord).Error
+		token = &tokenRecord
+	} else {
+		token, err = CacheGetTokenByKey(key)
+	}
 	if err != nil {
 		logger.SysError("CacheGetTokenByKey failed: " + err.Error())
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -69,12 +79,12 @@ func ValidateUserToken(key string) (token *Token, err error) {
 		}
 		return nil, errors.New("令牌验证失败")
 	}
-	if token.Status == TokenStatusExhausted {
+	if token.Status == TokenStatusExhausted && !config.PointsBillingEnabled {
 		return nil, fmt.Errorf("令牌 %s（#%d）额度已用尽", token.Name, token.Id)
 	} else if token.Status == TokenStatusExpired {
 		return nil, errors.New("该令牌已过期")
 	}
-	if token.Status != TokenStatusEnabled {
+	if token.Status != TokenStatusEnabled && !(config.PointsBillingEnabled && token.Status == TokenStatusExhausted) {
 		return nil, errors.New("该令牌状态不可用")
 	}
 	if token.ExpiredTime != -1 && token.ExpiredTime < helper.GetTimestamp() {
@@ -87,7 +97,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 		}
 		return nil, errors.New("该令牌已过期")
 	}
-	if !token.UnlimitedQuota && token.RemainQuota <= 0 {
+	if !config.PointsBillingEnabled && !token.UnlimitedQuota && token.RemainQuota <= 0 {
 		if !common.RedisEnabled {
 			// in this case, we can make sure the token is exhausted
 			token.Status = TokenStatusExhausted
@@ -122,6 +132,10 @@ func GetTokenById(id int) (*Token, error) {
 }
 
 func (t *Token) Insert() error {
+	if config.PointsBillingEnabled {
+		t.RemainQuota = 0
+		t.UnlimitedQuota = false
+	}
 	var err error
 	err = DB.Create(t).Error
 	return err
@@ -130,7 +144,11 @@ func (t *Token) Insert() error {
 // Update Make sure your token's fields is completed, because this will update non-zero values
 func (t *Token) Update() error {
 	var err error
-	err = DB.Model(t).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota", "models", "subnet").Updates(t).Error
+	if config.PointsBillingEnabled {
+		err = DB.Model(t).Select("name", "status", "expired_time", "models", "subnet").Updates(t).Error
+	} else {
+		err = DB.Model(t).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota", "models", "subnet").Updates(t).Error
+	}
 	return err
 }
 
@@ -169,6 +187,9 @@ func DeleteTokenById(id int, userId int) (err error) {
 }
 
 func IncreaseTokenQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
@@ -180,6 +201,9 @@ func IncreaseTokenQuota(id int, quota int64) (err error) {
 }
 
 func increaseTokenQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	err = DB.Model(&Token{}).Where("id = ?", id).Updates(
 		map[string]interface{}{
 			"remain_quota":  gorm.Expr("remain_quota + ?", quota),
@@ -191,6 +215,9 @@ func increaseTokenQuota(id int, quota int64) (err error) {
 }
 
 func DecreaseTokenQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
@@ -202,6 +229,9 @@ func DecreaseTokenQuota(id int, quota int64) (err error) {
 }
 
 func decreaseTokenQuota(id int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	err = DB.Model(&Token{}).Where("id = ?", id).Updates(
 		map[string]interface{}{
 			"remain_quota":  gorm.Expr("remain_quota - ?", quota),
@@ -213,6 +243,9 @@ func decreaseTokenQuota(id int, quota int64) (err error) {
 }
 
 func PreConsumeTokenQuota(tokenId int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
@@ -263,6 +296,9 @@ func PreConsumeTokenQuota(tokenId int, quota int64) (err error) {
 }
 
 func PostConsumeTokenQuota(tokenId int, quota int64) (err error) {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	token, err := GetTokenById(tokenId)
 	if err != nil {
 		return err

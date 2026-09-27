@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/middleware"
 	dbmodel "github.com/songquanpeng/one-api/model"
@@ -39,13 +40,21 @@ func PointsPrices(c *gin.Context) {
 }
 
 func PointsEstimate(c *gin.Context) {
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16*1024)
+	maxInput := config.PointsMaxInputBytes
+	if maxInput < 1024 {
+		maxInput = 1024
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, int64(maxInput))
 	var req struct {
 		Model     string `json:"model"`
 		Prompt    string `json:"prompt"`
 		MaxOutput int64  `json:"max_output_tokens"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.Model == "" || req.MaxOutput <= 0 || req.MaxOutput > 8192 || req.Prompt == "" || len(req.Prompt) > 12*1024 {
+	maxOutput := config.PointsMaxOutputTokens
+	if maxOutput < 1 {
+		maxOutput = 8192
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Model == "" || req.MaxOutput <= 0 || req.MaxOutput > int64(maxOutput) || req.Prompt == "" || len(req.Prompt) > maxInput {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "model, prompt, and positive max_output_tokens are required"})
 		return
 	}

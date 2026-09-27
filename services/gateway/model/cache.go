@@ -105,6 +105,9 @@ func CacheGetUserQuota(ctx context.Context, id int) (quota int64, err error) {
 }
 
 func CacheUpdateUserQuota(ctx context.Context, id int) error {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	if !common.RedisEnabled {
 		return nil
 	}
@@ -117,6 +120,9 @@ func CacheUpdateUserQuota(ctx context.Context, id int) error {
 }
 
 func CacheDecreaseUserQuota(id int, quota int64) error {
+	if config.PointsBillingEnabled {
+		return ErrPointsLegacyQuotaDisabled
+	}
 	if !common.RedisEnabled {
 		return nil
 	}

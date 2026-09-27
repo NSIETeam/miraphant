@@ -31,6 +31,8 @@ var ErrPointsDisabled = errors.New("points billing is disabled")
 var ErrPointsConflict = errors.New("points idempotency key conflict")
 var ErrPointsInsufficient = errors.New("insufficient available points")
 var ErrPointsPending = errors.New("point hold requires usage review")
+var ErrPointsLegacyQuotaDisabled = errors.New("legacy quota changes are disabled while points billing is enabled")
+var ErrPointsUserDeletionDisabled = errors.New("user deletion is disabled while points billing is enabled; disable the account instead")
 
 type PointAccount struct {
 	UserID         int   `gorm:"primaryKey"`
@@ -121,6 +123,7 @@ type PointHoldAttempt struct {
 	ID                 uint   `gorm:"primaryKey"`
 	HoldID             uint   `gorm:"not null;uniqueIndex:idx_point_attempt_key"`
 	AttemptKey         string `gorm:"size:180;not null;uniqueIndex:idx_point_attempt_key"`
+	LocalRequestID     string `gorm:"size:180;not null;default:''"`
 	RequestFingerprint string `gorm:"size:128;not null;default:''"`
 	State              string `gorm:"size:24;not null;index"` // started, succeeded, failed, unknown
 	UsageMicro         int64  `gorm:"not null;default:0"`
@@ -204,7 +207,7 @@ func (*PointPriceVersion) BeforeDelete(*gorm.DB) error {
 }
 
 func CreatePointPriceVersion(price *PointPriceVersion) error {
-	if price == nil || price.Version == "" || price.ModelID == "" || price.InputMicroPer1K < 0 || price.CachedInputMicroPer1K < 0 || price.OutputMicroPer1K < 0 || price.ExtraMicro < 0 {
+	if price == nil || price.Version == "" || price.ModelID == "" || price.InputMicroPer1K < 0 || price.CachedInputMicroPer1K < 0 || price.CachedInputMicroPer1K > price.InputMicroPer1K || price.OutputMicroPer1K < 0 || price.ExtraMicro < 0 {
 		return errors.New("invalid price version")
 	}
 	return DB.Create(price).Error
@@ -225,7 +228,7 @@ func ActivatePointPriceVersion(modelID, version string) error {
 }
 
 func PublishPointPriceVersion(actorID int, price *PointPriceVersion) error {
-	if actorID <= 0 || price == nil || price.ModelID == "" || price.Version == "" || price.Source == "" || price.InputMicroPer1K < 0 || price.CachedInputMicroPer1K < 0 || price.OutputMicroPer1K < 0 || price.ExtraMicro < 0 {
+	if actorID <= 0 || price == nil || price.ModelID == "" || price.Version == "" || price.Source == "" || price.InputMicroPer1K < 0 || price.CachedInputMicroPer1K < 0 || price.CachedInputMicroPer1K > price.InputMicroPer1K || price.OutputMicroPer1K < 0 || price.ExtraMicro < 0 {
 		return errors.New("invalid price publication")
 	}
 	return pointsTransaction(func(tx *gorm.DB) error {
@@ -479,12 +482,70 @@ func ListPointRecoveryHolds(limit int) ([]PointHold, error) {
 	return holds, err
 }
 
+// RecoverOrphanedPointHolds marks currently held requests pending and audits
+// the offline recovery batch. It intentionally does not release or settle funds.
+func RecoverOrphanedPointHolds(batchKey, reason string) (int64, error) {
+	batchKey = strings.TrimSpace(batchKey)
+	reason = strings.TrimSpace(reason)
+	if batchKey == "" || len(batchKey) > 80 || reason == "" || len(reason) > 512 {
+		return 0, errors.New("a recovery batch key (1-80 chars) and reason (1-512 chars) are required")
+	}
+	if !common.UsingSQLite {
+		return 0, errors.New("offline held-request recovery currently supports the single-instance SQLite deployment only")
+	}
+	var recovered int64
+	err := pointsTransaction(func(tx *gorm.DB) error {
+		recovered = 0 // A rolled-back SQLite attempt must not inflate the result.
+		batchDetails, _ := json.Marshal(map[string]string{"reason": reason})
+		batchAuditKey := "offline-recovery-batch:" + batchKey
+		var batchAudit PointAdminAudit
+		err := tx.Where("business_key = ?", batchAuditKey).First(&batchAudit).Error
+		if err == nil {
+			if batchAudit.Action != "offline_hold_recovery" || batchAudit.ActorUserID != 0 || batchAudit.Details != string(batchDetails) {
+				return ErrPointsConflict
+			}
+			return nil // A completed batch never takes ownership of later requests.
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := tx.Create(&PointAdminAudit{ActorUserID: 0, Action: "offline_hold_recovery", BusinessKey: batchAuditKey, Details: string(batchDetails)}).Error; err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+
+		var holds []PointHold
+		if err := tx.Where("state = ?", "held").Order("id ASC").Find(&holds).Error; err != nil {
+			return err
+		}
+		for _, hold := range holds {
+			details, _ := json.Marshal(map[string]string{"batch_key": batchKey, "reason": reason, "logical_request_key": hold.LogicalRequestKey})
+			auditKey := fmt.Sprintf("offline-recovery-hold:%s:%d", batchKey, hold.ID)
+			result := tx.Model(&PointHold{}).Where("id = ? AND state = ?", hold.ID, "held").Update("state", "pending")
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				continue
+			}
+			if err := tx.Create(&PointAdminAudit{ActorUserID: 0, Action: "offline_hold_recovery", BusinessKey: auditKey, TargetUserID: hold.UserID, Details: string(details)}).Error; err != nil {
+				return err
+			}
+			recovered++
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return recovered, nil
+}
+
 type PointsSchemaMigration struct {
 	Version   int `gorm:"primaryKey"`
 	AppliedAt time.Time
 }
 
-const pointsSchemaVersion = 3
+const pointsSchemaVersion = 4
 
 // MigratePointsSchema is deliberately separate from the normal startup migration.
 func MigratePointsSchema() error {
@@ -513,9 +574,6 @@ func MigratePointsSchema() error {
 }
 
 func RequirePointsSchema() error {
-	if !config.PointsBillingEnabled {
-		return nil
-	}
 	var applied PointsSchemaMigration
 	if err := DB.First(&applied, "version = ?", pointsSchemaVersion).Error; err != nil {
 		return fmt.Errorf("points billing schema version %d is required: %w", pointsSchemaVersion, err)
@@ -667,10 +725,12 @@ type PointReserveRequest struct {
 	TokenID            int
 	LogicalRequestKey  string
 	AttemptKey         string
+	LocalRequestID     string
 	AttemptFingerprint string
 	BudgetMicro        int64
 	PriceVersion       string
 	PriceSnapshot      string
+	RejectExisting     bool
 }
 
 // ReservePoints holds a single logical-request budget; retry attempts share that hold.
@@ -711,6 +771,9 @@ func reservePointsContextOn(ctx context.Context, db *gorm.DB, req PointReserveRe
 		var existing PointHold
 		err := tx.Where("logical_request_key = ?", req.LogicalRequestKey).First(&existing).Error
 		if err == nil {
+			if req.RejectExisting {
+				return ErrPointsConflict
+			}
 			if existing.UserID != req.UserID || existing.TokenID != req.TokenID || existing.BudgetMicro != req.BudgetMicro || existing.PriceVersion != req.PriceVersion || existing.PriceSnapshot != req.PriceSnapshot {
 				return ErrPointsConflict
 			}
@@ -720,13 +783,13 @@ func reservePointsContextOn(ctx context.Context, db *gorm.DB, req PointReserveRe
 			var attempt PointHoldAttempt
 			err = tx.Where("hold_id = ? AND attempt_key = ?", existing.ID, req.AttemptKey).First(&attempt).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				attempt = PointHoldAttempt{HoldID: existing.ID, AttemptKey: req.AttemptKey, RequestFingerprint: req.AttemptFingerprint, State: "started"}
+				attempt = PointHoldAttempt{HoldID: existing.ID, AttemptKey: req.AttemptKey, LocalRequestID: req.LocalRequestID, RequestFingerprint: req.AttemptFingerprint, State: "started"}
 				if err = tx.Create(&attempt).Error; err != nil {
 					return err
 				}
 			} else if err != nil {
 				return err
-			} else if attempt.RequestFingerprint != req.AttemptFingerprint {
+			} else if attempt.RequestFingerprint != req.AttemptFingerprint || attempt.LocalRequestID != req.LocalRequestID {
 				return ErrPointsConflict
 			}
 			result = existing
@@ -823,7 +886,7 @@ func reservePointsContextOn(ctx context.Context, db *gorm.DB, req PointReserveRe
 				return err
 			}
 		}
-		attempt := PointHoldAttempt{HoldID: result.ID, AttemptKey: req.AttemptKey, RequestFingerprint: req.AttemptFingerprint, State: "started"}
+		attempt := PointHoldAttempt{HoldID: result.ID, AttemptKey: req.AttemptKey, LocalRequestID: req.LocalRequestID, RequestFingerprint: req.AttemptFingerprint, State: "started"}
 		if err := tx.Create(&attempt).Error; err != nil {
 			return err
 		}
@@ -837,6 +900,51 @@ func reservePointsContextOn(ctx context.Context, db *gorm.DB, req PointReserveRe
 		return nil, err
 	}
 	return &result, nil
+}
+
+// ReleaseUnsentPointHold releases only a newly reserved hold whose only attempt
+// is still started and has no provider evidence. Callers must use it only before
+// starting network I/O.
+func ReleaseUnsentPointHold(logicalKey, reason string) error {
+	if logicalKey == "" || reason == "" {
+		return errors.New("logical request key and release reason are required")
+	}
+	return pointsTransaction(func(tx *gorm.DB) error {
+		var hold PointHold
+		if err := tx.Where("logical_request_key = ?", logicalKey).First(&hold).Error; err != nil {
+			return err
+		}
+		if hold.State != "held" {
+			return ErrPointsConflict
+		}
+		var attempts []PointHoldAttempt
+		if err := tx.Where("hold_id = ?", hold.ID).Find(&attempts).Error; err != nil {
+			return err
+		}
+		if len(attempts) != 1 || attempts[0].State != "started" || attempts[0].ProviderRequestID != "" || attempts[0].ProviderResponseID != "" {
+			return ErrPointsConflict
+		}
+		key := "local-unsent:" + logicalKey
+		var prior PointHoldDecision
+		err := tx.Where("decision_key = ?", key).First(&prior).Error
+		if err == nil {
+			if prior.HoldID == hold.ID && prior.Action == "release" && prior.Reason == reason {
+				return nil
+			}
+			return ErrPointsConflict
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		if err := tx.Create(&PointHoldDecision{HoldID: hold.ID, DecisionKey: key, Action: "release", Reason: reason}).Error; err != nil {
+			return err
+		}
+		hold.State = "held"
+		if err := releasePointHoldTx(tx, &hold); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 type PointAttemptUsage struct {

@@ -38,6 +38,29 @@ func main() {
 
 	// Initialize SQL Database
 	model.InitDB()
+	if *common.RecoverPointHolds && *common.MigratePoints {
+		logger.FatalLog("--recover-point-holds and --migrate-points cannot be used together")
+	}
+	if *common.RecoverPointHolds {
+		if *common.PointsRecoveryBatch == "" || *common.PointsRecoveryReason == "" {
+			logger.FatalLog("offline recovery requires --points-recovery-batch and --points-recovery-reason")
+		}
+		if !common.UsingSQLite {
+			logger.FatalLog("offline held-request recovery currently supports the single-instance SQLite deployment only")
+		}
+		if err := model.RequirePointsSchema(); err != nil {
+			logger.FatalLog("points schema is required for recovery: " + err.Error())
+		}
+		recovered, err := model.RecoverOrphanedPointHolds(*common.PointsRecoveryBatch, *common.PointsRecoveryReason)
+		if err != nil {
+			logger.FatalLog("offline point hold recovery failed: " + err.Error())
+		}
+		if err := model.CloseDB(); err != nil {
+			logger.FatalLog("failed to close database: " + err.Error())
+		}
+		logger.SysLogf("offline point hold recovery completed; marked %d held request(s) pending", recovered)
+		return
+	}
 	model.InitLogDB()
 	if *common.MigratePoints {
 		if err := model.MigratePointsSchema(); err != nil {

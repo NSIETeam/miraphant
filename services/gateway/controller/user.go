@@ -404,6 +404,10 @@ func UpdateUser(c *gin.Context) {
 		})
 		return
 	}
+	if config.PointsBillingEnabled && originUser.Quota != updatedUser.Quota {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": model.ErrPointsLegacyQuotaDisabled.Error()})
+		return
+	}
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
 	}

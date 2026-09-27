@@ -18,7 +18,10 @@ func SetRelayRouter(router *gin.Engine) {
 		modelsRouter.GET("/:model", controller.RetrieveModel)
 	}
 	relayV1Router := router.Group("/v1")
-	relayV1Router.Use(middleware.RelayPanicRecover(), middleware.TokenAuth(), middleware.Distribute())
+	// Limit the decompressed points request before TokenAuth reads and caches the
+	// body to discover its model. Applying the limit in the controller is too
+	// late: TokenAuth has already consumed the request by then.
+	relayV1Router.Use(middleware.PointsRelayBodyLimit(), middleware.RelayPanicRecover(), middleware.TokenAuth(), middleware.Distribute())
 	{
 		relayV1Router.Any("/oneapi/proxy/:channelid/*target", controller.Relay)
 		relayV1Router.POST("/completions", controller.Relay)

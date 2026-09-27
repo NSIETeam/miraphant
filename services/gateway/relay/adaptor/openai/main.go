@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/songquanpeng/one-api/common/render"
 
@@ -24,11 +24,56 @@ const (
 	dataPrefixLength = len(dataPrefix)
 )
 
+const PointsUsageFinalizerKey = "miraphant.points_usage_finalizer"
+
+func finalizePointsUsage(c *gin.Context, usage *model.Usage, complete bool) error {
+	value, ok := c.Get(PointsUsageFinalizerKey)
+	if !ok {
+		return nil
+	}
+	finalizer, ok := value.(func(*model.Usage, bool) error)
+	if !ok {
+		return errors.New("invalid points usage finalizer")
+	}
+	return finalizer(usage, complete)
+}
+
+func markAuthoritativeUsage(usage *model.Usage, complete bool) {
+	if usage == nil || !complete || !usage.PromptTokensPresent || !usage.CompletionTokensPresent || !usage.TotalTokensPresent || usage.PromptTokens <= 0 || usage.CompletionTokens < 0 || usage.TotalTokens != usage.PromptTokens+usage.CompletionTokens {
+		return
+	}
+	if usage.PromptTokensDetails != nil && (usage.PromptTokensDetails.CachedTokens < 0 || usage.PromptTokensDetails.CachedTokens > usage.PromptTokens) {
+		return
+	}
+	if usage.CompletionTokensDetails != nil && (usage.CompletionTokensDetails.ReasoningTokens < 0 || usage.CompletionTokensDetails.ReasoningTokens > usage.CompletionTokens) {
+		return
+	}
+	usage.UsageSource = "provider_openai_usage"
+	usage.UsageAuthoritative = true
+}
+
 func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.ErrorWithStatusCode, string, *model.Usage) {
+	defer resp.Body.Close()
 	responseText := ""
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(bufio.ScanLines)
 	var usage *model.Usage
+	responseID := ""
+	pointsMode := hasPointsUsageFinalizer(c)
+	finalized := false
+	finish := func(complete bool) error {
+		if finalized || !pointsMode {
+			return nil
+		}
+		finalized = true
+		if usage != nil {
+			usage.ProviderResponseID = responseID
+			markAuthoritativeUsage(usage, complete)
+		} else if responseID != "" {
+			usage = &model.Usage{ProviderResponseID: responseID}
+		}
+		return finalizePointsUsage(c, usage, complete)
+	}
 
 	common.SetEventStreamHeaders(c)
 
@@ -41,10 +86,14 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 		if data[:dataPrefixLength] != dataPrefix && data[:dataPrefixLength] != done {
 			continue
 		}
-		if strings.HasPrefix(data[dataPrefixLength:], done) {
+		if data == dataPrefix+done {
+			if err := finish(true); err != nil {
+				writePointStreamError(c)
+				return ErrorWrapper(errors.New("points usage could not be recorded; hold remains available for reconciliation"), "points_usage_settlement_failed", http.StatusInternalServerError), responseText, usage
+			}
 			render.StringData(c, data)
 			doneRendered = true
-			continue
+			break
 		}
 		switch relayMode {
 		case relaymode.ChatCompletions:
@@ -62,6 +111,9 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 			render.StringData(c, data)
 			for _, choice := range streamResponse.Choices {
 				responseText += conv.AsString(choice.Delta.Content)
+			}
+			if streamResponse.Id != "" {
+				responseID = streamResponse.Id
 			}
 			if streamResponse.Usage != nil {
 				usage = streamResponse.Usage
@@ -84,7 +136,15 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 		logger.SysError("error reading stream: " + err.Error())
 	}
 
-	if !doneRendered {
+	if pointsMode && !finalized {
+		if err := finish(false); err != nil {
+			if c.Writer.Written() {
+				writePointStreamError(c)
+			}
+			return ErrorWrapper(errors.New("points usage could not be recorded; hold remains available for reconciliation"), "points_usage_persist_failed", http.StatusInternalServerError), responseText, usage
+		}
+	}
+	if !doneRendered && !pointsMode {
 		render.Done(c)
 	}
 
@@ -116,6 +176,19 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 			StatusCode: resp.StatusCode,
 		}, nil
 	}
+	usage := textResponse.Usage
+	if pointsMode := hasPointsUsageFinalizer(c); pointsMode {
+		if usage == nil && textResponse.Id != "" {
+			usage = &model.Usage{ProviderResponseID: textResponse.Id}
+		}
+		if usage != nil {
+			usage.ProviderResponseID = textResponse.Id
+			markAuthoritativeUsage(usage, true)
+		}
+		if err := finalizePointsUsage(c, usage, true); err != nil {
+			return ErrorWrapper(errors.New("points usage could not be recorded; hold remains available for reconciliation"), "points_usage_settlement_failed", http.StatusInternalServerError), nil
+		}
+	}
 	// Reset response body
 	resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 
@@ -136,16 +209,23 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
 
-	if textResponse.Usage.TotalTokens == 0 || (textResponse.Usage.PromptTokens == 0 && textResponse.Usage.CompletionTokens == 0) {
+	if !hasPointsUsageFinalizer(c) && (textResponse.Usage == nil || textResponse.Usage.TotalTokens == 0 || (textResponse.Usage.PromptTokens == 0 && textResponse.Usage.CompletionTokens == 0)) {
 		completionTokens := 0
 		for _, choice := range textResponse.Choices {
 			completionTokens += CountTokenText(choice.Message.StringContent(), modelName)
 		}
-		textResponse.Usage = model.Usage{
+		usage = &model.Usage{
 			PromptTokens:     promptTokens,
 			CompletionTokens: completionTokens,
 			TotalTokens:      promptTokens + completionTokens,
 		}
 	}
-	return nil, &textResponse.Usage
+	return nil, usage
+}
+
+func hasPointsUsageFinalizer(c *gin.Context) bool { _, ok := c.Get(PointsUsageFinalizerKey); return ok }
+
+func writePointStreamError(c *gin.Context) {
+	_, _ = c.Writer.WriteString("event: error\ndata: {\"error\":{\"message\":\"points usage could not be recorded; funds remain held for reconciliation\",\"type\":\"points_settlement_error\"}}\n\n")
+	c.Writer.Flush()
 }

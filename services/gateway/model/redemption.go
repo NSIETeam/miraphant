@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/helper"
 	"gorm.io/gorm"
 )
@@ -49,6 +50,9 @@ func GetRedemptionById(id int) (*Redemption, error) {
 }
 
 func Redeem(key string, userId int) (quota int64, err error) {
+	if config.PointsBillingEnabled {
+		return 0, ErrPointsLegacyQuotaDisabled
+	}
 	if key == "" {
 		return 0, errors.New("未提供兑换码")
 	}

@@ -45,6 +45,10 @@ func relayHelper(c *gin.Context, relayMode int) *model.ErrorWithStatusCode {
 func Relay(c *gin.Context) {
 	ctx := c.Request.Context()
 	relayMode := relaymode.GetByPath(c.Request.URL.Path)
+	if config.PointsBillingEnabled && (c.Request.URL.Path != "/v1/chat/completions" || relayMode != relaymode.ChatCompletions) {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": gin.H{"message": "points billing currently supports only OpenAI-compatible text chat completions", "type": "one_api_error", "code": "points_route_unsupported"}})
+		return
+	}
 	if config.DebugEnabled {
 		requestBody, _ := common.GetRequestBody(c)
 		logger.Debugf(ctx, "request body: %s", string(requestBody))
@@ -63,6 +67,9 @@ func Relay(c *gin.Context) {
 	go processChannelRelayError(ctx, userId, channelId, channelName, *bizErr)
 	requestId := c.GetString(helper.RequestIdKey)
 	retryTimes := config.RetryTimes
+	if config.PointsBillingEnabled {
+		retryTimes = 0
+	}
 	if !shouldRetry(c, bizErr.StatusCode) {
 		logger.Errorf(ctx, "relay error happen, status code is %d, won't retry in this case", bizErr.StatusCode)
 		retryTimes = 0
@@ -96,6 +103,9 @@ func Relay(c *gin.Context) {
 
 		// BUG: bizErr is in race condition
 		bizErr.Error.Message = helper.MessageWithRequestId(bizErr.Error.Message, requestId)
+		if config.PointsBillingEnabled && c.Writer.Written() {
+			return
+		}
 		c.JSON(bizErr.StatusCode, gin.H{
 			"error": bizErr.Error,
 		})

@@ -121,7 +121,12 @@ func TokenAuth() func(c *gin.Context) {
 				return
 			}
 		}
-		userEnabled, err := model.CacheIsUserEnabled(token.UserId)
+		var userEnabled bool
+		if config.PointsBillingEnabled {
+			userEnabled, err = model.IsUserEnabled(token.UserId)
+		} else {
+			userEnabled, err = model.CacheIsUserEnabled(token.UserId)
+		}
 		if err != nil {
 			abortWithMessage(c, http.StatusInternalServerError, err.Error())
 			return
