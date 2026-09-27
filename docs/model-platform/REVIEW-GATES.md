@@ -378,3 +378,17 @@ v9 迁移源码复审追加：余额守恒差额只有在批次确有已到期�
 Luna 已停止编辑并交付稳定节点。父确认微信所有可信退款证据必须包含平台 refund_id，支付宝固定以 out_request_no 绑定；新增缺字段拒绝、支付入账与退款竞争、累计超额及原订单身份变化的整事务回滚用例。父独立运行 `TestPointRefundFinalization` 通过（0.340s），最终再次运行上述七包定向回归全部通过（controller 1.265s、router 1.399s、model 2.193s、relay/controller 2.230s、relay/adaptor/openai 2.651s、service/payments 2.921s），`git diff --check` 无输出。
 
 允许提交本批 v9 迁移、SQLite 事务门槛和纯退款账本。仅 SQLite 路径获得本节点验证；MySQL/Postgres 退款拒绝启用。HTTP、平台验签/退款调用、提交前持久状态及超时恢复、角色授权与重新认证、客户及管理退款界面仍未实现，真实商户退款未验收。赠送积分按比例撤销仍属待确认商业规则，本节点不批准公开政策或生产发布。
+
+提交 `3bc30b8b05d2ef57efc3002c271b0c12e94868c0` 已推送，父独立确认 [CI 36334337834](https://github.com/NSIETeam/miraphant/actions/runs/36334337834) 为 completed/success，包含积分接口/relay/账本、支付协议测试、前端主题与 Go 网关构建及静态发布隔离。该结果仅对应纯账本提交，后续退款协议适配器需独立验收。
+
+## 退款协议适配器早审（未放行）
+
+父对照[微信退款通知官方结构](https://pay.wechatpay.cn/doc/v3/merchant/4012791886)发现首版把顶层 `resource_type` 放入 `resource` 子对象，会拒绝真实回调；已要求修正并用官方结构的签名加密样例覆盖成功与错误层级拒绝。申请退款复用充值 NotifyURL 也已要求拆分退款通知配置，供后续专用路由接入。此时实现尚在开发，未提交或运行协议节点验收。
+
+支付宝首版将申请业务错误映射 definite_failed，父要求修订：协议层无法据本次被拒绝证明此前同退款号的超时尝试未成功，错误响应也缺少退款身份绑定。因此申请错误暂保持 unknown/error，不能触发账本释放；增加先结果不明、后重试业务拒绝的用例。最终失败须由可绑定该退款的可信终态证据证明。
+
+父首次运行当前 `go test ./payment/... ./service/payments -count=1 -timeout=120s` 未通过：支付宝退款 fixture 将 baseURL 指向服务器根地址，签名请求 helper 却要求 `/gateway.do`，导致 handler Fatal 和 EOF；微信通知错误路径返回零值 result，而新测试要求 Outcome=unknown。已交 Luna 统一测试地址与错误返回契约，并避免 handler goroutine 调用 Fatal。现有 service/payments 通过（0.665s）；新协议节点仍未放行。
+
+修订地址和通知错误断言后，父复跑同一命令通过（alipay 3.788s、wechat 0.731s、service/payments 0.624s）。当前证据包含官方回调层级、签名和解密、累计退款金额区分、身份/金额错配及未知状态处理；仍等待协议说明与稳定节点报告后集中放行。测试通过不代表真实商户接入或退款业务编排完成。
+
+退款协议稳定节点已交付并停止编辑。父已审阅 REFUND-PROTOCOL.md 与渠道字段绑定实现，独立运行 `go test -race ./payment/... -count=1 -timeout=120s` 通过（alipay 6.362s、wechat 2.505s），最终复跑支付协议及服务包通过（alipay 3.370s、wechat 0.779s、service/payments 0.681s），`git diff --check` 无输出。允许提交协议适配器及合成测试。微信申请仅记受理，终态由查询/通知确认；支付宝申请错误保持未知，累计金额仅由可信服务端历史提供。运行配置、通知路由、持久提交/恢复、授权与界面仍未接入，本节点不放行真实退款。

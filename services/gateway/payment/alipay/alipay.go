@@ -41,6 +41,11 @@ type Provider struct {
 	baseURL string // unexported: tests may inject httptest, runtime input cannot change it
 }
 
+var (
+	_ payment.Provider       = (*Provider)(nil)
+	_ payment.RefundProvider = (*Provider)(nil)
+)
+
 func New(config Config) (*Provider, error) {
 	if !config.Enabled {
 		return nil, payment.ErrDisabled
@@ -216,6 +221,170 @@ func (p *Provider) Close(ctx context.Context, orderKey string) error {
 		return payment.ErrOrderMismatch
 	}
 	return nil
+}
+
+type refundRequestBody struct {
+	OrderKey      string `json:"out_trade_no,omitempty"`
+	TransactionID string `json:"trade_no,omitempty"`
+	Amount        string `json:"refund_amount"`
+	Reason        string `json:"refund_reason,omitempty"`
+	RefundNumber  string `json:"out_request_no"`
+}
+
+type refundApplyResponse struct {
+	Code          string `json:"code"`
+	SubCode       string `json:"sub_code"`
+	OrderKey      string `json:"out_trade_no"`
+	TransactionID string `json:"trade_no"`
+	Cumulative    string `json:"refund_fee"`
+	FundChange    string `json:"fund_change"`
+}
+
+type refundQueryResponse struct {
+	Code          string `json:"code"`
+	SubCode       string `json:"sub_code"`
+	OrderKey      string `json:"out_trade_no"`
+	TransactionID string `json:"trade_no"`
+	RefundNumber  string `json:"out_request_no"`
+	TotalAmount   string `json:"total_amount"`
+	RefundAmount  string `json:"refund_amount"`
+	RefundStatus  string `json:"refund_status"`
+}
+
+func (p *Provider) ApplyRefund(ctx context.Context, request payment.RefundRequest) (payment.RefundResult, error) {
+	if err := p.validateRefundRequest(request); err != nil {
+		return payment.RefundResult{}, err
+	}
+	amount, err := formatFen(request.AmountFen)
+	if err != nil {
+		return payment.RefundResult{}, err
+	}
+	responseBody, err := p.api(ctx, "alipay.trade.refund", map[string]string{
+		"out_trade_no":   request.OrderKey,
+		"trade_no":       request.TransactionID,
+		"refund_amount":  amount,
+		"refund_reason":  request.Reason,
+		"out_request_no": request.ProviderRefundKey,
+	})
+	if err != nil {
+		return alipayRefundBase(request, payment.RefundUnknown, "", "apply"), err
+	}
+	var response refundApplyResponse
+	if err := json.Unmarshal(responseBody, &response); err != nil {
+		return alipayRefundBase(request, payment.RefundUnknown, "", "apply"), err
+	}
+	if response.Code != "10000" {
+		// Even a signed business error only describes this response. The same
+		// stable request number may have succeeded in an earlier timed-out try;
+		// only a refund query can reconcile that history safely.
+		result := alipayRefundBase(request, payment.RefundUnknown, response.SubCode, "apply")
+		return result, fmt.Errorf("Alipay refund apply returned code %s", response.Code)
+	}
+	if response.OrderKey != request.OrderKey || response.TransactionID != request.TransactionID {
+		return alipayRefundBase(request, payment.RefundUnknown, "", "apply"), payment.ErrOrderMismatch
+	}
+	cumulativeFen, err := parseFenAllowZero(response.Cumulative)
+	if err != nil {
+		return alipayRefundBase(request, payment.RefundUnknown, "", "apply"), errors.New("Alipay refund response lacks valid cumulative refund amount")
+	}
+	expected, ok := checkedAddFen(request.PriorRefundedFen, request.AmountFen)
+	if !ok || (response.FundChange == "Y" && cumulativeFen != expected) ||
+		(response.FundChange != "Y" && cumulativeFen != request.PriorRefundedFen && cumulativeFen != expected) {
+		return alipayRefundBase(request, payment.RefundUnknown, "", "apply"), payment.ErrOrderMismatch
+	}
+	result := alipayRefundBase(request, payment.RefundAccepted, response.FundChange, "apply")
+	if response.FundChange == "Y" {
+		result.Outcome = payment.RefundSucceeded
+		result.Status = "fund_change:Y"
+	} else if response.FundChange != "N" && response.FundChange != "" {
+		result.Outcome = payment.RefundUnknown
+		return result, payment.ErrUnknownStatus
+	}
+	return result, nil
+}
+
+func (p *Provider) QueryRefund(ctx context.Context, request payment.RefundRequest) (payment.RefundResult, error) {
+	if err := p.validateRefundRequest(request); err != nil {
+		return payment.RefundResult{}, err
+	}
+	responseBody, err := p.api(ctx, "alipay.trade.fastpay.refund.query", map[string]string{
+		"out_trade_no":   request.OrderKey,
+		"trade_no":       request.TransactionID,
+		"out_request_no": request.ProviderRefundKey,
+	})
+	if err != nil {
+		return alipayRefundBase(request, payment.RefundUnknown, "", "query"), err
+	}
+	var response refundQueryResponse
+	if err := json.Unmarshal(responseBody, &response); err != nil {
+		return alipayRefundBase(request, payment.RefundUnknown, "", "query"), err
+	}
+	if response.Code != "10000" {
+		return alipayRefundBase(request, payment.RefundUnknown, response.SubCode, "query"), fmt.Errorf("Alipay refund query returned code %s", response.Code)
+	}
+	if response.OrderKey != request.OrderKey || response.TransactionID != request.TransactionID || response.RefundNumber != request.ProviderRefundKey {
+		return alipayRefundBase(request, payment.RefundUnknown, response.RefundStatus, "query"), payment.ErrOrderMismatch
+	}
+	totalFen, totalErr := parseFen(response.TotalAmount)
+	refundFen, refundErr := parseFen(response.RefundAmount)
+	if totalErr != nil || refundErr != nil || totalFen != request.TotalFen || refundFen != request.AmountFen {
+		return alipayRefundBase(request, payment.RefundUnknown, response.RefundStatus, "query"), payment.ErrOrderMismatch
+	}
+	outcome := payment.RefundUnknown
+	switch response.RefundStatus {
+	case "REFUND_SUCCESS":
+		outcome = payment.RefundSucceeded
+	case "":
+		// The official API says an absent refund_status can mean the request was
+		// not received or failed. That ambiguity cannot release a ledger hold.
+	default:
+		// Unknown/future status strings remain non-terminal.
+	}
+	result := alipayRefundBase(request, outcome, response.RefundStatus, "query")
+	return result, nil
+}
+
+func (p *Provider) validateRefundRequest(request payment.RefundRequest) error {
+	if request.RefundKey == "" || request.ProviderRefundKey == "" || len(request.ProviderRefundKey) > 64 ||
+		!validRefundNumber(request.ProviderRefundKey) || !validOrderKey(request.OrderKey) || request.TransactionID == "" || len(request.TransactionID) > 64 ||
+		request.MerchantID != p.config.MerchantID || request.AppID != p.config.AppID || request.AmountFen <= 0 || request.TotalFen < request.AmountFen ||
+		request.PriorRefundedFen < 0 || request.PriorRefundedFen > request.TotalFen-request.AmountFen || request.Currency != "CNY" || len([]byte(request.Reason)) > 256 {
+		return errors.New("Alipay refund snapshot does not match configured merchant or amount")
+	}
+	return nil
+}
+
+func alipayRefundBase(request payment.RefundRequest, outcome payment.RefundOutcome, status, source string) payment.RefundResult {
+	return payment.RefundResult{Provider: "alipay", Outcome: outcome, Status: status, RefundKey: request.RefundKey,
+		ProviderRefundKey: request.ProviderRefundKey, OrderKey: request.OrderKey, TransactionID: request.TransactionID,
+		MerchantID: request.MerchantID, AppID: request.AppID, AmountFen: request.AmountFen, TotalFen: request.TotalFen,
+		Currency: request.Currency, EvidenceSource: source}
+}
+
+func checkedAddFen(left, right int64) (int64, bool) {
+	if left < 0 || right < 0 || left > int64(^uint64(0)>>1)-right {
+		return 0, false
+	}
+	return left + right, true
+}
+
+func parseFenAllowZero(value string) (int64, error) {
+	if value == "0" || value == "0.0" || value == "0.00" {
+		return 0, nil
+	}
+	return parseFen(value)
+}
+
+func validRefundNumber(value string) bool {
+	if value == "" || len(value) > 64 {
+		return false
+	}
+	for _, r := range value {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '-') {
+			return false
+		}
+	}
+	return true
 }
 
 type tradeResponse struct {

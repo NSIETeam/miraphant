@@ -36,6 +36,7 @@ type Config struct {
 	PlatformPublicKey *rsa.PublicKey
 	APIv3Key          []byte
 	NotifyURL         string
+	RefundNotifyURL   string
 }
 
 type Provider struct {
@@ -43,6 +44,12 @@ type Provider struct {
 	client  *http.Client
 	baseURL string // private so runtime/user input cannot redirect payment requests
 }
+
+var (
+	_ payment.Provider                   = (*Provider)(nil)
+	_ payment.RefundProvider             = (*Provider)(nil)
+	_ payment.RefundNotificationVerifier = (*Provider)(nil)
+)
 
 func New(config Config) (*Provider, error) {
 	if !config.Enabled {
@@ -53,6 +60,11 @@ func New(config Config) (*Provider, error) {
 	}
 	if err := validateNotifyURL(config.NotifyURL); err != nil {
 		return nil, err
+	}
+	if config.RefundNotifyURL != "" {
+		if err := validateNotifyURL(config.RefundNotifyURL); err != nil {
+			return nil, fmt.Errorf("invalid WeChat Pay refund notification URL: %w", err)
+		}
 	}
 	return &Provider{config: config, client: &http.Client{Timeout: 8 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, baseURL: apiBaseURL}, nil
 }
@@ -222,6 +234,251 @@ func (p *Provider) Close(ctx context.Context, orderKey string) error {
 		return err
 	}
 	return nil
+}
+
+type refundAmount struct {
+	Refund   int64  `json:"refund"`
+	Total    int64  `json:"total"`
+	Currency string `json:"currency"`
+}
+
+type refundApplyRequest struct {
+	TransactionID string       `json:"transaction_id,omitempty"`
+	OrderKey      string       `json:"out_trade_no,omitempty"`
+	RefundNumber  string       `json:"out_refund_no"`
+	Reason        string       `json:"reason,omitempty"`
+	NotifyURL     string       `json:"notify_url,omitempty"`
+	Amount        refundAmount `json:"amount"`
+}
+
+type refundResponse struct {
+	RefundID      string       `json:"refund_id"`
+	RefundNumber  string       `json:"out_refund_no"`
+	TransactionID string       `json:"transaction_id"`
+	OrderKey      string       `json:"out_trade_no"`
+	Status        string       `json:"status"`
+	SuccessTime   string       `json:"success_time"`
+	CreateTime    string       `json:"create_time"`
+	Amount        refundAmount `json:"amount"`
+}
+
+func (p *Provider) ApplyRefund(ctx context.Context, request payment.RefundRequest) (payment.RefundResult, error) {
+	if err := p.validateRefundRequest(request); err != nil {
+		return payment.RefundResult{}, err
+	}
+	if len(request.ProviderRefundKey) > 64 || !validRefundNumber(request.ProviderRefundKey) || len([]byte(request.Reason)) > 80 {
+		return payment.RefundResult{}, errors.New("invalid WeChat Pay refund number or reason")
+	}
+	body, err := json.Marshal(refundApplyRequest{
+		TransactionID: request.TransactionID,
+		RefundNumber:  request.ProviderRefundKey,
+		Reason:        request.Reason,
+		NotifyURL:     p.config.RefundNotifyURL,
+		Amount:        refundAmount{Refund: request.AmountFen, Total: request.TotalFen, Currency: request.Currency},
+	})
+	if err != nil {
+		return payment.RefundResult{}, err
+	}
+	responseBody, headers, _, err := p.call(ctx, http.MethodPost, "/v3/refund/domestic/refunds", body)
+	if err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, "", "apply"), err
+	}
+	if err := p.verifyResponse(headers, responseBody); err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, "", "apply"), err
+	}
+	var response refundResponse
+	if err := json.Unmarshal(responseBody, &response); err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, "", "apply"), err
+	}
+	result, err := p.normalizeRefundResponse(request, response, "apply")
+	if err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, response.Status, "apply"), err
+	}
+	return result, nil
+}
+
+func (p *Provider) QueryRefund(ctx context.Context, request payment.RefundRequest) (payment.RefundResult, error) {
+	if err := p.validateRefundRequest(request); err != nil {
+		return payment.RefundResult{}, err
+	}
+	if len(request.ProviderRefundKey) > 64 || !validRefundNumber(request.ProviderRefundKey) {
+		return payment.RefundResult{}, errors.New("invalid WeChat Pay refund number")
+	}
+	path := "/v3/refund/domestic/refunds/" + url.PathEscape(request.ProviderRefundKey)
+	body, headers, _, err := p.call(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, "", "query"), err
+	}
+	if err := p.verifyResponse(headers, body); err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, "", "query"), err
+	}
+	var response refundResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, "", "query"), err
+	}
+	result, err := p.normalizeRefundResponse(request, response, "query")
+	if err != nil {
+		return wechatRefundBase(request, payment.RefundUnknown, response.Status, "query"), err
+	}
+	return result, nil
+}
+
+func (p *Provider) validateRefundRequest(request payment.RefundRequest) error {
+	if request.RefundKey == "" || request.ProviderRefundKey == "" || request.OrderKey == "" || request.TransactionID == "" ||
+		request.MerchantID != p.config.MerchantID || request.AppID != p.config.AppID || request.AmountFen <= 0 || request.TotalFen < request.AmountFen ||
+		request.PriorRefundedFen < 0 || request.PriorRefundedFen > request.TotalFen-request.AmountFen || request.Currency != "CNY" {
+		return errors.New("WeChat Pay refund snapshot does not match configured merchant or amount")
+	}
+	if !validOrderKey(request.OrderKey) || len(request.TransactionID) > 32 {
+		return errors.New("invalid WeChat Pay original order identity")
+	}
+	return nil
+}
+
+func (p *Provider) normalizeRefundResponse(request payment.RefundRequest, response refundResponse, source string) (payment.RefundResult, error) {
+	if response.RefundID == "" || response.RefundNumber != request.ProviderRefundKey || response.OrderKey != request.OrderKey ||
+		response.TransactionID != request.TransactionID || response.Amount.Refund != request.AmountFen || response.Amount.Total != request.TotalFen ||
+		response.Amount.Currency != request.Currency {
+		return payment.RefundResult{}, payment.ErrOrderMismatch
+	}
+	outcome, ok := wechatRefundOutcome(response.Status)
+	if !ok {
+		return payment.RefundResult{}, payment.ErrUnknownStatus
+	}
+	if source == "apply" {
+		// WeChat explicitly documents a successful apply response as accepted,
+		// not as the final refund result. Finalization waits for a query or
+		// verified refund notification even if the body contains a known state.
+		outcome = payment.RefundAccepted
+	}
+	occurredAt, _ := time.Parse(time.RFC3339, response.SuccessTime)
+	if occurredAt.IsZero() {
+		occurredAt, _ = time.Parse(time.RFC3339, response.CreateTime)
+	}
+	result := wechatRefundBase(request, outcome, response.Status, source)
+	result.ProviderRefundID = response.RefundID
+	result.ProviderOccurredAt = occurredAt
+	return result, nil
+}
+
+func wechatRefundOutcome(status string) (payment.RefundOutcome, bool) {
+	switch status {
+	case "SUCCESS":
+		return payment.RefundSucceeded, true
+	case "CLOSED":
+		return payment.RefundDefiniteFailed, true
+	case "PROCESSING":
+		return payment.RefundAccepted, true
+	case "ABNORMAL":
+		return payment.RefundAbnormal, true
+	default:
+		return payment.RefundUnknown, false
+	}
+}
+
+func wechatRefundBase(request payment.RefundRequest, outcome payment.RefundOutcome, status, source string) payment.RefundResult {
+	return payment.RefundResult{Provider: "wechat", Outcome: outcome, Status: status, RefundKey: request.RefundKey,
+		ProviderRefundKey: request.ProviderRefundKey, OrderKey: request.OrderKey, TransactionID: request.TransactionID,
+		MerchantID: request.MerchantID, AppID: request.AppID, AmountFen: request.AmountFen, TotalFen: request.TotalFen,
+		Currency: request.Currency, EvidenceSource: source}
+}
+
+func validRefundNumber(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, r := range value {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || strings.ContainsRune("_-|*@", r)) {
+			return false
+		}
+	}
+	return true
+}
+
+// VerifyRefundNotification verifies the original signed envelope before AES-GCM
+// decryption. The app identity is bound to this configured merchant context;
+// the refund notification resource does not contain an appid field.
+func (p *Provider) VerifyRefundNotification(headers http.Header, body []byte) (payment.RefundResult, error) {
+	if len(body) == 0 || len(body) > 1<<20 {
+		return payment.RefundResult{}, payment.ErrInvalidNotice
+	}
+	timestamp, nonce := headers.Get("Wechatpay-Timestamp"), headers.Get("Wechatpay-Nonce")
+	signature, serial := headers.Get("Wechatpay-Signature"), headers.Get("Wechatpay-Serial")
+	if timestamp == "" || nonce == "" || signature == "" || serial != p.config.PlatformSerial || !freshTimestamp(timestamp, time.Now()) {
+		return payment.RefundResult{}, payment.ErrInvalidNotice
+	}
+	message := []byte(timestamp + "\n" + nonce + "\n" + string(body) + "\n")
+	if err := verifyRSA(p.config.PlatformPublicKey, message, signature); err != nil {
+		return payment.RefundResult{}, payment.ErrInvalidNotice
+	}
+	var envelope struct {
+		ID           string `json:"id"`
+		CreateTime   string `json:"create_time"`
+		EventType    string `json:"event_type"`
+		Summary      string `json:"summary"`
+		ResourceType string `json:"resource_type"`
+		Resource     struct {
+			OriginalType   string `json:"original_type"`
+			Algorithm      string `json:"algorithm"`
+			Ciphertext     string `json:"ciphertext"`
+			Nonce          string `json:"nonce"`
+			AssociatedData string `json:"associated_data"`
+		} `json:"resource"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil || envelope.ID == "" || envelope.EventType == "" || envelope.Summary == "" ||
+		envelope.ResourceType != "encrypt-resource" || envelope.Resource.Algorithm != "AEAD_AES_256_GCM" {
+		return payment.RefundResult{}, payment.ErrInvalidNotice
+	}
+	if envelope.Resource.OriginalType != "refund" {
+		return payment.RefundResult{}, payment.ErrInvalidNotice
+	}
+	plaintext, err := decryptResource(p.config.APIv3Key, envelope.Resource.Nonce, envelope.Resource.AssociatedData, envelope.Resource.Ciphertext)
+	if err != nil {
+		return payment.RefundResult{}, payment.ErrInvalidNotice
+	}
+	var data struct {
+		MerchantID    string `json:"mchid"`
+		OrderKey      string `json:"out_trade_no"`
+		TransactionID string `json:"transaction_id"`
+		RefundNumber  string `json:"out_refund_no"`
+		RefundID      string `json:"refund_id"`
+		Status        string `json:"refund_status"`
+		SuccessTime   string `json:"success_time"`
+		Amount        struct {
+			Total    int64  `json:"total"`
+			Refund   int64  `json:"refund"`
+			Currency string `json:"currency"`
+		} `json:"amount"`
+	}
+	if err := json.Unmarshal(plaintext, &data); err != nil || data.MerchantID != p.config.MerchantID || !validOrderKey(data.OrderKey) || data.TransactionID == "" || len(data.TransactionID) > 32 ||
+		!validRefundNumber(data.RefundNumber) || data.RefundID == "" || len(data.RefundID) > 32 || data.Amount.Total <= 0 || data.Amount.Refund <= 0 || data.Amount.Refund > data.Amount.Total || data.Amount.Currency != "CNY" {
+		return payment.RefundResult{}, payment.ErrInvalidNotice
+	}
+	outcome, ok := wechatRefundOutcome(data.Status)
+	if !ok || !wechatRefundEventMatches(envelope.EventType, data.Status) {
+		return payment.RefundResult{}, payment.ErrUnknownStatus
+	}
+	occurredAt, _ := time.Parse(time.RFC3339, data.SuccessTime)
+	if occurredAt.IsZero() {
+		occurredAt, _ = time.Parse(time.RFC3339, envelope.CreateTime)
+	}
+	return payment.RefundResult{Provider: "wechat", Outcome: outcome, Status: data.Status, ProviderRefundKey: data.RefundNumber,
+		ProviderRefundID: data.RefundID, OrderKey: data.OrderKey, TransactionID: data.TransactionID, MerchantID: data.MerchantID,
+		AppID: p.config.AppID, AmountFen: data.Amount.Refund, TotalFen: data.Amount.Total, Currency: data.Amount.Currency,
+		ProviderEventID: envelope.ID, ProviderOccurredAt: occurredAt, EvidenceSource: "notification"}, nil
+}
+
+func wechatRefundEventMatches(eventType, status string) bool {
+	switch eventType {
+	case "REFUND.SUCCESS":
+		return status == "SUCCESS"
+	case "REFUND.CLOSED":
+		return status == "CLOSED"
+	case "REFUND.ABNORMAL":
+		return status == "ABNORMAL"
+	default:
+		return false
+	}
 }
 
 func (p *Provider) call(ctx context.Context, method, requestURI string, body []byte) ([]byte, http.Header, int, error) {

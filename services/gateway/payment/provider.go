@@ -57,3 +57,69 @@ type Provider interface {
 	Query(context.Context, string) (Trade, error)
 	Close(context.Context, string) error
 }
+
+// RefundOutcome describes what the verified protocol evidence proves. In
+// particular, "accepted" is not a completed refund and "unknown" must never
+// release a ledger hold.
+type RefundOutcome string
+
+const (
+	RefundAccepted       RefundOutcome = "accepted"
+	RefundSucceeded      RefundOutcome = "succeeded"
+	RefundDefiniteFailed RefundOutcome = "definite_failed"
+	RefundUnknown        RefundOutcome = "unknown"
+	RefundAbnormal       RefundOutcome = "abnormal"
+)
+
+// RefundRequest is built from the immutable, server-side refund and paid-order
+// snapshots. Adapters verify every field they receive against their own
+// configured merchant identity before making a request.
+type RefundRequest struct {
+	RefundKey         string
+	ProviderRefundKey string // WeChat out_refund_no or Alipay out_request_no
+	OrderKey          string
+	TransactionID     string
+	MerchantID        string
+	AppID             string
+	AmountFen         int64
+	TotalFen          int64
+	PriorRefundedFen  int64 // trusted local amount completed before this refund
+	Currency          string
+	Reason            string
+}
+
+// RefundResult contains normalized, identity-bound protocol evidence. The
+// returned AmountFen is always this refund amount; it is never a provider's
+// cumulative refunded amount.
+type RefundResult struct {
+	Provider           string
+	Outcome            RefundOutcome
+	Status             string
+	RefundKey          string
+	ProviderRefundKey  string
+	ProviderRefundID   string
+	OrderKey           string
+	TransactionID      string
+	MerchantID         string
+	AppID              string
+	AmountFen          int64
+	TotalFen           int64
+	Currency           string
+	ProviderEventID    string
+	ProviderOccurredAt time.Time
+	EvidenceSource     string
+}
+
+// RefundProvider is a protocol-only interface. Implementations do not persist
+// state or decide retry policy; callers must keep funds frozen for unknown or
+// merely accepted evidence.
+type RefundProvider interface {
+	ApplyRefund(context.Context, RefundRequest) (RefundResult, error)
+	QueryRefund(context.Context, RefundRequest) (RefundResult, error)
+}
+
+// RefundNotificationVerifier is implemented only by channels with a refund
+// notification protocol supported in this integration stage.
+type RefundNotificationVerifier interface {
+	VerifyRefundNotification(http.Header, []byte) (RefundResult, error)
+}
