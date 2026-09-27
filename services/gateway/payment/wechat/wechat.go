@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/songquanpeng/one-api/payment"
+	"github.com/songquanpeng/one-api/payment/bill"
 )
 
 const apiBaseURL = "https://api.mch.weixin.qq.com"
@@ -40,9 +41,11 @@ type Config struct {
 }
 
 type Provider struct {
-	config  Config
-	client  *http.Client
-	baseURL string // private so runtime/user input cannot redirect payment requests
+	config        Config
+	client        *http.Client
+	baseURL       string // private so runtime/user input cannot redirect payment requests
+	billTransport http.RoundTripper
+	billResolver  bill.Resolver
 }
 
 var (

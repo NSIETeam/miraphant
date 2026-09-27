@@ -21,6 +21,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/songquanpeng/one-api/payment"
+	"github.com/songquanpeng/one-api/payment/bill"
 )
 
 const apiBaseURL = "https://openapi.alipay.com/gateway.do"
@@ -36,9 +37,11 @@ type Config struct {
 }
 
 type Provider struct {
-	config  Config
-	client  *http.Client
-	baseURL string // unexported: tests may inject httptest, runtime input cannot change it
+	config        Config
+	client        *http.Client
+	baseURL       string // unexported: tests may inject httptest, runtime input cannot change it
+	billTransport http.RoundTripper
+	billResolver  bill.Resolver
 }
 
 var (
