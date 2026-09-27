@@ -18,6 +18,7 @@ import LarkOAuth from './components/LarkOAuth';
 import PersonalSetting from './components/PersonalSetting';
 import {
   AdminHome, AdminPendingPage, AdminPricingPage, AdminRoute, AdminUsersPage,
+  AdminOrdersPage, AdminOrderDetailPage, AdminAuditPage,
   AdminPackagesPage, AdminPaymentsPage, OrderDetailPage, OrdersPage,
   ConsolePage, CustomerRoute, HelpPage, KeysPage, LegacyRedirect, NotFoundPage,
   PlatformHome, PricingPage, ProfilePage, UnavailableAdminPage, UsagePage,
@@ -99,10 +100,11 @@ function App() {
       <Route path='/admin/channels/add' element={<AdminRoute><EditChannel /></AdminRoute>} />
       <Route path='/admin/packages' element={<AdminRoute><AdminPackagesPage /></AdminRoute>} />
       <Route path='/admin/payments' element={<AdminRoute><AdminPaymentsPage /></AdminRoute>} />
-      <Route path='/admin/orders' element={<AdminRoute><UnavailableAdminPage title='充值订单' /></AdminRoute>} />
+      <Route path='/admin/orders/:orderId' element={<AdminRoute><AdminOrderDetailPage /></AdminRoute>} />
+      <Route path='/admin/orders' element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
       <Route path='/admin/refunds' element={<AdminRoute><UnavailableAdminPage title='退款审核' /></AdminRoute>} />
       <Route path='/admin/reconciliation' element={<AdminRoute><UnavailableAdminPage title='支付对账' /></AdminRoute>} />
-      <Route path='/admin/audit' element={<AdminRoute><UnavailableAdminPage title='操作审计' /></AdminRoute>} />
+      <Route path='/admin/audit' element={<AdminRoute><AdminAuditPage /></AdminRoute>} />
       <Route path='/admin/brand' element={<AdminRoute><UnavailableAdminPage title='品牌设置' detail='平台名称与主题已统一为 Miraphant，客服联系方式可在支付与客服模块接通后配置。' /></AdminRoute>} />
       <Route path='/admin/setting' element={<AdminRoute><Setting /></AdminRoute>} />
       <Route path='/admin/users/edit/:id' element={<AdminRoute><EditUser /></AdminRoute>} />

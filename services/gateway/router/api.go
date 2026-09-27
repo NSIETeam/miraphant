@@ -45,6 +45,13 @@ func SetApiRouter(router *gin.Engine) {
 			paymentAdmin.POST("/packages", middleware.PointsCSRF(), controller.CreatePointPackage)
 			paymentAdmin.POST("/recover", middleware.PointsCSRF(), controller.AdminRecoverPaymentEvents)
 		}
+		paymentOpsAdmin := apiRouter.Group("/admin")
+		paymentOpsAdmin.Use(middleware.PointsAdminAuth())
+		{
+			paymentOpsAdmin.GET("/orders", controller.AdminPaymentOrders)
+			paymentOpsAdmin.GET("/orders/:key", controller.AdminPaymentOrder)
+			paymentOpsAdmin.GET("/audit", controller.AdminPaymentAudit)
+		}
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)

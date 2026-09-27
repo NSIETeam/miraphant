@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/User';
 import { StrictAPI as API, copy, showError, showSuccess } from '../../helpers';
 export { WalletPage, OrdersPage, OrderDetailPage, AdminPackagesPage, AdminPaymentsPage } from './Payments';
+export { AdminOrdersPage, AdminOrderDetailPage, AdminAuditPage } from './AdminPaymentReview';
 
 const MICRO = 1000000;
 const formatPoints = (micro = 0) => (Number(micro || 0) / MICRO).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
@@ -153,8 +154,8 @@ export function HelpPage() {
 export function AdminHome() {
   const [prices, setPrices] = useState([]); const [pending, setPending] = useState([]); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false);
   useEffect(() => { Promise.all([API.get('/api/points/prices'), API.get('/api/admin/points/pending?limit=100')]).then(([priceRes, pendingRes]) => { setPrices(priceRes?.data?.prices || []); setPending(pendingRes?.data?.holds || []); }).catch(() => setFailed(true)).finally(() => setLoading(false)); }, []);
-  const cards = [['模型定价', '/admin/pricing', `${prices.length} 个生效模型`], ['客户积分', '/admin/users', '客户查询与带原因赠送'], ['用量核实', '/admin/pending', `${pending.length} 条待核实`], ['渠道状态', '/admin/channels', '管理模型接入'], ['套餐管理', '/admin/packages', '发布版本与查看历史'], ['支付设置', '/admin/payments', '渠道配置与开通准备'], ['充值订单', '/admin/orders', '管理查单待接入'], ['退款审核', '/admin/refunds', '当前未开通'], ['支付对账', '/admin/reconciliation', '当前未开通'], ['操作审计', '/admin/audit', '部分积分调整已记录'], ['品牌设置', '/admin/brand', '统一品牌配置']];
-  return <main className='platform-page'><PageTitle eyebrow='ADMIN' title='平台管理' intro='管理入口受服务端权限控制。积分调整和价格发布都会记录审计。' />{loading ? <LoadingState /> : failed ? <ErrorState title='管理数据暂时无法读取' detail='会话权限可能已变化。请重新登录后再试。' /> : <div className='admin-module-grid'>{cards.map(([title, path, detail]) => <Link to={path} className='admin-module' key={path}><span>{title}</span><strong>{detail}</strong><i>打开模块 →</i></Link>)}</div>}<div className='platform-alert platform-alert-info'><strong>运营能力状态</strong><span>支付商户、套餐、退款、财务与客服细分角色尚未接入。页面不会展示模拟订单或成功付款。</span></div></main>;
+  const cards = [['模型定价', '/admin/pricing', `${prices.length} 个生效模型`], ['客户积分', '/admin/users', '客户查询与带原因赠送'], ['用量核实', '/admin/pending', `${pending.length} 条待核实`], ['渠道状态', '/admin/channels', '管理模型接入'], ['套餐管理', '/admin/packages', '发布版本与查看历史'], ['支付设置', '/admin/payments', '渠道配置与开通准备'], ['充值订单', '/admin/orders', '筛选订单与查看核验记录'], ['退款审核', '/admin/refunds', '当前未开通'], ['支付对账', '/admin/reconciliation', '当前未开通'], ['操作审计', '/admin/audit', '查看积分、套餐与核实操作'], ['品牌设置', '/admin/brand', '统一品牌配置']];
+  return <main className='platform-page'><PageTitle eyebrow='ADMIN' title='平台管理' intro='管理入口受服务端权限控制。积分调整和价格发布都会记录审计。' />{loading ? <LoadingState /> : failed ? <ErrorState title='管理数据暂时无法读取' detail='会话权限可能已变化。请重新登录后再试。' /> : <div className='admin-module-grid'>{cards.map(([title, path, detail]) => <Link to={path} className='admin-module' key={path}><span>{title}</span><strong>{detail}</strong><i>打开模块 →</i></Link>)}</div>}<div className='platform-alert platform-alert-info'><strong>运营能力状态</strong><span>已提供套餐管理、充值订单与操作审计。真实商户尚未开通；退款、对账和财务／客服权限仍待接入。</span></div></main>;
 }
 
 export function AdminPricingPage() {
