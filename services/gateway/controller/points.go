@@ -29,6 +29,99 @@ func PointsWallet(c *gin.Context) {
 	c.JSON(http.StatusOK, wallet)
 }
 
+func AdminPointUserWallet(c *gin.Context) {
+	userID, ok := parsePositivePathID(c.Param("id"))
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+	var target dbmodel.User
+	if err := dbmodel.DB.Select("id", "status").First(&target, "id = ?", userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read user wallet"})
+		}
+		return
+	}
+	wallet, err := dbmodel.GetPointWallet(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read user wallet"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"user_id": userID, "user_status": userStatusName(target.Status),
+		"read_may_expire_lots": true, "wallet": wallet,
+	})
+}
+
+func AdminPointUserLedger(c *gin.Context) {
+	userID, ok := parsePositivePathID(c.Param("id"))
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+	var target dbmodel.User
+	if err := dbmodel.DB.Select("id").First(&target, "id = ?", userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read user ledger"})
+		}
+		return
+	}
+	limit := 50
+	if raw := c.Query("limit"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 || parsed > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "limit must be between 1 and 100"})
+			return
+		}
+		limit = parsed
+	}
+	var beforeID uint64
+	if raw := c.Query("before_id"); raw != "" {
+		parsed, err := strconv.ParseUint(raw, 10, 64)
+		if err != nil || parsed == 0 || strconv.FormatUint(parsed, 10) != raw {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "before_id must be a positive integer"})
+			return
+		}
+		beforeID = parsed
+	}
+	rows, nextBefore, hasMore, err := dbmodel.ListPointLedgerForUser(userID, uint(beforeID), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read user ledger"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user_id": userID, "ledger": rows, "next_before_id": nextBefore, "has_more": hasMore})
+}
+
+func parsePositivePathID(raw string) (int, bool) {
+	if raw == "" {
+		return 0, false
+	}
+	for _, ch := range raw {
+		if ch < '0' || ch > '9' {
+			return 0, false
+		}
+	}
+	parsed, err := strconv.Atoi(raw)
+	return parsed, err == nil && parsed > 0
+}
+
+func userStatusName(status int) string {
+	switch status {
+	case dbmodel.UserStatusEnabled:
+		return "enabled"
+	case dbmodel.UserStatusDisabled:
+		return "disabled"
+	case dbmodel.UserStatusDeleted:
+		return "deleted"
+	default:
+		return "unknown"
+	}
+}
+
 func PointsPrices(c *gin.Context) {
 	prices, err := dbmodel.GetActivePointPrices()
 	if err != nil {

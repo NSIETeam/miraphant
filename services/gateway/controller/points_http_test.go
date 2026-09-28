@@ -119,6 +119,70 @@ func TestPointsHTTPRealRoutesAndCurrentAuthorization(t *testing.T) {
 	if got := request(http.MethodPost, "/api/admin/points/adjustments", adminCookie, changedGrant, 42).Code; got != http.StatusConflict {
 		t.Fatalf("conflicting grant replay status=%d", got)
 	}
+	if got := request(http.MethodGet, "/api/admin/points/users/41/wallet", customerCookie, "", 0).Code; got != http.StatusForbidden {
+		t.Fatalf("customer wallet access status=%d", got)
+	}
+	adminWallet := request(http.MethodGet, "/api/admin/points/users/41/wallet", adminCookie, "", 0)
+	if adminWallet.Code != http.StatusOK || !strings.Contains(adminWallet.Body.String(), `"user_status":"enabled"`) || !strings.Contains(adminWallet.Body.String(), `"read_may_expire_lots":true`) || !strings.Contains(adminWallet.Body.String(), `"gifted_total_micro":123456`) {
+		t.Fatalf("admin wallet status=%d body=%s", adminWallet.Code, adminWallet.Body.String())
+	}
+	emptyWallet := request(http.MethodGet, "/api/admin/points/users/42/wallet", adminCookie, "", 0)
+	if emptyWallet.Code != http.StatusOK || !strings.Contains(emptyWallet.Body.String(), `"available_micro":0`) {
+		t.Fatalf("empty wallet status=%d body=%s", emptyWallet.Code, emptyWallet.Body.String())
+	}
+	if got := request(http.MethodGet, "/api/admin/points/users/999/wallet", adminCookie, "", 0).Code; got != http.StatusNotFound {
+		t.Fatalf("unknown user wallet status=%d", got)
+	}
+	for _, badPath := range []string{"/api/admin/points/users/0/wallet", "/api/admin/points/users/-1/wallet", "/api/admin/points/users/nope/wallet"} {
+		if got := request(http.MethodGet, badPath, adminCookie, "", 0).Code; got != http.StatusBadRequest {
+			t.Fatalf("invalid user ID path %s status=%d", badPath, got)
+		}
+	}
+	holdID, orderID := uint(909), uint(808)
+	if err := db.Create(&[]dbmodel.PointLedger{
+		{UserID: 41, BusinessKey: "admin-ledger-private-1", Kind: "settle", AvailableDelta: -5, SpentDelta: 5, AvailableAfter: 123451, SpentAfter: 5, HoldID: &holdID, OrderID: &orderID, Reason: "safe admin reason"},
+		{UserID: 41, BusinessKey: "admin-ledger-private-2", Kind: "release", AvailableDelta: 2, AvailableAfter: 123453, Reason: "second reason"},
+		{UserID: 42, BusinessKey: "other-user-private-key", Kind: "grant", AvailableDelta: 999, AvailableAfter: 999, Reason: "other customer"},
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	ledgerPage1 := request(http.MethodGet, "/api/admin/points/users/41/ledger?limit=1", adminCookie, "", 0)
+	if ledgerPage1.Code != http.StatusOK || !strings.Contains(ledgerPage1.Body.String(), `"has_more":true`) || strings.Contains(ledgerPage1.Body.String(), "other-user-private-key") || strings.Contains(ledgerPage1.Body.String(), "admin-ledger-private") || strings.Contains(ledgerPage1.Body.String(), `"hold_id"`) || strings.Contains(ledgerPage1.Body.String(), `"order_id"`) {
+		t.Fatalf("admin ledger page1 status=%d body=%s", ledgerPage1.Code, ledgerPage1.Body.String())
+	}
+	var ledgerPage struct {
+		Ledger       []map[string]any `json:"ledger"`
+		NextBeforeID uint             `json:"next_before_id"`
+		HasMore      bool             `json:"has_more"`
+	}
+	if err := json.Unmarshal(ledgerPage1.Body.Bytes(), &ledgerPage); err != nil {
+		t.Fatal(err)
+	}
+	if len(ledgerPage.Ledger) != 1 || ledgerPage.NextBeforeID == 0 {
+		t.Fatalf("bad ledger page1: %+v", ledgerPage)
+	}
+	for _, forbidden := range []string{"user_id", "business_key", "lot_id", "hold_id", "order_id", "token_id"} {
+		if _, exists := ledgerPage.Ledger[0][forbidden]; exists {
+			t.Fatalf("ledger DTO contains forbidden field %q: %+v", forbidden, ledgerPage.Ledger[0])
+		}
+	}
+	ledgerPage2 := request(http.MethodGet, "/api/admin/points/users/41/ledger?limit=1&before_id="+strconv.Itoa(int(ledgerPage.NextBeforeID)), adminCookie, "", 0)
+	if ledgerPage2.Code != http.StatusOK || !strings.Contains(ledgerPage2.Body.String(), `"has_more":true`) {
+		t.Fatalf("admin ledger page2 status=%d body=%s", ledgerPage2.Code, ledgerPage2.Body.String())
+	}
+	if err := json.Unmarshal(ledgerPage2.Body.Bytes(), &ledgerPage); err != nil {
+		t.Fatal(err)
+	}
+	ledgerPage3 := request(http.MethodGet, "/api/admin/points/users/41/ledger?limit=1&before_id="+strconv.Itoa(int(ledgerPage.NextBeforeID)), adminCookie, "", 0)
+	if ledgerPage3.Code != http.StatusOK || !strings.Contains(ledgerPage3.Body.String(), `"has_more":false`) {
+		t.Fatalf("admin ledger final page status=%d body=%s", ledgerPage3.Code, ledgerPage3.Body.String())
+	}
+	if got := request(http.MethodGet, "/api/admin/points/users/41/ledger?limit=101", adminCookie, "", 0).Code; got != http.StatusBadRequest {
+		t.Fatalf("oversized ledger page status=%d", got)
+	}
+	if got := request(http.MethodGet, "/api/admin/points/users/41/ledger?before_id=01", adminCookie, "", 0).Code; got != http.StatusBadRequest {
+		t.Fatalf("noncanonical ledger cursor status=%d", got)
+	}
 	walletRes := request(http.MethodGet, "/api/points/wallet", customerCookie, "", 0)
 	if walletRes.Code != http.StatusOK {
 		t.Fatalf("wallet status=%d body=%s", walletRes.Code, walletRes.Body.String())

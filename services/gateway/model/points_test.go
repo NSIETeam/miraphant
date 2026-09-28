@@ -210,6 +210,38 @@ func TestPointArithmeticExactHalfUp(t *testing.T) {
 	}
 }
 
+func TestPointLedgerAdminProjectionUsesIsolatedDescendingKeyset(t *testing.T) {
+	db, cleanup := withPointsFixture(t, 0, 0, false)
+	defer cleanup()
+	for _, ledger := range []PointLedger{
+		{UserID: 1, BusinessKey: "private-key-a", Kind: "grant", AvailableDelta: 10, AvailableAfter: 10, Reason: "first"},
+		{UserID: 1, BusinessKey: "private-key-b", Kind: "settle", SpentDelta: 3, SpentAfter: 3, Reason: "second"},
+		{UserID: 2, BusinessKey: "other-user-key", Kind: "grant", AvailableDelta: 99, AvailableAfter: 99, Reason: "other"},
+	} {
+		if err := db.Create(&ledger).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	var target []PointLedger
+	if err := db.Where("user_id = ?", 1).Order("id ASC").Find(&target).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(target) != 2 {
+		t.Fatalf("seed target rows=%d", len(target))
+	}
+	page1, cursor, more, err := ListPointLedgerForUser(1, 0, 1)
+	if err != nil || !more || len(page1) != 1 || page1[0].ID != target[1].ID || cursor != target[1].ID {
+		t.Fatalf("page1=%+v cursor=%d more=%v err=%v", page1, cursor, more, err)
+	}
+	page2, cursor2, more2, err := ListPointLedgerForUser(1, cursor, 1)
+	if err != nil || more2 || cursor2 != 0 || len(page2) != 1 || page2[0].ID != target[0].ID {
+		t.Fatalf("page2=%+v cursor=%d more=%v err=%v", page2, cursor2, more2, err)
+	}
+	if _, _, _, err := ListPointLedgerForUser(1, 0, 101); err == nil {
+		t.Fatal("model accepted a ledger page over the maximum")
+	}
+}
+
 func TestLegacyQuotaWritesAreBlockedInPointsMode(t *testing.T) {
 	db, cleanup := withPointsFixture(t, 1_000_000, 1_000_000, false)
 	defer cleanup()

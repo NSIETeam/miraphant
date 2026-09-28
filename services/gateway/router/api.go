@@ -126,6 +126,8 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			pointsAdmin.POST("/prices", middleware.PointsCSRF(), controller.AdminPublishPointPrice)
 			pointsAdmin.POST("/adjustments", middleware.PointsCSRF(), controller.AdminGrantPoints)
+			pointsAdmin.GET("/users/:id/wallet", controller.AdminPointUserWallet)
+			pointsAdmin.GET("/users/:id/ledger", controller.AdminPointUserLedger)
 			pointsAdmin.GET("/pending", controller.AdminPointPending)
 			pointsAdmin.POST("/pending/:key/resolve", middleware.PointsCSRF(), controller.AdminResolvePointHold)
 		}

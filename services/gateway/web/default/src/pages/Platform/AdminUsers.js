@@ -73,6 +73,30 @@ function Alert({ kind = 'error', children }) {
   return <div className={`platform-alert platform-alert-${kind}`} role={kind === 'error' ? 'alert' : 'status'}>{children}</div>;
 }
 
+function formatMicroPoints(value) {
+  const amount = Number(value || 0);
+  return Number.isFinite(amount) ? (amount / 1000000).toLocaleString('zh-CN', { maximumFractionDigits: 6 }) : '—';
+}
+
+function formatSignedMicroPoints(value) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) return '—';
+  return `${amount > 0 ? '+' : ''}${formatMicroPoints(amount)}`;
+}
+
+function ledgerKindLabel(kind) {
+  const labels = {
+    adjustment: '管理员赠送', purchase_credit: '购买入账', hold: '请求冻结',
+    settle: '用量结算', release: '释放冻结', expire: '积分过期',
+    refund_hold: '退款冻结', refund_success: '退款扣减', refund_release: '退款释放',
+  };
+  return labels[kind] || '积分流水';
+}
+
+function userStatusLabel(status) {
+  return ({ enabled: '正常', disabled: '已停用', deleted: '已删除', unknown: '状态未知' })[status] || '状态未知';
+}
+
 export function AdminUsersPage() {
   const [actor, setActor] = useState(null);
   const [identityState, setIdentityState] = useState('loading');
@@ -91,6 +115,17 @@ export function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState('');
+  const [detailUser, setDetailUser] = useState(null);
+  const [detailWallet, setDetailWallet] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletError, setWalletError] = useState('');
+  const [ledgerRows, setLedgerRows] = useState([]);
+  const [ledgerNextBefore, setLedgerNextBefore] = useState(0);
+  const [ledgerHasMore, setLedgerHasMore] = useState(false);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerError, setLedgerError] = useState('');
+  const [ledgerRetryBefore, setLedgerRetryBefore] = useState(0);
+  const detailSequence = useRef(0);
 
   const installIdentity = async () => {
     setIdentityState('loading');
@@ -222,6 +257,67 @@ export function AdminUsersPage() {
   const retryUsers = () => setUsersReload((current) => current + 1);
   const locked = Boolean(pending);
 
+  const loadWalletDetail = async (userID, sequence = detailSequence.current) => {
+    setWalletLoading(true);
+    setWalletError('');
+    try {
+      const response = await API.get(`/api/admin/points/users/${userID}/wallet`);
+      if (sequence === detailSequence.current) setDetailWallet(response?.data || null);
+    } catch {
+      if (sequence === detailSequence.current) {
+        setDetailWallet(null);
+        setWalletError('该客户的钱包暂时无法读取，请重试。');
+      }
+    } finally {
+      if (sequence === detailSequence.current) setWalletLoading(false);
+    }
+  };
+
+  const loadLedgerPage = async (userID, beforeID = 0, append = false, sequence = detailSequence.current) => {
+    setLedgerLoading(true);
+    setLedgerError('');
+    setLedgerRetryBefore(beforeID);
+    try {
+      const query = beforeID ? `?limit=50&before_id=${encodeURIComponent(beforeID)}` : '?limit=50';
+      const response = await API.get(`/api/admin/points/users/${userID}/ledger${query}`);
+      const data = response?.data || {};
+      if (!Array.isArray(data.ledger)) throw new Error('invalid ledger response');
+      if (sequence === detailSequence.current) {
+        setLedgerRows((current) => append ? [...current, ...data.ledger] : data.ledger);
+        setLedgerNextBefore(Number(data.next_before_id) || 0);
+        setLedgerHasMore(Boolean(data.has_more));
+      }
+    } catch {
+      if (sequence === detailSequence.current) setLedgerError('积分流水暂时无法读取，请重试。');
+    } finally {
+      if (sequence === detailSequence.current) setLedgerLoading(false);
+    }
+  };
+
+  const openUserDetail = (user) => {
+    const sequence = ++detailSequence.current;
+    setDetailUser(user);
+    setDetailWallet(null);
+    setWalletError('');
+    setLedgerRows([]);
+    setLedgerNextBefore(0);
+    setLedgerHasMore(false);
+    setLedgerError('');
+    loadWalletDetail(user.id, sequence);
+    loadLedgerPage(user.id, 0, false, sequence);
+  };
+
+  const closeUserDetail = () => {
+    detailSequence.current += 1;
+    setDetailUser(null);
+    setDetailWallet(null);
+    setLedgerRows([]);
+    setLedgerError('');
+    setWalletError('');
+  };
+
+  const retryLedger = () => detailUser && loadLedgerPage(detailUser.id, ledgerRetryBefore, ledgerRows.length > 0, detailSequence.current);
+
   return <main className='platform-page'>
     <PageTitle />
     {identityState === 'loading' && <div className='platform-state'>正在核验当前管理身份…</div>}
@@ -229,9 +325,21 @@ export function AdminUsersPage() {
 
     <section className='platform-panel'>
       <div className='platform-panel-head'><div><div className='platform-eyebrow'>CUSTOMERS</div><h2>客户账户</h2></div></div>
-      {identityState === 'loading' ? <div className='platform-state'>正在核验管理身份…</div> : identityState === 'error' ? <Alert><strong>无法确认管理身份</strong><span>{identityError}</span><button className='platform-button secondary' onClick={retryIdentity}>重试</button></Alert> : usersLoading ? <div className='platform-state'>正在加载客户列表…</div> : usersError ? <Alert><strong>客户列表无法读取</strong><span>{usersError}</span><button className='platform-button secondary' onClick={retryUsers}>重试</button></Alert> : users.length === 0 ? <div className='platform-empty'><strong>{page === 0 ? '暂无客户记录' : '没有更多客户'}</strong><span>请检查其他页码，或稍后刷新。</span></div> : <div className='platform-table-wrap'><table className='platform-table'><thead><tr><th>账户 ID</th><th>用户名</th><th>显示名称</th><th>状态</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.id}</td><td>{user.username}</td><td>{user.display_name || '—'}</td><td>{user.status === 1 ? '正常' : '受限'}</td></tr>)}</tbody></table></div>}
+      {identityState === 'loading' ? <div className='platform-state'>正在核验管理身份…</div> : identityState === 'error' ? <Alert><strong>无法确认管理身份</strong><span>{identityError}</span><button className='platform-button secondary' onClick={retryIdentity}>重试</button></Alert> : usersLoading ? <div className='platform-state'>正在加载客户列表…</div> : usersError ? <Alert><strong>客户列表无法读取</strong><span>{usersError}</span><button className='platform-button secondary' onClick={retryUsers}>重试</button></Alert> : users.length === 0 ? <div className='platform-empty'><strong>{page === 0 ? '暂无客户记录' : '没有更多客户'}</strong><span>请检查其他页码，或稍后刷新。</span></div> : <div className='platform-table-wrap'><table className='platform-table'><thead><tr><th>账户 ID</th><th>用户名</th><th>显示名称</th><th>状态</th><th>积分</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.id}</td><td>{user.username}</td><td>{user.display_name || '—'}</td><td>{user.status === 1 ? '正常' : '受限'}</td><td><button type='button' className='platform-button secondary' onClick={() => openUserDetail(user)}>查看钱包</button></td></tr>)}</tbody></table></div>}
       {identityState === 'ready' && <div className='platform-form-footer'><span>第 {page + 1} 页 · 每页 {PAGE_SIZE} 条</span><div className='platform-actions'><button className='platform-button secondary' disabled={page === 0 || usersLoading} onClick={() => setPage((current) => Math.max(0, current - 1))}>上一页</button><button className='platform-button secondary' disabled={users.length < PAGE_SIZE || usersLoading || Boolean(usersError)} onClick={() => setPage((current) => current + 1)}>下一页</button></div></div>}
     </section>
+
+    {detailUser && <section className='platform-panel' aria-live='polite'>
+      <div className='platform-panel-head'><div><div className='platform-eyebrow'>CUSTOMER POINTS</div><h2>客户 #{detailUser.id} · {detailUser.display_name || detailUser.username}</h2></div><button type='button' className='platform-button secondary' onClick={closeUserDetail}>关闭详情</button></div>
+      {walletLoading ? <div className='platform-state'>正在读取钱包…</div> : walletError ? <Alert><strong>钱包暂时无法读取</strong><span>{walletError}</span><button className='platform-button secondary' onClick={() => loadWalletDetail(detailUser.id)}>重试</button></Alert> : detailWallet?.wallet ? <>
+        <p>账户状态：{userStatusLabel(detailWallet.user_status)}。读取钱包时可能会按规则结算已过期积分。</p>
+        <div className='wallet-source-grid'><div><span>可用积分</span><strong>{formatMicroPoints(detailWallet.wallet.available_micro)}</strong></div><div><span>冻结积分</span><strong>{formatMicroPoints(detailWallet.wallet.held_micro)}</strong></div><div><span>已消耗积分</span><strong>{formatMicroPoints(detailWallet.wallet.spent_micro)}</strong></div><div><span>购买积分 · 可用 / 累计</span><strong>{formatMicroPoints(detailWallet.wallet.purchased_available_micro)} / {formatMicroPoints(detailWallet.wallet.purchased_total_micro)}</strong></div><div><span>赠送积分 · 可用 / 累计</span><strong>{formatMicroPoints(detailWallet.wallet.gifted_available_micro)} / {formatMicroPoints(detailWallet.wallet.gifted_total_micro)}</strong></div><div><span>迁移积分 · 可用 / 累计</span><strong>{formatMicroPoints(detailWallet.wallet.migrated_available_micro)} / {formatMicroPoints(detailWallet.wallet.migrated_total_micro)}</strong></div></div>
+      </> : <div className='platform-state'>钱包数据暂不可用。</div>}
+      <div className='platform-panel-head'><div><div className='platform-eyebrow'>LEDGER</div><h3>积分流水</h3></div></div>
+      {ledgerError && <Alert><strong>流水暂时无法读取</strong><span>{ledgerError}</span><button className='platform-button secondary' onClick={retryLedger}>重试</button></Alert>}
+      {!ledgerError && ledgerRows.length === 0 && !ledgerLoading ? <div className='platform-empty'><strong>暂无积分流水</strong><span>该账户还没有积分变动记录。</span></div> : ledgerRows.length > 0 && <div className='platform-table-wrap'><table className='platform-table'><thead><tr><th>时间</th><th>类型</th><th>可用变动</th><th>冻结变动</th><th>消耗变动</th><th>变动后余额（可用 / 冻结 / 消耗）</th><th>原因</th></tr></thead><tbody>{ledgerRows.map((row) => <tr key={row.id}><td>{row.created_at ? new Date(row.created_at).toLocaleString('zh-CN', { hour12: false }) : '—'}</td><td>{ledgerKindLabel(row.kind)}</td><td>{formatSignedMicroPoints(row.available_delta)}</td><td>{formatSignedMicroPoints(row.held_delta)}</td><td>{formatSignedMicroPoints(row.spent_delta)}</td><td>{formatMicroPoints(row.available_after)} / {formatMicroPoints(row.held_after)} / {formatMicroPoints(row.spent_after)}</td><td>{row.reason || '—'}</td></tr>)}</tbody></table></div>}
+      <div className='platform-form-footer'><span>{ledgerRows.length ? `已显示 ${ledgerRows.length} 条流水` : '流水按时间倒序排列'}</span>{ledgerHasMore && <button type='button' className='platform-button secondary' disabled={ledgerLoading} onClick={() => loadLedgerPage(detailUser.id, ledgerNextBefore, true)}>{ledgerLoading ? '正在读取…' : '加载更早流水'}</button>}{ledgerLoading && ledgerRows.length > 0 && <span>正在读取…</span>}</div>
+    </section>}
 
     <section className='platform-panel'>
       <div className='platform-panel-head'><div><div className='platform-eyebrow'>AUDITED ADJUSTMENT</div><h2>赠送积分</h2></div></div>

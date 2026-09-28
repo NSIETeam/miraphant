@@ -601,6 +601,48 @@ type PointWalletView struct {
 	MigratedTotalMicro      int64 `json:"migrated_total_micro"`
 }
 
+// PointLedgerAdminView is the deliberately restricted projection exposed to
+// authorized administrators. It omits business keys and all resource IDs.
+type PointLedgerAdminView struct {
+	ID             uint      `json:"id"`
+	Kind           string    `json:"kind"`
+	AvailableDelta int64     `json:"available_delta"`
+	HeldDelta      int64     `json:"held_delta"`
+	SpentDelta     int64     `json:"spent_delta"`
+	AvailableAfter int64     `json:"available_after"`
+	HeldAfter      int64     `json:"held_after"`
+	SpentAfter     int64     `json:"spent_after"`
+	Reason         string    `json:"reason"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// ListPointLedgerForUser returns a stable descending keyset page containing
+// only fields intended for authorized administrative review.
+func ListPointLedgerForUser(userID int, beforeID uint, limit int) ([]PointLedgerAdminView, uint, bool, error) {
+	if userID <= 0 || limit < 1 || limit > 100 {
+		return nil, 0, false, errors.New("invalid point ledger pagination")
+	}
+	query := DB.Model(&PointLedger{}).
+		Select("id", "kind", "available_delta", "held_delta", "spent_delta", "available_after", "held_after", "spent_after", "reason", "created_at").
+		Where("user_id = ?", userID)
+	if beforeID > 0 {
+		query = query.Where("id < ?", beforeID)
+	}
+	var rows []PointLedgerAdminView
+	if err := query.Order("id DESC").Limit(limit + 1).Find(&rows).Error; err != nil {
+		return nil, 0, false, err
+	}
+	hasMore := len(rows) > limit
+	if hasMore {
+		rows = rows[:limit]
+	}
+	var nextBefore uint
+	if hasMore && len(rows) > 0 {
+		nextBefore = rows[len(rows)-1].ID
+	}
+	return rows, nextBefore, hasMore, nil
+}
+
 func GetPointWallet(userID int) (*PointWalletView, error) {
 	view := &PointWalletView{}
 	err := pointsTransaction(func(tx *gorm.DB) error {
