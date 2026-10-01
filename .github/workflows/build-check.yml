@@ -1,0 +1,61 @@
+name: Build checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build allowlisted static staging tree
+        run: python3 scripts/build-pages.py --output "$RUNNER_TEMP/miraphant-pages"
+      - name: Confirm gateway and private material are excluded
+        run: |
+          python3 - "$RUNNER_TEMP/miraphant-pages" <<'PY'
+          from pathlib import Path
+          import sys
+
+          root = Path(sys.argv[1])
+          assert root.is_dir()
+          forbidden = {"services", "docs", ".git", "node_modules", "data", "logs", "cache"}
+          for path in root.rglob("*"):
+              assert not (forbidden & set(path.parts)), path
+              assert not path.name.startswith(".env"), path
+              assert path.suffix.lower() not in {".db", ".sqlite", ".log", ".pem", ".key", ".crt"}, path
+          PY
+
+  gateway-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: npm
+          cache-dependency-path: |
+            services/gateway/web/default/package-lock.json
+            services/gateway/web/berry/package-lock.json
+            services/gateway/web/air/package-lock.json
+      - name: Pin npm version
+        run: npm install --global npm@11.19.0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.1
+          cache-dependency-path: services/gateway/go.sum
+      - name: Verify read-only legacy inventory on synthetic backups
+        run: python3 services/gateway/scripts/test_legacy_inventory.py
+      - name: Verify points HTTP, relay, and ledger transactions
+        working-directory: services/gateway
+        run: go test ./controller ./router ./middleware ./model ./relay/controller ./relay/adaptor/openai -run 'Test(BrandOption|StatusReportsServerPointsMode|Reconciliation|AdminReconciliation|AdminPayment|AdminAudit|AdminRefund|FinanceReconcile|CustomerRefund|WeChatRefund|SQLite|Refund|DelegatedRefund|UserProfileUpdatePreservesRefund|LateNonterminalRefund|UnknownRecovery|OfflineRecovery|Payment|WeChatSigned|Point|LegacyBilling|LegacyQuota|NewUsers|NewPurchase|Adjustment|PendingUsage|ExpiredBonus|PaidOrder|Reviewed)' -count=1
+      - name: Verify payment protocol adapters
+        working-directory: services/gateway
+        run: go test ./payment/... ./service/payments -count=1
+      - name: Build frontend themes and Go gateway
+        run: services/gateway/scripts/build-local.sh
