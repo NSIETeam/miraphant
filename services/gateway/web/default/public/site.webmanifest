@@ -1,0 +1,16 @@
+{
+  "name": "Miraphant 模型平台",
+  "short_name": "Miraphant",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7f2",
+  "theme_color": "#f5f7f2",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
