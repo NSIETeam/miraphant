@@ -1,0 +1,478 @@
+{
+  "format": 1,
+  "date": "2026-10-21",
+  "project": "miraphant-site",
+  "repository": "NSIETeam/miraphant",
+  "original_head": "32142135f75122577ea4972539e2fd27ef826dae",
+  "original_branch": "main",
+  "source_files": [
+    {
+      "path": "source/.github/workflows/update-changelog.yml",
+      "sha256": "2d2fa915a09a7db598a28a71dd22a97fc48ca5367a059a63f479b80e6e876003",
+      "git_blob": "a21ec782396f58c67548962477cee46b2762d43e",
+      "bytes": 1588,
+      "mode": "100644",
+      "original_path": ".github/workflows/update-changelog.yml"
+    },
+    {
+      "path": "source/.gitignore",
+      "sha256": "c66370b22239172ff680dc483459711382797f49f5926e396708365694638b63",
+      "git_blob": "3810e98fd0115e44537376c7b003f7b5159fbcd4",
+      "bytes": 78,
+      "mode": "100644",
+      "original_path": ".gitignore"
+    },
+    {
+      "path": "source/404.html",
+      "sha256": "268c68c1f55b015d0565ef4970579ae24e1294c01bce9e91c40659f0cda24336",
+      "git_blob": "813b6699d6a021f43704f1e6b6a9c262e1bbef90",
+      "bytes": 2232,
+      "mode": "100644",
+      "original_path": "404.html"
+    },
+    {
+      "path": "source/DESIGN-SOURCES.md",
+      "sha256": "cfdb365be9242fe58ea4440092d17452f59e6aa30601a44df154a2ff35d07a41",
+      "git_blob": "15c805b47d0e8a4e947b9a8c7cf0a2c477c30460",
+      "bytes": 8005,
+      "mode": "100644",
+      "original_path": "DESIGN-SOURCES.md"
+    },
+    {
+      "path": "source/about.html",
+      "sha256": "d458da48fef458ea2e62a2b50966d747364233548fa5ccba7d2e1a7f0a3cf8bc",
+      "git_blob": "f1bd1e2fe32f05fe9be4edb449135811a6e9a8e6",
+      "bytes": 422,
+      "mode": "100644",
+      "original_path": "about.html"
+    },
+    {
+      "path": "source/about/index.html",
+      "sha256": "f5f6139253484431a13d7ffbec6c22ed5507407cb05d10b6472267db48076739",
+      "git_blob": "2c21f1b5bed3997bd7b7b0221fa73665c28c61d1",
+      "bytes": 20631,
+      "mode": "100644",
+      "original_path": "about/index.html"
+    },
+    {
+      "path": "source/ai-club.html",
+      "sha256": "b62e2d8ba3f6ee1fee2f62199fe5d7b8dabc4de6a88556ff839d4f5f0103780d",
+      "git_blob": "1bc5a4686c8438725568c6553fcea59e1893ae4c",
+      "bytes": 432,
+      "mode": "100644",
+      "original_path": "ai-club.html"
+    },
+    {
+      "path": "source/ai-club/index.html",
+      "sha256": "257145d61851e22c71621ee6732d0cb9aeda6327f2dc9c93a9fc13c1af274694",
+      "git_blob": "378d134142a9bdff33a0271aec3f37983c327b58",
+      "bytes": 15679,
+      "mode": "100644",
+      "original_path": "ai-club/index.html"
+    },
+    {
+      "path": "source/badge-king.svg",
+      "sha256": "04f717f82d45b5ec21c9a3a5ea8edf543e21ed0d49c7de6370f1224d3162c55d",
+      "git_blob": "aac0affd9a5d3867356ab746bbfd988033b5f033",
+      "bytes": 3313,
+      "mode": "100644",
+      "original_path": "badge-king.svg"
+    },
+    {
+      "path": "source/changelog.html",
+      "sha256": "a34e9bbe0deebe1dfeda6a946bad65e8bab0069ebab8c84dabbc51bddf5cc917",
+      "git_blob": "9467b6f6286191f6151ef9cf0c8d7dde55e7e43c",
+      "bytes": 374,
+      "mode": "100644",
+      "original_path": "changelog.html"
+    },
+    {
+      "path": "source/changelog/index.html",
+      "sha256": "95d8a971ab1b2c7119fdf4166a9c115e115e6a188ba9803a0f6a38ce1704df99",
+      "git_blob": "6f4fe7c4f23b0dabb828bd911933a8277371478b",
+      "bytes": 75121,
+      "mode": "100644",
+      "original_path": "changelog/index.html"
+    },
+    {
+      "path": "source/circle.html",
+      "sha256": "83cb9962b0e18d0c627c7bfe933c94ab83dfb92e5c3224766b41f6d5778d106e",
+      "git_blob": "02dc1c48181686a6b7242d00fa01fa1e0edb65c3",
+      "bytes": 427,
+      "mode": "100644",
+      "original_path": "circle.html"
+    },
+    {
+      "path": "source/circle/index.html",
+      "sha256": "7fe5d3ae576503919afe16d0b2b6dd55f5f32a20323c46b59b4b7a08a61b776c",
+      "git_blob": "0651d1af50014338400ca4b1aeda2249eb5b4a5f",
+      "bytes": 25541,
+      "mode": "100644",
+      "original_path": "circle/index.html"
+    },
+    {
+      "path": "source/commits.json",
+      "sha256": "3497553180c1615b3cff1acd7fefba0fe02fd9d8423d6bfb5a068f64ee33bba3",
+      "git_blob": "4b884962bbdc28511272f54d0c1ccf81d1fdc6f7",
+      "bytes": 304805,
+      "mode": "100644",
+      "original_path": "commits.json"
+    },
+    {
+      "path": "source/css/site.css",
+      "sha256": "73e7346c9cf7f6b85cd1de545752213794f4c1ef2126acec981161f8b8f4ff1c",
+      "git_blob": "a0561279738cc295215fc0ac7092c8eddc3612c8",
+      "bytes": 38981,
+      "mode": "100644",
+      "original_path": "css/site.css"
+    },
+    {
+      "path": "source/css/workspace.css",
+      "sha256": "b80ecf92d4a75246ec9c6a8cae2e7714ad16ac45817078e8c67a6ed5fd108dce",
+      "git_blob": "1c29a9f86f8fabb7cf32859bf9c3fbe417f2d352",
+      "bytes": 8767,
+      "mode": "100644",
+      "original_path": "css/workspace.css"
+    },
+    {
+      "path": "source/docs/design-references/bloome-hero-avatars-1440.png",
+      "sha256": "d11e5e778b1a2eaad1f9a698b879510a9cc013c6de029a347f4daeade43add0d",
+      "git_blob": "a09620bbf03bead494173ccfa2c90133c2746b39",
+      "bytes": 36989,
+      "mode": "100644",
+      "original_path": "docs/design-references/bloome-hero-avatars-1440.png"
+    },
+    {
+      "path": "source/docs/research/components/home-hero-avatar-orbit.spec.md",
+      "sha256": "5c651d66176f913c552c03ac58112d0bb181a716db34533b189d7f684e5ef4e4",
+      "git_blob": "4c14800d3ff06d46f41af81dd6fd187f011c3075",
+      "bytes": 1724,
+      "mode": "100644",
+      "original_path": "docs/research/components/home-hero-avatar-orbit.spec.md"
+    },
+    {
+      "path": "source/downloads/flexhmi.json",
+      "sha256": "225a159abf59c077e675e091848edd230caef6048e63d3e04ac8263d2486df34",
+      "git_blob": "69719c5eba4b2b9d19687479afc23c68b8cca6ff",
+      "bytes": 2583,
+      "mode": "100644",
+      "original_path": "downloads/flexhmi.json"
+    },
+    {
+      "path": "source/favicon.svg",
+      "sha256": "60f8ff1f989bfc768bda9b9d1abee30109b4d24ff6e82b61d8f58983451b9935",
+      "git_blob": "507e35b181e64ac7a452c09f5b2be1ebab79d491",
+      "bytes": 560695,
+      "mode": "100644",
+      "original_path": "favicon.svg"
+    },
+    {
+      "path": "source/flexhmi.html",
+      "sha256": "c6d45e89a40f290c049600f040625a186e72d9de01c3fa5dd90b97664d3380a0",
+      "git_blob": "c7fa7b84b8739b39ef23be770c6b8531e3857fe3",
+      "bytes": 432,
+      "mode": "100644",
+      "original_path": "flexhmi.html"
+    },
+    {
+      "path": "source/flexhmi/index.html",
+      "sha256": "38a05beab2e0848cca09fe48790a83247bfed4f27d5f1ffca57d9e681199e333",
+      "git_blob": "0b6e72d656ff97279b80e1e3de8bb1fd6e9e3b58",
+      "bytes": 13310,
+      "mode": "100644",
+      "original_path": "flexhmi/index.html"
+    },
+    {
+      "path": "source/followup.html",
+      "sha256": "af26f50140e69d19b040e459eeb22d199701f282919ad13fcec13502b9d0e7a6",
+      "git_blob": "cea9d6cb19362a332e0bd415812e196197901774",
+      "bytes": 371,
+      "mode": "100644",
+      "original_path": "followup.html"
+    },
+    {
+      "path": "source/followup/index.html",
+      "sha256": "dc0e8dd01d2cbf7c44773351b8896c6218581c2979fe97c3eac63bd37d3ef790",
+      "git_blob": "1ef7b4a1601eb135cef39b55211a080e8c1a0dc3",
+      "bytes": 9292,
+      "mode": "100644",
+      "original_path": "followup/index.html"
+    },
+    {
+      "path": "source/images/flexhmi-icon.png",
+      "sha256": "ac1c32d130a2fc84c7253ad662f54b49d3842cf2baf7c04cf507ee8532e537b2",
+      "git_blob": "c1f90785836344f51b38cabc128a309f56a20916",
+      "bytes": 59166,
+      "mode": "100644",
+      "original_path": "images/flexhmi-icon.png"
+    },
+    {
+      "path": "source/images/flexhmi-workspace.png",
+      "sha256": "b54216672a0f57526b060e8dabd6d445e501bb1a7aa8d4be34027c8502212663",
+      "git_blob": "78df5c6fd52296599066422497a90910fbdad00e",
+      "bytes": 145070,
+      "mode": "100644",
+      "original_path": "images/flexhmi-workspace.png"
+    },
+    {
+      "path": "source/images/hero-avatars/portrait-01.png",
+      "sha256": "a659dc5601cc88a409caf30f9e482b6e96552e202fa90437bbc12ce8ffae4eda",
+      "git_blob": "265671a7c3ba383cc4403a797f5eb1bdb8f81bca",
+      "bytes": 6248,
+      "mode": "100644",
+      "original_path": "images/hero-avatars/portrait-01.png"
+    },
+    {
+      "path": "source/images/hero-avatars/portrait-02.png",
+      "sha256": "071e1e40d54db4f6c7fdf8369125dfc22748e0abcfda443bebff0475d5386260",
+      "git_blob": "42165dc821e5efe6ea9a4a0275ad80fbfec4e168",
+      "bytes": 7271,
+      "mode": "100644",
+      "original_path": "images/hero-avatars/portrait-02.png"
+    },
+    {
+      "path": "source/images/hero-avatars/portrait-03.png",
+      "sha256": "874b7db73d47bb0a40129819298a7caf7737433eee329fdbf49ceeeea4de1391",
+      "git_blob": "b712382dfa2af9ba4d3c4bbe12b7f5b9b6434c59",
+      "bytes": 6524,
+      "mode": "100644",
+      "original_path": "images/hero-avatars/portrait-03.png"
+    },
+    {
+      "path": "source/images/hero-avatars/portrait-04.png",
+      "sha256": "cdf4c2ac3da87671c8674f538d9ed51aef4251c2bc90bbcb7468a08d7174c4b5",
+      "git_blob": "7417ee1b483548bd9118eb1f4a4b93b5220a2034",
+      "bytes": 6266,
+      "mode": "100644",
+      "original_path": "images/hero-avatars/portrait-04.png"
+    },
+    {
+      "path": "source/images/hero-avatars/vibe-01.png",
+      "sha256": "690c879e74e6a29b17758deaea0d4bb92de44a9bb642ae57b689512759756d5f",
+      "git_blob": "c9818db301e64155046b425e7cb464ddd4fe998b",
+      "bytes": 9013,
+      "mode": "100644",
+      "original_path": "images/hero-avatars/vibe-01.png"
+    },
+    {
+      "path": "source/images/hero-avatars/vibe-02.png",
+      "sha256": "5a4d80d89c67e56bcaf88443a93f1e0e1088d56481fb0fd21b6722a8b583c386",
+      "git_blob": "b9927cfa1aa3d4413bda223fd0e2944dc4e9274c",
+      "bytes": 7904,
+      "mode": "100644",
+      "original_path": "images/hero-avatars/vibe-02.png"
+    },
+    {
+      "path": "source/images/miraphant-mark-gray.svg",
+      "sha256": "66fc25aba4276b9d2a42180c3107f519cebe49bda92907c5225eeef4a5742b1e",
+      "git_blob": "cc8583a85e298637d8b7a4a3c848b955aee348f7",
+      "bytes": 560644,
+      "mode": "100644",
+      "original_path": "images/miraphant-mark-gray.svg"
+    },
+    {
+      "path": "source/images/miraphant-mark.png",
+      "sha256": "58ebca426df41109b2cc580cd43d5bd390b43367f35767690fb79bf7986c950d",
+      "git_blob": "15ea3b14c2d49b66c8cfa9dd154f94fc25efef91",
+      "bytes": 420197,
+      "mode": "100644",
+      "original_path": "images/miraphant-mark.png"
+    },
+    {
+      "path": "source/index.html",
+      "sha256": "78a01dbe43ffd886a92bffcbed9c02c50420cfd5f3a4d211678cf874113d2474",
+      "git_blob": "66cbea29543f555b127b059a914d7e9a6fb21da5",
+      "bytes": 51547,
+      "mode": "100644",
+      "original_path": "index.html"
+    },
+    {
+      "path": "source/js/auth.js",
+      "sha256": "a5a35a79fab271ef1e91235e0d9304a521bed06cf5777bbbb08060cd772e2c01",
+      "git_blob": "48604a529421bc91e0500ccb8d739afee4efa88f",
+      "bytes": 2085,
+      "mode": "100644",
+      "original_path": "js/auth.js"
+    },
+    {
+      "path": "source/js/fu-app.js",
+      "sha256": "556982411161efceed3ef4af185086ec8c62e1538663a3feca8090fdde0c4bef",
+      "git_blob": "feb89301d3cb46c2b197d7288baaf4b07ff037e6",
+      "bytes": 9397,
+      "mode": "100644",
+      "original_path": "js/fu-app.js"
+    },
+    {
+      "path": "source/js/language.js",
+      "sha256": "bfcc1e5a60b4fccc476504623b3f549665ae202078f2cddfd1132615a68512e5",
+      "git_blob": "bbf679773c900a5cd46abf6b20351741cb2b9962",
+      "bytes": 4026,
+      "mode": "100644",
+      "original_path": "js/language.js"
+    },
+    {
+      "path": "source/js/oa-app.js",
+      "sha256": "a52e6278ac52621041bd1f297a3336848a5a487751e90b55489afa0faf48a064",
+      "git_blob": "00046e520f56838ddc261a99a65813a35c9c4d9b",
+      "bytes": 23777,
+      "mode": "100644",
+      "original_path": "js/oa-app.js"
+    },
+    {
+      "path": "source/js/portal.css",
+      "sha256": "7c6edb24a5c0636bbc39cb4058a505e3d12e7e4ed3002d7a93dd2fb9aab13ecd",
+      "git_blob": "6cdfeca7e0f875b56a97c7c4a179b948fab37fbe",
+      "bytes": 3996,
+      "mode": "100644",
+      "original_path": "js/portal.css"
+    },
+    {
+      "path": "source/js/site.js",
+      "sha256": "0881f4ea52db839d29db52c7b0c464e552bdc68d3dd01d3de09d83dee64ed96d",
+      "git_blob": "27d7dd14e8aec43170cd0895bd101ff4c28951d9",
+      "bytes": 7363,
+      "mode": "100644",
+      "original_path": "js/site.js"
+    },
+    {
+      "path": "source/logo.png",
+      "sha256": "58ebca426df41109b2cc580cd43d5bd390b43367f35767690fb79bf7986c950d",
+      "git_blob": "15ea3b14c2d49b66c8cfa9dd154f94fc25efef91",
+      "bytes": 420197,
+      "mode": "100644",
+      "original_path": "logo.png"
+    },
+    {
+      "path": "source/manifesto.html",
+      "sha256": "19d27f20e5fad2267ca213ee3476aae5b7f8ea3c3cc3ac2712fe9e0722a417c9",
+      "git_blob": "1a72a9e8a7586cbfacf950a10cc9fc7960b1897f",
+      "bytes": 442,
+      "mode": "100644",
+      "original_path": "manifesto.html"
+    },
+    {
+      "path": "source/manifesto/index.html",
+      "sha256": "a2390c2c210f034b7c1f676467c7bfee88389dcf53e8d4c759e2ec21ee634e9d",
+      "git_blob": "7686b13058a210f65fd999366f36208a2ed34efa",
+      "bytes": 28368,
+      "mode": "100644",
+      "original_path": "manifesto/index.html"
+    },
+    {
+      "path": "source/oa.html",
+      "sha256": "2995d6d762ba9a366f3a3bd4488823d8ce60e7bfaa2094bd7ef839a1196a4a83",
+      "git_blob": "f65d63e6d661ee85aa039f4dd5fd70ed002f1ef0",
+      "bytes": 346,
+      "mode": "100644",
+      "original_path": "oa.html"
+    },
+    {
+      "path": "source/oa/index.html",
+      "sha256": "df763f0ea92de668d400a6c4369351dcd8703182bceabf3ead1f5ce8b068a7e4",
+      "git_blob": "81336305c3784724c236b4eace19aa76f716cc19",
+      "bytes": 11732,
+      "mode": "100644",
+      "original_path": "oa/index.html"
+    },
+    {
+      "path": "source/olivewolf.html",
+      "sha256": "1648d3cea087ce30a59fa44d44a1d566f8b48fad211d19737e3d9b7c77f5adb8",
+      "git_blob": "dc4290a3cf57036239e57e915f36f5389471b125",
+      "bytes": 442,
+      "mode": "100644",
+      "original_path": "olivewolf.html"
+    },
+    {
+      "path": "source/olivewolf/index.html",
+      "sha256": "fc4cdd8ec9298d8855cd021ce29285f1dce7149c18b82c692e924b6d2c133db1",
+      "git_blob": "026b123946f023b0fa12c38cab35d42d8c728d68",
+      "bytes": 37973,
+      "mode": "100644",
+      "original_path": "olivewolf/index.html"
+    },
+    {
+      "path": "source/portal.html",
+      "sha256": "8a67f83291cdb2ac1c1d38ae503a411db29cd21dfa56dcdb1ba29047ddba4287",
+      "git_blob": "0c872c2ce2ca9401d386c1fe24a7e0bb6cb49d72",
+      "bytes": 362,
+      "mode": "100644",
+      "original_path": "portal.html"
+    },
+    {
+      "path": "source/portal/index.html",
+      "sha256": "088cb36cea6cd4f236c173b8fe88dc68812ed5441328f660b19addf8080c320b",
+      "git_blob": "d79ce67af3d3f1f5db252d5ed8bc429426ab6c5c",
+      "bytes": 18133,
+      "mode": "100644",
+      "original_path": "portal/index.html"
+    },
+    {
+      "path": "source/products.html",
+      "sha256": "5253e27027d151a137e3ee9b4d7d20455cb0405c580dd3bd38c3d00d651e1a13",
+      "git_blob": "f19e730beb2f7c531d480891af1ef8668cdd8e23",
+      "bytes": 437,
+      "mode": "100644",
+      "original_path": "products.html"
+    },
+    {
+      "path": "source/products/catalog.json",
+      "sha256": "a824d2053c4fcdccc574bb5fb9fb6cf7e4f5182e9a9ac98b40508dd9db8761d3",
+      "git_blob": "e75528a02a7e7eba90bae1363c7556acd9d02c95",
+      "bytes": 6232,
+      "mode": "100644",
+      "original_path": "products/catalog.json"
+    },
+    {
+      "path": "source/products/index.html",
+      "sha256": "a999a87282859635bd9a784c5a030f51c2c41cbf51fa73232095a499a7531ca5",
+      "git_blob": "280082ee36dec5eacb0363ddd51ee9f95333e631",
+      "bytes": 19234,
+      "mode": "100644",
+      "original_path": "products/index.html"
+    },
+    {
+      "path": "source/scripts/fetch_commits.py",
+      "sha256": "88106706414261fcdce76724ed463182caf72368d857e6e92765c683cb5810db",
+      "git_blob": "215a46e56889604af592f84608389d907523af22",
+      "bytes": 3850,
+      "mode": "100644",
+      "original_path": "scripts/fetch_commits.py"
+    },
+    {
+      "path": "source/scripts/test-language-navigation.js",
+      "sha256": "71fe0ce449cd6e36e8995bf89979d642a482308498b73289b43ec5fb436027f2",
+      "git_blob": "e0f349b078947c240c99364615c34e081c263783",
+      "bytes": 11903,
+      "mode": "100644",
+      "original_path": "scripts/test-language-navigation.js"
+    }
+  ],
+  "excluded_counts": {
+    "binary-data-or-rebuildable-artifact": 1
+  },
+  "history": {
+    "available": true,
+    "refs": [
+      "32142135f75122577ea4972539e2fd27ef826dae refs/heads/main",
+      "32142135f75122577ea4972539e2fd27ef826dae refs/local-backup-reflog/000000",
+      "554a666ec283f8c291d2985d1dc458c8fc749a0d refs/local-backup-reflog/000001",
+      "641cfe288639267c41c4c0b26111bf8e38363c88 refs/local-backup-reflog/000002",
+      "8ce629096c75ab18ce314ed5d5426f3f0b80b8de refs/local-backup-reflog/000003",
+      "96dcaf8a284e66a1cfd731bfd1180eb1ea93638e refs/local-backup-reflog/000004",
+      "ab091b9e173c0b4b572902446517f70657800dca refs/local-backup-reflog/000005",
+      "32142135f75122577ea4972539e2fd27ef826dae refs/remotes/origin/HEAD",
+      "32142135f75122577ea4972539e2fd27ef826dae refs/remotes/origin/main",
+      "6b6e355a69c41ef991567775dd18595ece05ac57 refs/tags/v1.2.0",
+      "32142135f75122577ea4972539e2fd27ef826dae HEAD"
+    ],
+    "reflog_commit_count": 6
+  },
+  "history_parts": [
+    {
+      "path": "history/history.bundle.part0000",
+      "sha256": "af9ce8fa4bc724d14c18db066c16766bc2a1133c4ccc7cd2c1a1d1ae0f7dfb87",
+      "git_blob": "6f9b0bf337d7c2d60095cbc45f681afde98db806",
+      "bytes": 1823943
+    }
+  ]
+}
