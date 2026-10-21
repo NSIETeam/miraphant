@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com">
+<script src="js/language.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Miraphant — Application Layer Superintelligence. AI-powered products & enterprise AI-native transformation.">
+<meta name="keywords" content="Miraphant, AI, Application Layer, Otto, Circle, AI Native, enterprise AI, digital colleague">
+<meta name="author" content="Miraphant, Inc.">
+<meta name="theme-color" content="#000000">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Miraphant — Application Layer Superintelligence">
+<meta property="og:description" content="We turn ideas into working products — fast. AI-powered products & enterprise AI-native transformation.">
+<meta property="og:image" content="https://nsieteam.github.io/miraphant/logo.svg">
+<meta property="og:url" content="https://nsieteam.github.io/miraphant/">
+<meta property="og:site_name" content="Miraphant">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Miraphant — Application Layer Superintelligence">
+<meta name="twitter:description" content="We turn ideas into working products — fast.">
+<meta name="twitter:image" content="https://nsieteam.github.io/miraphant/logo.svg">
+
+<link rel="icon" href="favicon.svg?v=gray-2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="images/miraphant-mark-gray.svg?v=gray-2">
+<link rel="canonical" href="https://nsieteam.github.io/miraphant/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="js/portal.css">
+
+<!-- Structured Data for SEO -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Miraphant",
+  "description": "Application Layer Superintelligence. AI-powered products and enterprise AI-native transformation.",
+  "url": "https://nsieteam.github.io/miraphant/",
+  "logo": "https://nsieteam.github.io/miraphant/logo.svg",
+  "email": "NSIETeam@outlook.com",
+  "foundingDate": "2026"
+}
+</script>
+
+<title>Miraphant — Application Layer Superintelligence</title>
+<style>
+  :root {
+    --white: #FFFFFF; --black: #000000;
+    --gray-50: #F9F9F9; --gray-100: #F0F0F0; --gray-200: #E5E5E5;
+    --gray-300: #CCCCCC; --gray-400: #999999; --gray-500: #666666;
+    --gray-600: #444444; --gray-700: #333333; --gray-800: #222222;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--white); color: var(--black);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Scroll progress bar */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: var(--black); width: 0; z-index: 200;
+    transition: width 0.1s linear;
+  }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: border-color 0.3s, background 0.3s;
+  }
+  nav.scrolled { border-bottom-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.92); }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px; transition: height 0.3s;
+  }
+  nav.scrolled .nav-inner { height: 56px; }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; color: var(--white);
+    font-weight: 700; font-size: 18px; letter-spacing: -0.3px;
+  }
+  .nav-logo-mark { width: 32px; height: 32px; transition: transform 0.3s var(--ease-out); }
+  .nav-logo:hover .nav-logo-mark { transform: scale(1.08); }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-links { display: flex; gap: 20px; list-style: none; }
+  .nav-links a {
+    text-decoration: none; color: var(--gray-400);
+    font-size: 12px; font-weight: 500; transition: color 0.2s;
+    position: relative; letter-spacing: 0.2px; white-space: nowrap;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--white); }
+  .nav-links a::after {
+    content: ''; position: absolute; bottom: -4px; left: 0;
+    width: 0; height: 1.5px; background: var(--white);
+    transition: width 0.25s var(--ease-out);
+  }
+  .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+  .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; color: var(--white); }
+  .lang-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--gray-500);
+    padding: 4px 8px; border-radius: 4px; font-family: inherit;
+    transition: all 0.2s;
+  }
+  .lang-btn:hover { color: var(--white); background: rgba(255,255,255,0.1); }
+  .lang-btn.active { color: var(--white); background: rgba(255,255,255,0.15); }
+
+  /* Hero */
+  #hero {
+    min-height: 100vh; display: flex; align-items: center;
+    padding: 80px 0 60px; position: relative;
+  }
+  .hero-content { max-width: 900px; margin: 0 auto; text-align: center; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 100px;
+    border: 1px solid var(--gray-200); background: var(--white);
+    font-size: 12px; font-weight: 500; color: var(--gray-500);
+    margin-bottom: 32px; box-shadow: var(--shadow-sm);
+  }
+  .hero-badge-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--black);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .hero-title {
+    font-size: clamp(36px, 6.5vw, 72px);
+    font-weight: 900; line-height: 1.05;
+    letter-spacing: -0.035em; margin-bottom: 20px;
+  }
+  .hero-title .light { font-weight: 300; }
+  .hero-sub {
+    font-size: clamp(16px, 1.3vw, 19px);
+    color: var(--gray-500); line-height: 1.7;
+    max-width: 600px; margin: 0 auto 40px;
+  }
+  .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; border-radius: 100px;
+    background: var(--black); color: var(--white);
+    font-weight: 600; font-size: 14px; letter-spacing: 0.2px;
+    text-decoration: none; transition: all 0.25s var(--ease-out);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary:hover { background: var(--gray-800); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; border-radius: 100px;
+    border: 1px solid var(--gray-200); color: var(--black);
+    font-weight: 500; font-size: 14px; letter-spacing: 0.2px;
+    text-decoration: none; transition: all 0.25s var(--ease-out);
+  }
+  .btn-secondary:hover { border-color: var(--black); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .hero-logo-wrap { margin-top: 24px; }
+  .hero-logo-display {
+    width: 80px; height: 80px; opacity: 0;
+    animation: logoFadeIn 1s var(--ease-out) 0.5s forwards;
+  }
+  @keyframes logoFadeIn { to { opacity: 1; } }
+
+  /* Sections */
+  .section { padding: 80px 0; }
+  .section.border-b { border-bottom: 1px solid var(--gray-100); }
+  .section .label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gray-400); margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: clamp(28px, 3.5vw, 42px);
+    font-weight: 800; letter-spacing: -0.03em;
+    line-height: 1.1; margin-bottom: 16px;
+  }
+  .section-sub {
+    font-size: 16px; color: var(--gray-500); line-height: 1.7;
+  }
+
+  /* About */
+  .about-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
+  }
+  .about-text {
+    font-size: 17px; line-height: 1.8; color: var(--gray-700);
+  }
+
+  /* Products */
+  .products-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  .product-card {
+    padding: 40px 36px; border-radius: 16px;
+    border: 1px solid var(--gray-200);
+    text-decoration: none; color: inherit;
+    transition: all 0.3s var(--ease-out);
+    position: relative; overflow: hidden;
+  }
+  .product-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 0;
+    background: var(--gray-50); transition: height 0.3s var(--ease-out); z-index: 0;
+  }
+  .product-card:hover::before { height: 100%; }
+  .product-card:hover { border-color: var(--black); transform: translateY(-4px); box-shadow: var(--shadow-md); }
+  .product-card > * { position: relative; z-index: 1; }
+  .product-card::after {
+    content: "→"; position: absolute; top: 40px; right: 36px;
+    font-size: 20px; color: var(--gray-300);
+    transition: color 0.25s, transform 0.25s; z-index: 1;
+  }
+  .product-card:hover::after { color: var(--black); transform: translateX(6px); }
+  .product-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .product-card p { font-size: 14px; color: var(--gray-500); line-height: 1.7; }
+  .product-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
+  .product-tags span {
+    padding: 3px 10px; border-radius: 4px;
+    background: var(--white); border: 1px solid var(--gray-200);
+    font-size: 11px; color: var(--gray-500);
+  }
+
+  /* Club */
+  .club-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--gray-200);
+    border: 1px solid var(--gray-200); border-radius: 16px; overflow: hidden;
+  }
+  .club-card { background: var(--white); padding: 32px 28px; transition: background 0.25s; }
+  .club-card:hover { background: var(--gray-50); }
+  .club-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .club-card p { font-size: 13px; color: var(--gray-500); line-height: 1.7; }
+
+  /* CTA dark */
+  .cta-dark { background: var(--black); color: var(--white); text-align: center; position: relative; overflow: hidden; }
+  .cta-dark::before {
+    content: ''; position: absolute; top: -50%; left: -10%; width: 120%; height: 200%;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.02) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .cta-dark .label { color: var(--gray-500); }
+  .cta-dark .section-title { color: var(--white); }
+  .cta-dark .section-sub { color: var(--gray-400); }
+  .cta-dark .btn-primary { background: var(--white); color: var(--black); }
+  .cta-dark .btn-primary:hover { background: var(--gray-200); }
+  .cta-dark .btn-secondary { border-color: var(--gray-700); color: var(--white); }
+
+  /* Footer */
+  footer { padding: 56px 0 32px; border-top: 1px solid var(--gray-100); }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 60px; margin-bottom: 40px; }
+  .footer-brand-text { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+  .footer-brand-desc { font-size: 13px; color: var(--gray-400); line-height: 1.7; max-width: 280px; }
+  .footer-col h4 {
+    font-size: 11px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--gray-400); margin-bottom: 16px;
+  }
+  .footer-col a {
+    display: block; color: var(--gray-500); text-decoration: none;
+    font-size: 13px; padding: 5px 0; transition: color 0.2s, padding-left 0.2s;
+  }
+  .footer-col a:hover { color: var(--black); padding-left: 4px; }
+  .footer-bottom {
+    padding-top: 24px; border-top: 1px solid var(--gray-100);
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--gray-400);
+  }
+
+  /* Back to top */
+  #back-to-top {
+    position: fixed; bottom: 32px; right: 32px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--black); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; font-size: 18px; z-index: 90;
+    opacity: 0; transform: translateY(10px); pointer-events: none;
+    transition: all 0.3s var(--ease-out); box-shadow: var(--shadow-md);
+  }
+  #back-to-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  #back-to-top:hover { background: var(--gray-800); transform: translateY(-3px); }
+
+  /* Page transition */
+  a[href]:not([href^="#"]):not([href^="mailto"]):not([href^="http"]) {
+    transition: opacity 0.15s;
+  }
+  a[href]:not([href^="#"]):not([href^="mailto"]):not([href^="http"]):click { opacity: 0.5; }
+
+  @media (max-width: 900px) {
+    .about-grid, .products-grid { grid-template-columns: 1fr; }
+    .club-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .nav-links.open {
+      display: flex; flex-direction: column; position: absolute;
+      top: 64px; left: 0; right: 0; background: rgba(0,0,0,0.95);
+      padding: 16px 24px; border-bottom: 1px solid var(--gray-200); gap: 16px;
+    }
+    .nav-toggle { display: block; }
+    .footer-grid { grid-template-columns: 1fr; }
+    .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+    #back-to-top { bottom: 20px; right: 20px; }
+  }
+</style>
+<link rel="stylesheet" href="css/site.css?v=gray-2">
+</head>
+<body class="mf-site page-home">
+
+<div id="progress-bar"></div>
+
+<nav id="nav" aria-label="Primary">
+  <div class="container nav-inner">
+    <a href="/miraphant/" class="nav-logo">
+      <img src="images/miraphant-mark-gray.svg?v=gray-2" alt="Miraphant" class="nav-logo-mark" style="width:32px;height:32px">
+      Miraphant
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="/miraphant/about/" data-i18n="nav.about" data-nav="about">About</a></li>
+      <li><a href="#products" data-i18n="nav.products" data-nav="products">Products</a></li>
+      <li><a href="/miraphant/manifesto/" data-i18n="nav.manifesto" data-nav="manifesto">Manifesto</a></li>
+      <li><a href="/miraphant/ai-club/" data-i18n="nav.club" data-nav="club">AI Club</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="nav-toggle" id="navToggle" aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h18M3 6h18M3 18h18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="hero-avatar-canvas" aria-hidden="true">
+    <img class="hero-avatar hero-avatar--top-left" src="images/hero-avatars/portrait-01.png" alt="">
+    <img class="hero-avatar hero-avatar--middle-left" src="images/hero-avatars/vibe-01.png" alt="">
+    <img class="hero-avatar hero-avatar--bottom-left" src="images/hero-avatars/portrait-03.png" alt="">
+    <img class="hero-avatar hero-avatar--top-right" src="images/hero-avatars/portrait-02.png" alt="">
+    <img class="hero-avatar hero-avatar--middle-right" src="images/hero-avatars/vibe-02.png" alt="">
+    <img class="hero-avatar hero-avatar--bottom-right" src="images/hero-avatars/portrait-04.png" alt="">
+  </div>
+  <div class="container" style="width:100%">
+    <div class="hero-content">
+      <div class="reveal">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          <span data-i18n="hero.badge">Application Layer Superintelligence</span>
+        </div>
+      </div>
+      <div class="reveal rd1">
+        <h1 class="hero-title">
+          <span data-i18n="hero.l1">Turn ideas into</span><br>
+          <span class="light" data-i18n="hero.l2">working products — fast.</span>
+        </h1>
+      </div>
+      <div class="reveal rd2">
+        <p class="hero-sub" data-i18n="hero.sub">
+          Miraphant builds AI-powered products and transforms organizations into AI-native ones.
+          From idea to deployment, we make intelligence real.
+        </p>
+      </div>
+      <div class="reveal rd3">
+        <div class="hero-buttons">
+          <a href="#products" class="btn-primary" data-i18n="hero.cta1">Explore Products →</a>
+          <a href="/miraphant/about/" class="btn-secondary" data-i18n="hero.cta2">Our Superpower</a>
+        </div>
+      </div>
+      <div class="hero-logo-wrap reveal rd4">
+        <img src="images/miraphant-mark-gray.svg?v=gray-2" alt="Miraphant" class="hero-logo-display">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="section">
+  <div class="container about-layout">
+    <header class="about-heading reveal" data-scroll-reveal>
+      <div class="label" data-i18n="about.label">Who We Are</div>
+      <h2 class="section-title" data-i18n="about.title">
+        We make your ideas real<br>and your organization AI-native
+      </h2>
+    </header>
+    <div class="about-copy">
+      <div class="about-text reveal rd1" data-scroll-reveal data-i18n="about.p1">
+          Miraphant is an application-layer AI company. We don't train models — we ship products.
+          Our platform turns concepts into working software in days, compressing timelines
+          that other approaches measure in months.
+      </div>
+      <div class="about-text reveal rd2" data-scroll-reveal data-i18n="about.p2">
+          We also transform entire organizations into AI-native operations. From deploying
+          AI colleagues across every department to building foundational AI literacy through
+          Miraphant AI Club — we make intelligence a company-wide capability.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section collaboration-paths" aria-labelledby="collaboration-title">
+  <div class="container collaboration-layout">
+    <header class="collaboration-intro reveal" data-scroll-reveal>
+      <div class="label" data-i18n="creator.label">Work with us</div>
+      <h2 class="section-title" id="collaboration-title" data-i18n="creator.title">Two ways to build with Miraphant</h2>
+      <p class="section-sub" data-i18n="creator.sub">From a product idea to organization-wide AI transformation.</p>
+    </header>
+    <div class="collaboration-list">
+      <a class="collaboration-card reveal rd1" data-scroll-reveal href="mailto:NSIETeam@outlook.com?subject=Product%20co-building">
+        <span class="collaboration-card-copy">
+          <strong data-i18n="creator.path1">Build a product</strong>
+          <span data-i18n="creator.p1">If you are experienced in your field and want to bring an idea to life, Miraphant can help you.</span>
+        </span>
+        <span class="collaboration-card-arrow" aria-hidden="true">↗</span>
+      </a>
+      <a class="collaboration-card reveal rd2" data-scroll-reveal href="mailto:NSIETeam@outlook.com?subject=Organization%20transformation">
+        <span class="collaboration-card-copy">
+          <strong data-i18n="creator.path2">Transform an organization</strong>
+          <span data-i18n="creator.p2">If you seek enterprise transformation and want a partner to drive it, Miraphant is here.</span>
+        </span>
+        <span class="collaboration-card-arrow" aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="products" class="section border-b">
+  <div class="container">
+    <div class="reveal" data-scroll-reveal style="max-width:600px">
+      <div class="label" data-i18n="products.label">Our Products</div>
+      <h2 class="section-title" data-i18n="products.title">AI that ships</h2>
+      <p class="section-sub" data-i18n="products.sub">From desktop to platform — products that bring intelligence to real workflows.</p>
+    </div>
+    <div class="products-grid" style="margin-top:24px">
+      <a href="/miraphant/otto/" class="product-card reveal rd1" data-scroll-reveal>
+        <h3>Otto</h3>
+        <p data-i18n="products.otto.desc">Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.</p>
+        <div class="product-tags">
+          <span data-i18n="products.otto.t1">Desktop App</span>
+          <span data-i18n="products.otto.t2">CLI Agent</span>
+          <span data-i18n="products.otto.t3">Enterprise</span>
+        </div>
+      </a>
+      <a href="/miraphant/circle/" class="product-card reveal rd2" data-scroll-reveal>
+        <h3>Circle</h3>
+        <p data-i18n="products.circle.desc">A vibrant enterprise service ecosystem. AI-driven industrial property investment matching and B2B services platform.</p>
+        <div class="product-tags">
+          <span data-i18n="products.circle.t1">Enterprise Services</span>
+          <span data-i18n="products.circle.t2">AI Matching</span>
+          <span data-i18n="products.circle.t3">B2B Platform</span>
+        </div>
+      </a>
+      <a href="/miraphant/olivewolf/" class="product-card reveal rd3" data-scroll-reveal>
+        <h3>OliveWolf</h3>
+        <p data-i18n="products.olive.desc">Open-source 3D digital human engine. Real-time audio-driven conversation, dual render backends, and enterprise deployment.</p>
+        <div class="product-tags">
+          <span data-i18n="products.olive.t1">Digital Human</span>
+          <span data-i18n="products.olive.t2">Open Source</span>
+          <span data-i18n="products.olive.t3">Real-time</span>
+        </div>
+      </a>
+      <a href="/miraphant/flexhmi/" class="product-card reveal rd4" data-scroll-reveal>
+        <h3>FlexHMI</h3>
+        <p data-i18n="products.flex.desc">Visual HMI editing, AI engineering plans and external agents. Download the Windows and macOS preview.</p>
+        <div class="product-tags"><span>Windows / macOS</span><span data-i18n="products.flex.tag">Open Source · Preview</span></div>
+      </a>
+      <a href="/miraphant/ai-club/" class="product-card reveal rd4" data-scroll-reveal>
+        <h3>Miraphant AI Club</h3>
+        <p data-i18n="products.club.desc">Enterprise AI Native training product. One-day executive bootcamp plus hands-on Otto practice, scenario selection, playbook building, and rollout planning.</p>
+        <div class="product-tags">
+          <span data-i18n="products.club.t1">AI Native Training</span>
+          <span data-i18n="products.club.t2">Executive Bootcamp</span>
+          <span data-i18n="products.club.t3">Enterprise Rollout</span>
+        </div>
+      </a>
+    </div>
+  </div>
+<div class="container" style="margin-top:48px"><h3 data-i18n="products.more.title">More from Miraphant</h3><p data-i18n="products.more.sub">AI workspaces, business platforms and open-source tools.</p><div class="products-grid" style="margin-top:24px"><a href="/miraphant/products/#clawmaster" class="product-card"><h3>ClawMaster</h3><p data-i18n="products.new.clawmaster">A desktop AI workbench for agent tasks, project memory, reusable skills and business workflows.</p><div class="product-tags"><span data-i18n="products.stage.clawmaster">Desktop · Beta</span></div></a><a href="/miraphant/products/#mira" class="product-card"><h3>Mira</h3><p data-i18n="products.new.mira">A self-hosted AI agent execution kernel with tools, persistent memory, automations and an engineering console.</p><div class="product-tags"><span data-i18n="products.stage.mira">Open-source project</span></div></a><a href="/miraphant/products/#kaopu" class="product-card"><h3>靠谱</h3><p data-i18n="products.new.kaopu">Prepare product material, structure courses, review scripts and deliver live presentations from one self-hosted workspace. Real-model and payment acceptance are still pending.</p><div class="product-tags"><span data-i18n="products.stage.kaopu">Content &amp; live studio · MVP</span></div></a><a href="/miraphant/products/#easywiki" class="product-card"><h3>EasyWiki</h3><p data-i18n="products.new.easywiki">An agent-assisted organizational knowledge base for reviewed notes, reusable decisions, semantic search and MCP integration.</p><div class="product-tags"><span data-i18n="products.stage.easywiki">Open-source project</span></div></a><a href="/miraphant/products/#zhifang" class="product-card"><h3>鸿雁知访</h3><p data-i18n="products.new.zhifang">A field-service workspace for organizing customer visits and field-team work.</p><div class="product-tags"><span data-i18n="products.stage.zhifang">Business platform · Contact us</span></div></a><a href="/miraphant/products/#pangolin" class="product-card"><h3>穿山甲</h3><p data-i18n="products.new.pangolin">A traceability workspace for product codes and supply-chain tracing.</p><div class="product-tags"><span data-i18n="products.stage.pangolin">Business platform · Contact us</span></div></a><a href="/miraphant/products/#cicada" class="product-card"><h3>知了猴</h3><p data-i18n="products.new.cicada">An e-commerce operations workspace for day-to-day merchant workflows.</p><div class="product-tags"><span data-i18n="products.stage.cicada">Business platform · Contact us</span></div></a><a href="/miraphant/products/#pigeon" class="product-card"><h3>智信鸽</h3><p data-i18n="products.new.pigeon">An AI customer-service workspace for organizing service conversations and team workflows.</p><div class="product-tags"><span data-i18n="products.stage.pigeon">Business platform · Contact us</span></div></a><a href="/miraphant/products/#owl" class="product-card"><h3>猫头鹰</h3><p data-i18n="products.new.owl">A channel price-control workspace for reviewing price observations and follow-up work.</p><div class="product-tags"><span data-i18n="products.stage.owl">Business platform · Contact us</span></div></a><a href="/miraphant/products/#reliacode" class="product-card"><h3>ReliaCode · 可靠码</h3><p data-i18n="products.new.reliacode">Serialized pack-to-carton traceability, logistics events and recall workflows, integrated with an external OpenEPCIS repository.</p><div class="product-tags"><span data-i18n="products.stage.reliacode">Open-source project</span></div></a><a href="/miraphant/products/#priceguard" class="product-card"><h3>Pet Price Guard</h3><p data-i18n="products.new.priceguard">Monitor public product prices, retain observation evidence and queue suspected low-price alerts for human review.</p><div class="product-tags"><span data-i18n="products.stage.priceguard">Open-source project</span></div></a><a href="/miraphant/products/#easycode" class="product-card"><h3>Easy Code</h3><p data-i18n="products.new.easycode">An AI coding assistant for code understanding, editing and developer tool workflows.</p><div class="product-tags"><span data-i18n="products.stage.easycode">Open-source project</span></div></a><a href="/miraphant/products/#easygrowth" class="product-card"><h3>EasyGrowth</h3><p data-i18n="products.new.easygrowth">A B2B growth workspace connecting lead collection, scoring, review, CRM handoff and sales follow-up.</p><div class="product-tags"><span data-i18n="products.stage.easygrowth">Open-source project</span></div></a></div><a href="/miraphant/products/" class="btn-primary" style="margin-top:24px" data-i18n="products.all">All products →</a></div></section>
+
+<section id="club" class="section" aria-labelledby="club-title">
+  <div class="container">
+    <header class="club-heading reveal" data-scroll-reveal>
+      <div class="label" data-i18n="club.label">Miraphant AI Club</div>
+      <h2 class="section-title" id="club-title" data-i18n="club.title">让效率可以留存</h2>
+      <p class="section-sub" data-i18n="club.sub">不是来听课的，是来完成一个真实任务的。从认知到动手的一天，让AI长成你的组织。</p>
+    </header>
+    <div class="club-grid">
+      <article class="club-card reveal rd1" data-scroll-reveal>
+        <h3 data-i18n="club.c1.title">AI认知扫盲</h3>
+        <p data-i18n="club.c1.desc">AI不是聊天，是自主完成任务。Agent=手脚、Skill=经验、你=指挥官。AI已在专业考试中超越人类，90%律师考、95%数学奥赛、87%博士级推理。</p>
+      </article>
+      <article class="club-card reveal rd2" data-scroll-reveal>
+        <h3 data-i18n="club.c2.title">Otto实战场</h3>
+        <p data-i18n="club.c2.desc">从会说话到会做事。选场景→@Otto发任务→观察思考过程→拿结果验收。全程透明可见，不是黑箱操作。会说话，就会用。</p>
+      </article>
+      <article class="club-card reveal rd3" data-scroll-reveal>
+        <h3 data-i18n="club.c3.title">Skill沉淀机制</h3>
+        <p data-i18n="club.c3.desc">入职5问继承团队经验，同类任务3次自动沉淀SOP，离职时经验自动合并。经验不再因人员流动而消失。</p>
+      </article>
+      <article class="club-card reveal rd4" data-scroll-reveal>
+        <h3 data-i18n="club.c4.title">ROI真实数据</h3>
+        <p data-i18n="club.c4.desc">6个真实验证任务：平均单任务节省4小时，投入产出比551倍，单次Token成本仅¥0.36。</p>
+      </article>
+      <article class="club-card reveal rd5" data-scroll-reveal>
+        <h3 data-i18n="club.c5.title">消除顾虑专场</h3>
+        <p data-i18n="club.c5.desc">不是AI取代人，是掌握AI的人取代不掌握AI的人。本地部署零云端零第三方，数据始终在企业边界内。省下的时间，是你的。</p>
+      </article>
+      <article class="club-card reveal rd6" data-scroll-reveal>
+        <h3 data-i18n="club.c6.title">组织落地计划</h3>
+        <p data-i18n="club.c6.desc">Day 1管理层上手→Week 1选3-5人试点→Month 1全员跑通3个场景。别家让你用AI，我们让AI长成你的组织。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section home-contact" aria-labelledby="home-contact-title">
+  <div class="container">
+    <div class="home-contact-inner reveal" data-scroll-reveal>
+      <div class="label" data-i18n="cta.label">Get in Touch</div>
+      <h2 class="section-title" id="home-contact-title" data-i18n="cta.title">Ready to build<br>with Miraphant?</h2>
+      <p class="section-sub" data-i18n="cta.sub">Whether you want a product built, your organization transformed, or your team AI-trained — we're here.</p>
+      <div class="home-contact-actions">
+        <a href="mailto:NSIETeam@outlook.com" class="btn-primary" data-i18n="cta.email">NSIETeam@outlook.com</a>
+        <a href="/miraphant/ai-club/" class="btn-secondary" data-i18n="cta.club">Join AI Club →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-brand-text">Miraphant</div>
+        <div class="footer-brand-desc" data-i18n="footer.desc">Application Layer Superintelligence. AI-powered products and organizational transformation.</div>
+      </div>
+      <div class="footer-links" aria-label="Footer navigation">
+        <div class="footer-col">
+          <h4 data-i18n="footer.products">Products</h4>
+          <a href="/miraphant/products/" data-i18n="products.all">All products →</a><a href="/miraphant/flexhmi/">FlexHMI</a><a href="/miraphant/otto/">Otto</a>
+          <a href="/miraphant/circle/">Circle</a>
+          <a href="/miraphant/olivewolf/">OliveWolf</a>
+          <a href="/miraphant/ai-club/" data-i18n="footer.club">AI Club</a>
+        </div>
+        <div class="footer-col">
+          <h4 data-i18n="footer.company">Company</h4>
+          <a href="/miraphant/about/" data-i18n="footer.about">About</a>
+          <a href="/miraphant/manifesto/" data-i18n="footer.manifesto">Manifesto</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span data-i18n="footer.copy">© 2026 Miraphant, Inc.</span>
+      <div class="footer-meta-actions">
+        <div class="language-menu">
+          <button class="language-trigger" type="button" aria-label="Language" aria-haspopup="menu" aria-expanded="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+            <span class="language-current">English</span>
+            <svg class="language-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="language-popover" role="menu" aria-label="Language">
+            <button class="lang-btn active" type="button" role="menuitemradio" aria-checked="true" data-lang="en"><span>English</span><svg class="language-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+            <button class="lang-btn" type="button" role="menuitemradio" aria-checked="false" data-lang="zh"><span>中文</span><svg class="language-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+          </div>
+        </div>
+        <button class="portal-employee-link" onclick="handleEmployeePortal()">Employee Portal</button>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<button id="back-to-top" aria-label="Back to top">↑</button>
+
+<script src="js/auth.js"></script>
+<script>
+const i18n = {
+  en: {
+    'nav.about': 'About', 'nav.products': 'Products', 'nav.manifesto': 'Manifesto', 'nav.club': 'AI Club',
+    'hero.badge': 'Application Layer Superintelligence',
+    'hero.l1': 'Turn ideas into',
+    'hero.l2': 'working products — fast.',
+    'hero.sub': 'Miraphant builds AI-powered products and transforms organizations into AI-native ones. From idea to deployment, we make intelligence real.',
+    'hero.cta1': 'Explore Products →',
+    'hero.cta2': 'Our Superpower',
+    'hero.c2': 'Our Superpower',
+    'about.label': 'Who We Are',
+    'about.title': 'We make your ideas real and your organization AI-native',
+    'about.p1': 'Miraphant is an application-layer AI company. We don\'t train models — we ship products. Our platform turns concepts into working software in days, compressing timelines that other approaches measure in months.',
+    'about.p2': 'We also transform entire organizations into AI-native operations. From deploying AI colleagues across every department to building foundational AI literacy through Miraphant AI Club — we make intelligence a company-wide capability.',
+    'creator.label': 'Work with us',
+    'creator.title': 'Two ways to build with Miraphant',
+    'creator.sub': 'From a product idea to organization-wide AI transformation.',
+    'creator.path1': 'Build a product',
+    'creator.path2': 'Transform an organization',
+    'creator.p1': 'If you are experienced in your field and want to bring an idea to life, Miraphant can help you.',
+    'creator.p2': 'If you seek enterprise transformation and want a partner to drive it, Miraphant is here.',
+    'products.label': 'Our Products',
+    'products.title': 'AI that ships',
+    'products.sub': 'From desktop to platform — products that bring intelligence to real workflows.',
+    "products.more.title": "More from Miraphant",
+    "products.more.sub": "AI workspaces, business platforms and open-source tools.",
+    "products.all": "All products →",
+    "products.new.clawmaster": "A desktop AI workbench for agent tasks, project memory, reusable skills and business workflows.",
+    "products.stage.clawmaster": "Desktop · Beta",
+    "products.new.mira": "A self-hosted AI agent execution kernel with tools, persistent memory, automations and an engineering console.",
+    "products.stage.mira": "Open-source project",
+    "products.new.kaopu": "Prepare product material, structure courses, review scripts and deliver live presentations from one self-hosted workspace. Real-model and payment acceptance are still pending.",
+    "products.stage.kaopu": "Content & live studio · MVP",
+    "products.new.easywiki": "An agent-assisted organizational knowledge base for reviewed notes, reusable decisions, semantic search and MCP integration.",
+    "products.stage.easywiki": "Open-source project",
+    "products.new.zhifang": "A field-service workspace for organizing customer visits and field-team work.",
+    "products.stage.zhifang": "Business platform · Contact us",
+    "products.new.pangolin": "A traceability workspace for product codes and supply-chain tracing.",
+    "products.stage.pangolin": "Business platform · Contact us",
+    "products.new.cicada": "An e-commerce operations workspace for day-to-day merchant workflows.",
+    "products.stage.cicada": "Business platform · Contact us",
+    "products.new.pigeon": "An AI customer-service workspace for organizing service conversations and team workflows.",
+    "products.stage.pigeon": "Business platform · Contact us",
+    "products.new.owl": "A channel price-control workspace for reviewing price observations and follow-up work.",
+    "products.stage.owl": "Business platform · Contact us",
+    "products.new.reliacode": "Serialized pack-to-carton traceability, logistics events and recall workflows, integrated with an external OpenEPCIS repository.",
+    "products.stage.reliacode": "Open-source project",
+    "products.new.priceguard": "Monitor public product prices, retain observation evidence and queue suspected low-price alerts for human review.",
+    "products.stage.priceguard": "Open-source project",
+    "products.new.easycode": "An AI coding assistant for code understanding, editing and developer tool workflows.",
+    "products.stage.easycode": "Open-source project",
+    "products.new.easygrowth": "A B2B growth workspace connecting lead collection, scoring, review, CRM handoff and sales follow-up.",
+    "products.stage.easygrowth": "Open-source project",
+    'products.otto.desc': 'Your AI digital colleague. Desktop app, CLI agent, Feishu bot & enterprise deployment. Lives where you work.',
+    'products.otto.t1': 'Desktop App', 'products.otto.t2': 'CLI Agent', 'products.otto.t3': 'Enterprise',
+    'products.circle.desc': 'A vibrant enterprise service ecosystem. AI-driven industrial property investment matching and B2B services platform.',
+    'products.circle.t1': 'Enterprise Services', 'products.circle.t2': 'AI Matching', 'products.circle.t3': 'B2B Platform',
+    'products.flex.desc': 'Visual HMI editing, AI engineering plans and external agents. Download the Windows and macOS preview.',
+    'products.flex.tag': 'Open Source · Preview',
+    'products.olive.desc': 'Open-source 3D digital human engine. Real-time audio-driven conversation, dual render backends, and enterprise deployment.',
+    'products.olive.t1': 'Digital Human', 'products.olive.t2': 'Open Source', 'products.olive.t3': 'Real-time',
+    'products.club.desc': 'Enterprise AI Native training product. One-day executive bootcamp plus hands-on Otto practice, scenario selection, playbook building, and rollout planning.',
+    'products.club.t1': 'AI Native Training', 'products.club.t2': 'Executive Bootcamp', 'products.club.t3': 'Enterprise Rollout',
+    'club.label': 'Miraphant AI Club',
+    'club.title': 'Let efficiency be preserved',
+    'club.sub': 'Not a lecture — you will complete a real task. From认知 to action in one day. Make AI grow into your organization.',
+    'club.c1.title': 'AI Foundations', 'club.c1.desc': 'AI is not chat — it autonomously completes tasks. Agent=hands, Skill=memory, You=commander. AI surpasses humans in bar exams (90%), Math Olympiad (95%), PhD-level reasoning (87%).',
+    'club.c2.title': 'Otto Bootcamp', 'club.c2.desc': 'From words to work. Pick a scenario, @Otto, describe the task, watch it think and execute. Full transparency — not a black box. If you can talk, you can use it.',
+    'club.c3.title': 'Skill Engine', 'club.c3.desc': 'Onboard with 5 questions to inherit team knowledge. Same task 3 times = auto-SOP. Employee leaves, experience stays. Knowledge no longer walks out the door.',
+    'club.c4.title': 'Real ROI Data', 'club.c4.desc': '6 real validated tasks: avg 4 hours saved per task, 551x ROI, token cost ¥0.36 per task. Efficiency gains that are measurable and repeatable.',
+    'club.c5.title': 'Concerns Addressed', 'club.c5.desc': 'AI doesn\'t replace people — people who master AI replace those who don\'t. Local deployment, zero cloud, zero third-party. Time saved is yours.',
+    'club.c6.title': 'Org Rollout Plan', 'club.c6.desc': 'Day 1: leadership onboards. Week 1: 3-5 pilot users. Month 1: org-wide across 3 scenarios. Others let you use AI — we make AI grow into your org.',
+    'cta.label': 'Get in Touch', 'cta.title': 'Ready to build with Miraphant?',
+    'cta.sub': 'Whether you want a product built, your organization transformed, or your team AI-trained — we\'re here.',
+    'cta.email': 'NSIETeam@outlook.com', 'cta.club': 'Join AI Club →',
+    'footer.desc': 'Application Layer Superintelligence. AI-powered products and organizational transformation.',
+    'footer.products': 'Products', 'footer.company': 'Company',
+    'footer.about': 'About', 'footer.manifesto': 'Manifesto', 'footer.club': 'AI Club',
+    'footer.copy': '© 2026 Miraphant, Inc.',
+  },
+  zh: {
+    'nav.about': '关于我们', 'nav.products': '产品', 'nav.manifesto': '我们的主张', 'nav.club': 'AI Club',
+    'hero.badge': '应用层超级智能',
+    'hero.l1': '把你的想法变成',
+    'hero.l2': '能用的产品——快。',
+    'hero.sub': 'Miraphant 构建 AI 驱动的产品，并将组织转变为 AI Native。从想法到部署，我们让智能成为现实。',
+    'hero.cta1': '探索产品 →',
+    'hero.cta2': '我们的超能力',
+    'about.label': '我们是谁',
+    'about.title': '把你的想法变成现实，让你的组织 AI Native',
+    'about.p1': 'Miraphant 是一家应用层 AI 公司。我们不训练模型——我们交付产品。我们的平台在数天内将概念转化为可工作的软件，压缩了其他方法需要数月才能完成的周期。',
+    'about.p2': '我们还将整个组织转变为 AI Native 运营。从在每个部门部署 AI 同事，到通过 Miraphant AI Club 构建基础 AI 素养——我们让智能成为公司级的能力。',
+    'creator.label': '与我们合作',
+    'creator.title': '两种方式，和 Miraphant 一起构建',
+    'creator.sub': '从一个产品想法，到整个组织的 AI 转型。',
+    'creator.path1': '构建产品',
+    'creator.path2': '推动组织转型',
+    'creator.p1': '如果您在自己的领域内经验丰富，想要实现一个想法，Miraphant 可以帮助您。',
+    'creator.p2': '如果您力求企业改革，想要一个组织来推进，Miraphant 是您的伙伴。',
+    'products.label': '我们的产品',
+    'products.title': '智能，说到做到',
+    'products.sub': '从桌面到平台——将智能带入真实工作流的产品。',
+    "products.more.title": "更多 Miraphant 产品",
+    "products.more.sub": "AI 工作台、业务平台与开源工具。",
+    "products.all": "查看全部产品 →",
+    "products.new.clawmaster": "将 Agent 任务、项目记忆、可复用技能与业务操作集中到桌面的 AI 工作台。",
+    "products.stage.clawmaster": "桌面软件 · Beta",
+    "products.new.mira": "可自托管的 AI Agent 执行内核，提供工具调用、持久记忆、自动化任务与工程控制台。",
+    "products.stage.mira": "开源项目",
+    "products.new.kaopu": "在自托管工作台中整理商品资料、编排课程、审改讲稿并开展真人直播。真实模型与支付能力仍待验收。",
+    "products.stage.kaopu": "内容与直播工作台 · MVP",
+    "products.new.easywiki": "面向组织的 Agent 知识库，支持知识审阅、决策沉淀、语义检索与 MCP 集成。",
+    "products.stage.easywiki": "开源项目",
+    "products.new.zhifang": "面向客户拜访与外勤团队的业务工作台。",
+    "products.stage.zhifang": "业务平台 · 咨询接入",
+    "products.new.pangolin": "面向商品编码与流通追踪的溯源业务平台。",
+    "products.stage.pangolin": "业务平台 · 咨询接入",
+    "products.new.cicada": "面向商家日常经营的电商业务工作台。",
+    "products.stage.cicada": "业务平台 · 咨询接入",
+    "products.new.pigeon": "面向客服对话与服务协作的 AI 客服工作台。",
+    "products.stage.pigeon": "业务平台 · 咨询接入",
+    "products.new.owl": "面向渠道价格观察、异常复核与跟进的控价业务工作台。",
+    "products.stage.owl": "业务平台 · 咨询接入",
+    "products.new.reliacode": "围绕单品与箱码建立追溯关系，记录物流与召回事件，对接独立的 OpenEPCIS 事件库。",
+    "products.stage.reliacode": "开源项目",
+    "products.new.priceguard": "监测公开商品价格，留存观测证据，并将疑似低价告警交由人工复核。",
+    "products.stage.priceguard": "开源项目",
+    "products.new.easycode": "面向代码理解、编辑与开发工具协作的 AI 编程助手。",
+    "products.stage.easycode": "开源项目",
+    "products.new.easygrowth": "连接线索采集、评分、复核、CRM 同步与销售跟进的 B2B 增长工作台。",
+    "products.stage.easygrowth": "开源项目",
+    'products.otto.desc': '你的 AI 数字同事。桌面应用、CLI 代理、飞书机器人及企业部署。在你工作的地方工作。',
+    'products.otto.t1': '桌面应用', 'products.otto.t2': 'CLI 代理', 'products.otto.t3': '企业版',
+    'products.circle.desc': '一个充满活力的企业服务生态。AI 驱动的产业地产招商撮合与 B2B 服务平台。',
+    'products.circle.t1': '企业服务', 'products.circle.t2': 'AI 撮合', 'products.circle.t3': 'B2B 平台',
+    'products.flex.desc': '可视化组态、AI 工程计划与外置 Agent。提供 Windows 和 macOS 预览版下载。',
+    'products.flex.tag': '开源 · 预览版',
+    'products.olive.desc': '开源 3D 数字人引擎。实时音频驱动对话，双渲染后端，企业级部署。',
+    'products.olive.t1': '数字人', 'products.olive.t2': '开源', 'products.olive.t3': '实时',
+    'products.club.desc': '企业 AI Native 培训产品。一日管理层训练营，结合 Otto 实战、场景选择、工作方法沉淀和组织落地计划。',
+    'products.club.t1': 'AI Native 培训', 'products.club.t2': '管理层训练营', 'products.club.t3': '企业落地',
+    'club.label': 'Miraphant AI Club',
+    'club.title': '让效率可以留存',
+    'club.sub': '不是来听课的，是来完成一个真实任务的。从认知到动手的一天，让AI长成你的组织。',
+    'club.c1.title': 'AI认知扫盲', 'club.c1.desc': 'AI不是聊天，是自主完成任务。Agent=手脚、Skill=经验、你=指挥官。AI已在专业考试超越人类：律师考90%、数学奥赛95%、博士级推理87%。',
+    'club.c2.title': 'Otto实战场', 'club.c2.desc': '从会说话到会做事。选场景→@Otto发任务→观察思考过程→拿结果验收。全程透明可见，会说话就会用。',
+    'club.c3.title': 'Skill沉淀机制', 'club.c3.desc': '入职5问继承团队经验，同类任务3次自动沉淀SOP，离职时经验自动合并。经验不再因人员流动而消失。',
+    'club.c4.title': 'ROI真实数据', 'club.c4.desc': '6个真实验证任务：平均单任务节省4小时，投入产出比551倍，单次Token成本仅¥0.36。',
+    'club.c5.title': '消除顾虑专场', 'club.c5.desc': '不是AI取代人，是掌握AI的人取代不掌握AI的人。本地部署零云端零第三方，数据始终在企业边界内。省下的时间，是你的。',
+    'club.c6.title': '组织落地计划', 'club.c6.desc': 'Day 1管理层上手→Week 1选3-5人试点→Month 1全员跑通3个场景。别家让你用AI，我们让AI长成你的组织。',
+    'cta.label': '联系我们', 'cta.title': '准备好和 Miraphant 一起构建了吗？',
+    'cta.sub': '无论你想构建产品、转型组织、还是培训团队——我们都在。',
+    'cta.email': 'NSIETeam@outlook.com', 'cta.club': '加入 AI Club →',
+    'footer.desc': '应用层超级智能。AI 驱动的产品和组织转型。',
+    'footer.products': '产品', 'footer.company': '公司',
+    'footer.about': '关于我们', 'footer.manifesto': '我们的主张', 'footer.club': 'AI Club',
+    'footer.copy': '© 2026 Miraphant, Inc.',
+  }
+};
+
+let currentLang = 'en';
+function setLang(lang) {
+  lang = window.MiraphantLanguage.set(lang);
+  currentLang = lang;
+  const s = i18n[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (s[el.getAttribute('data-i18n')]) el.textContent = s[el.getAttribute('data-i18n')];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+  });
+  window.MiraphantLanguage.reveal();
+}
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => setLang(b.getAttribute('data-lang')));
+});
+setLang(window.MiraphantLanguage.get());
+
+// Nav scroll + active highlight
+const nav = document.getElementById('nav');
+const navLinks = document.querySelectorAll('.nav-links a');
+const sections = document.querySelectorAll('section[id]');
+
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+
+  // Progress bar
+  const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = (window.scrollY / scrollHeight) * 100;
+  document.getElementById('progress-bar').style.width = progress + '%';
+
+  // Active nav link
+  let current = '';
+  sections.forEach(section => {
+    const top = section.offsetTop - 100;
+    if (window.scrollY >= top) current = section.id;
+  });
+  navLinks.forEach(a => {
+    const href = a.getAttribute('href');
+    if (href === '#' + current) { a.classList.add('active'); }
+    else if (href !== '#') { a.classList.remove('active'); }
+  });
+
+  // Back to top
+  const btn = document.getElementById('back-to-top');
+  if (btn) btn.classList.toggle('visible', window.scrollY > 600);
+}, { passive: true });
+
+// Back to top
+document.getElementById('back-to-top').addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Employee Portal
+function handleEmployeePortal() {
+  if (window.checkAuth()) {
+    window.location.href = '/miraphant/portal/';
+  } else {
+    window.showLoginModal(function() {
+      window.location.href = '/miraphant/portal/';
+    });
+  }
+}
+if (window.location.hash === '#employee-portal') {
+  if (!window.checkAuth()) {
+    setTimeout(function() {
+      window.showLoginModal(function() {
+        window.location.href = '/miraphant/portal/';
+      });
+    }, 500);
+  } else {
+    window.location.href = '/miraphant/portal/';
+  }
+}
+
+</script>
+<script src="js/site.js"></script>
+</body>
+</html>

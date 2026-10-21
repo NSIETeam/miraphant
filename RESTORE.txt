@@ -1,0 +1,7 @@
+Local project backup before cleanup
+
+Source files are under source/. Environment files, credentials, databases, models and local-only evidence were retained locally.
+
+Restore source/ into an empty directory. Verify files using BACKUP_MANIFEST.json.
+If history parts are present, concatenate history/history.bundle.part* in filename order and clone the resulting Git bundle; then overlay source/. history/staged.patch preserves the staged index changes when present.
+This backup does not represent a tested release or deployment.

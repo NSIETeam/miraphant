@@ -1,0 +1,62 @@
+{
+  "releases": [
+    {
+      "platform": "windows",
+      "version": "0.4.4",
+      "channel": "preview",
+      "qualified": true,
+      "sourceCommit": "4247f6e5c808850e084e55d5a7a8b00a6f466989",
+      "releaseUrl": "https://github.com/NSIETeam/FlexHMI/releases/tag/v0.4.4-preview",
+      "qualificationUrl": "https://github.com/NSIETeam/FlexHMI/actions/runs/34566210571",
+      "checksumUrl": "https://github.com/NSIETeam/FlexHMI/releases/download/v0.4.4-preview/SHA256SUMS.txt",
+      "publishedAt": "2026-09-11T05:40:43Z",
+      "packages": [
+        {
+          "arch": "arm64",
+          "file": "FlexHMI-0.4.4-Windows-arm64-Setup.exe",
+          "bytes": 56198853,
+          "sha256": "ebaa50f7ac3ec916e1237e9338281603fc75671deea7fa8e057275a2f80f238a",
+          "qualified": true,
+          "url": "https://github.com/NSIETeam/FlexHMI/releases/download/v0.4.4-preview/FlexHMI-0.4.4-Windows-arm64-Setup.exe"
+        },
+        {
+          "arch": "x64",
+          "file": "FlexHMI-0.4.4-Windows-x64-Setup.exe",
+          "bytes": 60145903,
+          "sha256": "47fe63f441dba1cabeef5e6a4844c1c93d091852086778db96a19c1d9f4b6556",
+          "qualified": true,
+          "url": "https://github.com/NSIETeam/FlexHMI/releases/download/v0.4.4-preview/FlexHMI-0.4.4-Windows-x64-Setup.exe"
+        }
+      ]
+    },
+    {
+      "platform": "macos",
+      "version": "0.4.4",
+      "channel": "preview",
+      "qualified": true,
+      "sourceCommit": "4247f6e5c808850e084e55d5a7a8b00a6f466989",
+      "releaseUrl": "https://github.com/NSIETeam/FlexHMI/releases/tag/v0.4.4-preview",
+      "qualificationUrl": "https://github.com/NSIETeam/FlexHMI/actions/runs/34566137880",
+      "checksumUrl": "https://github.com/NSIETeam/FlexHMI/releases/download/v0.4.4-preview/SHA256SUMS.txt",
+      "publishedAt": "2026-09-11T05:40:43Z",
+      "packages": [
+        {
+          "arch": "arm64",
+          "file": "FlexHMI-0.4.4-macOS-arm64.dmg",
+          "bytes": 218942750,
+          "sha256": "55a5359e0a1d18be2dc0464da89d2b985f5e9e22efd928f2124f0c718775e7ca",
+          "qualified": true,
+          "url": "https://github.com/NSIETeam/FlexHMI/releases/download/v0.4.4-preview/FlexHMI-0.4.4-macOS-arm64.dmg"
+        },
+        {
+          "arch": "x64",
+          "file": "FlexHMI-0.4.4-macOS-x64.dmg",
+          "bytes": 190909969,
+          "sha256": "76c06cbfb505f7ebcc647e37f452282a6fab2c2e398d9792b7c8f74eb675c590",
+          "qualified": true,
+          "url": "https://github.com/NSIETeam/FlexHMI/releases/download/v0.4.4-preview/FlexHMI-0.4.4-macOS-x64.dmg"
+        }
+      ]
+    }
+  ]
+}
