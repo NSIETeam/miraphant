@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "status": "draft_not_for_production",
+  "effective_at": null,
+  "currency": "CNY",
+  "points_per_cny": 100,
+  "micro_points_per_point": 1000000,
+  "amount_storage": "integer_fen",
+  "rounding": "half_up_once_at_final_micro_point_settlement",
+  "requires_model_cost_review": true,
+  "model_bindings": [],
+  "tiers": [
+    {
+      "id": "standard",
+      "label": "标准",
+      "uncached_input_points_per_1000_tokens": "0.5",
+      "cached_input_points_per_1000_tokens": "0.1",
+      "output_points_per_1000_tokens": "2"
+    },
+    {
+      "id": "advanced",
+      "label": "高阶",
+      "uncached_input_points_per_1000_tokens": "5",
+      "cached_input_points_per_1000_tokens": "1",
+      "output_points_per_1000_tokens": "20"
+    }
+  ],
+  "packages": [
+    {
+      "id": "cny-10",
+      "amount_fen": 1000,
+      "purchased_points": 1000,
+      "bonus_points": 0,
+      "enabled": false
+    },
+    {
+      "id": "cny-50",
+      "amount_fen": 5000,
+      "purchased_points": 5000,
+      "bonus_points": 0,
+      "enabled": false
+    },
+    {
+      "id": "cny-100",
+      "amount_fen": 10000,
+      "purchased_points": 10000,
+      "bonus_points": 0,
+      "enabled": false
+    },
+    {
+      "id": "cny-500",
+      "amount_fen": 50000,
+      "purchased_points": 50000,
+      "bonus_points": 0,
+      "enabled": false
+    }
+  ],
+  "estimate_assumptions": {
+    "tier": "standard",
+    "cached_input_tokens": 0,
+    "calls_per_task": 1,
+    "extra_tool_fees": 0,
+    "includes_billed_reasoning_in_output": true,
+    "guaranteed_task_count": false
+  },
+  "scenarios": [
+    {
+      "id": "short-qa",
+      "label": "简短问答",
+      "input_tokens": 500,
+      "output_tokens": 300,
+      "estimated_points": "0.85",
+      "full_tasks_per_1000_points": 1176
+    },
+    {
+      "id": "product-copy",
+      "label": "商品文案初稿",
+      "input_tokens": 1000,
+      "output_tokens": 800,
+      "estimated_points": "2.10",
+      "full_tasks_per_1000_points": 476
+    },
+    {
+      "id": "document-summary",
+      "label": "长文摘要",
+      "input_tokens": 8000,
+      "output_tokens": 1000,
+      "estimated_points": "6.00",
+      "full_tasks_per_1000_points": 166
+    },
+    {
+      "id": "translation",
+      "label": "较长翻译",
+      "input_tokens": 3000,
+      "output_tokens": 3000,
+      "estimated_points": "7.50",
+      "full_tasks_per_1000_points": 133
+    },
+    {
+      "id": "code-qa",
+      "label": "带上下文的代码问答",
+      "input_tokens": 10000,
+      "output_tokens": 3000,
+      "estimated_points": "11.00",
+      "full_tasks_per_1000_points": 90
+    }
+  ],
+  "payment_channels": [
+    {
+      "id": "wechat",
+      "enabled": false
+    },
+    {
+      "id": "alipay",
+      "enabled": false
+    }
+  ],
+  "planned_entrypoints": {
+    "customer_wallet": "https://api.miraphant.com/console/wallet",
+    "admin": "https://api.miraphant.com/admin",
+    "status": "not_deployed"
+  },
+  "public_notice": "示例估算，实际消耗取决于模型、内容长度和调用次数。价格为草案，尚未上线。"
+}

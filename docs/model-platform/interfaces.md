@@ -1,0 +1,87 @@
+# 客户充值入口与管理界面规格
+
+状态：规划路由，尚未部署。当前静态官网不能提供支付、鉴权或后台能力。本文件中的 `/console`、`/checkout`、`/admin` 均为网关应用的目标路由。
+
+## 客户入口
+
+官网导航增加“模型平台”，跳到 `https://api.miraphant.com`；平台导航常驻“积分与充值”，目标为 `https://api.miraphant.com/console/wallet`。未登录时进入登录页，成功后安全返回原入口（仅允许本站路径）。
+
+| 路由 | 页面 | 必须展示和支持 |
+|---|---|---|
+| `/` | 平台首页 | Miraphant 标志、服务介绍、模型目录、登录与注册 |
+| `/pricing` | 模型与积分价格 | 可用模型、积分费率、价格生效时间、任务估算器及假设 |
+| `/console` | 客户总览 | 可用积分、冻结积分、最近消耗、明显的“充值”按钮 |
+| `/console/wallet` | 积分钱包 | 购买／赠送／冻结／可用余额，充值档位与兑换码入口 |
+| `/checkout/:orderId` | 收银台 | 本人订单、应付人民币、到账积分、微信／支付宝、有效期、状态查询 |
+| `/console/orders` | 充值订单 | 时间、金额、积分、支付方式、已付待到账／已到账／关闭／退款状态 |
+| `/console/orders/:orderId` | 订单详情 | 到账凭证、退款申请、处理进度、联系客服 |
+| `/console/usage` | 使用记录 | 应用、模型、时间、积分、价格版本；可展开底层 token 计量 |
+| `/console/keys` | 访问密钥 | 创建、一次性复制、撤销、积分预算、有效期；不公开完整历史密钥 |
+| `/help` | 使用帮助 | API 接入、积分规则、退款规则、联系方式 |
+
+钱包结构：顶部可用积分与充值按钮 → 金额档位 → 微信／支付宝选择 → “实付 ¥X，到账 Y 积分” → 确认创建订单 → 收银台 → 到账后返回钱包。
+
+收银台要求：手机可用对应签约支付场景；桌面微信提供扫码。二维码过期时明确提示并按查单／关单规则重新创建，不重用过期订单。只有服务端返回到账状态时显示“充值成功”；已付款待入账提供自动刷新与客服查询，不催促用户再次支付。
+
+未开通支付、模型不可用或维护期间：显示原因与帮助入口，禁止创建真实充值订单。支付接通前不在官网发布“立即充值”的有效宣传链接。
+
+## 独立管理界面
+
+保留 `https://api.miraphant.com/admin` 作为管理入口。只对管理员角色展示，服务端逐接口校验；直接输入 URL 也不能绕过权限。客户导航不展示管理菜单。既有管理员必须在迁移时保留正确权限。
+
+| 路由 | 模块 | 管理能力 |
+|---|---|---|
+| `/admin` | 经营概览 | 实收、到账积分、消耗、退款、待入账及对账异常 |
+| `/admin/users` | 客户与积分 | 用户状态、购买／赠送／冻结余额、带原因的调整及流水 |
+| `/admin/channels` | 模型渠道 | 上游可用状态、模型映射、成本；密钥只显示脱敏值 |
+| `/admin/pricing` | 模型定价 | 输入／输出／缓存积分费率、成本测算、草稿预览、版本发布与停用 |
+| `/admin/packages` | 充值套餐 | 金额、积分、渠道可用性、上下架；修改不影响已创建订单 |
+| `/admin/payments` | 支付设置 | 微信／支付宝开通状态、生产／测试环境、回调与证书状态、充值开关 |
+| `/admin/orders` | 充值订单 | 按用户／订单号查单、状态核对、幂等重试到账 |
+| `/admin/refunds` | 退款 | 可退金额及积分、审核、原路退款、失败／待确认处理 |
+| `/admin/reconciliation` | 对账 | 渠道账单、差额、待处理事件、处理记录与导出 |
+| `/admin/audit` | 审计 | 管理操作、价格变更、补账、退款、角色修改 |
+| `/admin/brand` | 品牌设置 | Miraphant 名称、Logo、页脚、客服和开源声明 |
+
+角色至少分为客户、客服只读、财务、平台管理员。财务可以退款与对账，不读取上游密钥；客服不能调整余额。高风险操作二次认证，人工调整必须有原因与业务关联，不能直接覆盖余额。客户订单查询始终按当前用户过滤，管理员接口与模型访问密钥权限分离。
+
+## 接口契约（新增命名，避免与旧充值路由混淆）
+
+| 方法与路由 | 权限 | 契约 |
+|---|---|---|
+| `GET /api/points/prices` | 公开 | 已生效价格、套餐、估算假设，不返回上游密钥或内部成本 |
+| `POST /api/points/estimate` | 登录／限流 | 返回估算、模型、价格版本及限制；不扣款 |
+| `GET /api/points/wallet` | 客户本人 | 购买、赠送、冻结、可用和流水游标 |
+| `POST /api/payments/orders` | 客户本人 | `package_id`、`channel`、幂等键；金额与积分由服务端决定 |
+| `GET /api/payments/orders/:key` | 订单本人／授权管理员 | 付款与到账状态，无其他客户资料 |
+| `GET /api/payments/orders/:key/refund-quote` | 订单本人 | 当前可退金额预览；提交时重新核验并冻结积分 |
+| `POST /api/payments/orders/:key/refund-requests` | 订单本人 | 仅提交整数分金额、原因、幂等键；订单、退款号和渠道身份由服务端读取 |
+| `GET /api/payments/orders/:key/refunds` | 订单本人 | 本订单退款进度，按本人订单隔离 |
+| `GET /api/payments/refunds/:key` | 退款本人 | 单笔退款状态，其他客户返回不存在 |
+| `POST /api/payments/notify/wechat` | 渠道签名 | 验签、解密、核验订单后可靠记录通知 |
+| `POST /api/payments/notify/alipay` | 渠道签名 | 验签、核验订单后可靠记录通知 |
+| `POST /api/payments/refunds/notify/wechat` | 渠道签名 | 独立退款回调；验签解密并先持久化通知，再确认接收 |
+| `GET /api/admin/refunds`、`GET /api/admin/refunds/:key` | `refund.read` 或平台管理员 | 安全退款列表／详情，不返回支付原始报文或凭据 |
+| `POST /api/admin/refunds/:key/approve`、`/reject` | `refund.review` 或平台管理员 | 独立短期密码再确认票据；审批通过后等待单独提交，不直接调用渠道 |
+| `POST /api/admin/refunds/:key/submit` | `refund.submit` 或平台管理员 | 再确认后事务内写入提交意图，再调用渠道；未知结果继续冻结并按原退款号恢复 |
+| `POST /api/admin/refunds/:key/reconcile` | `refund.reconcile` 或平台管理员 | 查询渠道与处理持久证据，不接受客户端提供的成功状态 |
+| `POST /api/refund-auth/step-up` | 当前已登录且有相应能力 | 重新验证本地密码，签发绑定会话、退款、动作、金额、业务键和原因的一次性票据 |
+| `GET /api/refund-auth/self`、`/csrf` | 当前已登录 | 返回本人能力和 CSRF token；不暴露票据摘要、凭据指纹或支付密钥 |
+| `GET /api/admin/refund-auth/users/:id/grants`、`POST /api/admin/refund-auth/grants` | 平台管理员（role 100） | 查询或变更退款能力；变更须密码再确认及原因审计 |
+| `POST /api/admin/points/adjustments` | 管理员 | 增量账本记录＋原因＋唯一业务键，不允许覆盖余额 |
+
+Cookie 登录的写操作具备 CSRF 防护；退款操作另需动作绑定的短期重新认证，CSRF 不能代替密码再确认。客户状态和订单始终按当前登录用户过滤。支付通知不依赖用户登录，但必须验证支付渠道身份并先可靠持久化。退款开关默认关闭；暂停新申请和处理操作不关闭历史状态读取、回调验签与恢复。
+
+当前退款授权使用独立 capability：role 100 精确匹配时拥有平台能力，role 10 不自动获得财务权限。客服只读授权仅可读取；审批权限只能把申请推进到 `review_approved`，必须另由具备 `refund.submit` 的人员确认提交。`review_approved` 不进入自动恢复派发。审批、拒绝、提交分别绑定独立票据、业务键和原因；重复提交同一已完成业务键可恢复既有结果，不重复消费资金或生成渠道退款号。
+
+## 旧余额查询接口的兼容边界
+
+积分模式下，`/dashboard/billing/subscription`、`/v1/dashboard/billing/subscription`、`/dashboard/billing/usage`、`/v1/dashboard/billing/usage` 不再提供旧额度或美元语义的数据：通过原模型密钥认证后返回 HTTP 409，`error.code` 为 `legacy_billing_disabled`。未认证请求仍由原认证层拒绝。不得将积分填入 `*_usd` 字段，也不返回假零余额。
+
+客户应登录 `/console/wallet` 查看积分；`/api/points/wallet` 使用自身现有的账户登录鉴权，不能把旧 billing 路径的模型密钥视作钱包会话。模型请求与模型 token/usage 计量字段继续保留协议兼容。关闭积分模式后，这四个旧接口继续使用原有契约。
+
+## 页面验收
+
+每个页面覆盖桌面／手机、未登录／普通客户／财务／管理员、加载／空／错误状态。确认历史 One API 与 ClawMaster 商业品牌残留、Logo 比例、浏览器标题、清缓存后初次加载及邮件文案。
+
+业务必验：客户从官网找到充值入口；付款后可见积分；查询自己订单；使用模型看到扣分；申请退款看到处理进度；管理员可查单和对账；普通客户访问所有管理接口均被拒绝。
